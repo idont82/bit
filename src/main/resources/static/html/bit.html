@@ -77,25 +77,39 @@
 	  		
 	  		<div  class="col-auto">
 	  			<div class="input-group ">
-					<label class="input-group-text" for="inputGroupSelect01">날짜</label>
-					<select id="sel_month" class="form-select" id="inputGroupSelect01">
+					<label class="input-group-text" for="inputGroupSelect01">단위</label>
+					<select id=sel_candlesType class="form-select" id="inputGroupSelect01">
+						<option value="minutes" selected>분</option>
+						<option value="days">일</option>
+						<option value="weeks">주</option>
+						<option value="months">월</option>
 					</select>
 				</div>
 				
 			</div>
-			
+			<div  class="col-auto">
+	  			<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelect02">분단위</label>
+					<select id="sel_minutes" class="form-select" id="inputGroupSelect02">
+						<option value="1" selected>1분</option>
+						<option value="3" selected>3분</option>
+						<option value="5" selected>5분</option>
+						<option value="10" selected>10분</option>
+						<option value="15" selected>15분</option>
+						<option value="30" selected>30분</option>
+						<option value="60" selected>1시간</option>
+						<option value="240" selected>4시간</option>
+					</select>
+				</div>
+				
+			</div>
 		  	<div class="col-auto">
 		  		<div class="input-group ">
-					<label class="input-group-text" for="inputGroupSelect02">지역</label>
-					<select id="sel_area" class="form-select" id="inputGroupSelect02">
-						<option value="None">선택...</option>
-						<option value="서울" selected>서울</option>
-						<option value="경기">경기</option>
-						<option value="강남">강남</option>
-						<option value="홍대">홍대</option>
-						<option value="인천">인천</option>
-						<option value="제주도">제주도</option>
-						<option value="부산">부산</option>
+					<label class="input-group-text" for="inputGroupSelect03">갯수</label>
+					<select id="sel_count" class="form-select" id="inputGroupSelect03">
+						<option value="50" selected>50개</option>
+						<option value="100">100개</option>
+						<option value="200">200개</option>
 					</select>
 				</div>
 			</div>
@@ -174,7 +188,7 @@
     bit.loop = function(response){
 		
     	//1)테이블 생성
-    	$('#myTable').DataTable(
+    	var table = $('#myTable').DataTable(
     			{ data: response,
     			pageLength: 500,
     			"columns": [
@@ -196,6 +210,15 @@
 				}
     	);
     	
+		$('#myTable tbody').on('click', 'tr', function() {
+			        // 클릭된 행(<tr>)의 데이터를 가져옵니다.
+			        var data = table.row(this).data();
+
+			        if (data) { // data가 유효한 경우에만 실행
+			        	bit.selectCandles(data.market);
+			        }
+		});
+    	  
     	console.log(response);
     	return;
     	
@@ -207,7 +230,7 @@
 
             const r = response[index];
             console.log(index + " : " + r.market);
-            bit.selectCandles(r.market);
+            bit.selectCandles(r.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
 
             index++;
             setTimeout(callNext, 100); // 0.3초 후 다음 호출
@@ -216,11 +239,11 @@
         callNext();
     }
     
-    bit.selectCandles = function(market){	
+    bit.selectCandles = function(market, candleType, minutes, count){	
 
     	const options = {method: 'GET', headers: {accept: 'application/json'}};
 
-    	fetch('https://api.bithumb.com/v1/candles/minutes/1?market='+market+'&count=1', options)
+    	fetch('https://api.bithumb.com/v1/candles/'+candleType+'/'+minutes+'?market='+market+'&count=' + count, options)
     	  .then(response => response.json())
     	  .then(response => console.log(response))
     	  .catch(err => console.error(err));
