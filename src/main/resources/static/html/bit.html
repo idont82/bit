@@ -215,7 +215,7 @@
 			        var data = table.row(this).data();
 
 			        if (data) { // data가 유효한 경우에만 실행
-			        	bit.selectCandles(data.market);
+			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
 			        }
 		});
     	  
