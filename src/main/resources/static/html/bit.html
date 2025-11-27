@@ -70,7 +70,25 @@
 	<div class="container mt-5   mb-5">
 	  	
 	  <div class="row g-3 align-items-center mt-5">
-			<span></span>
+	    
+	    <div  class="col-auto">
+	      
+	  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelectCount">갯수</label>
+					<select id="sel_monitorCnt" class="form-select" id="inputGroupSelectCount">
+					  <option value="" >All</option>
+						<option value="50" selected>50개</option>
+						<option value="100" >100개</option>
+						<option value="200">200개</option>
+						<option value="300">300개</option>
+						<option value="400">400개</option>
+					</select>
+				</div>
+				
+			</div>
+			<div  class="col">
+			  <button id="btn_start" class="btn btn-primary align-middle ms-2">Start</button>
+			</div>
 		</div>
 		
 	
@@ -83,7 +101,7 @@
 			</table>
 		</div>
 		
-		<div class="row g-3 align-items-center mt-5">
+		<div class="row g-3 align-items-center mt-5 border-top border-secondary">
 			<span></span>
 		</div>
 		
@@ -117,7 +135,7 @@
 				</div>
 				
 			</div>
-		  	<div class="col-auto">
+		  <div class="col-auto">
 		  		<div class="input-group ">
 					<label class="input-group-text" for="inputGroupSelect03">갯수</label>
 					<select id="sel_count" class="form-select" id="inputGroupSelect03">
@@ -128,10 +146,10 @@
 				</div>
 			</div>
 			<div class="col">
-				<span id="txt_nowCandel"> </span>
+				
 			</div>
 			<div class="col-auto">
-				<span> </span><span id="label_last"></span>
+				  <span id="txt_nowCandel"> </span>
 			</div>
 		</div>
 		
@@ -177,9 +195,13 @@
     $(document).ready(function() {
     	
         //조회
-        bit.selectAll();
+        //bit.selectAll();
+        //bit.selectCaution();
         
-        bit.selectCaution();
+        $("#btn_start").on('click', function(event) {
+          bit.selectAll();
+        });
+        
     	
     });
     
@@ -231,6 +253,7 @@
     		            { "data": "candle_acc_trade_price" , title : "price" }, 
     		            { "data": "candle_acc_trade_volume" , title : "volume"},
     		            { "data": "avg" , title : "avg"},
+    		            { "data": "per" , title : "%"},
     		            { "data": "candle_date_time_kst", title : "kst" }
     		      ]
 				}
@@ -249,14 +272,14 @@
     	//return;
     	
     	//2)시세
-      let index = 0;
-
+      let index = 1;
+      let totalCnt = $("#sel_monitorCnt").val() == "" ? response.length : $("#sel_monitorCnt").val();
       function callNext() {
-          if (index >= 30/*response.length*/) return;
+          if (index > totalCnt || index > response.length) return;
 
-          const r = response[index];
+          const r = response[index-1];
           console.log(index + " : " + r.market);
-          $("#txt_nowCandel").text(r.market);
+          $("#txt_nowCandel").text(r.market + " " +index+ "/"+totalCnt);
           bit.selectCandles(r.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
 
           index++;
@@ -290,6 +313,7 @@
           if(avg < r["candle_acc_trade_volume"]){
     			  console.log( r);
     			  r["avg"] = avg;
+    			  r["per"] = (avg / r["candle_acc_trade_volume"] * 100).toFixed(1);
     			  //평균보다 높으면 담기
     			  bit.tableSlave.row.add(r).draw();
           }
