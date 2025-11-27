@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=1400, initial-scale=1">
     
     <title>BIT</title>
-  	<meta name="description" content="삼삼엠투 사이트의 예약현황을 간편히 조회할 수 있습니다.">
+  	<meta name="description" content="">
   	
 	<!-- https://getbootstrap.kr/ -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
@@ -50,7 +50,7 @@
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive" aria-controls="navbarResponsive" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
             <div class="collapse navbar-collapse" id="navbarResponsive">
                 <ul class="navbar-nav ms-auto">
-                    
+              
                     <li class="nav-item"><a class="nav-link" href="#services">Search</a></li>
                     <li class="nav-item"><a class="nav-link" href="#div_mapArea">Map</a></li>
                 </ul>
@@ -58,7 +58,7 @@
         </div>
     </nav>
     
-    <header class="bg-primary bg-gradient text-white">
+    <header style="display:none;" class="bg-primary bg-gradient text-white">
             <div class="container px-4 text-center">
                 <h1 class="fw-bolder">Welcome</h1>
                 <p class="lead"></p>
@@ -69,59 +69,10 @@
         
 	<div class="container mt-5   mb-5">
 	  	
-	  	<div class="row g-3 align-items-center mt-5">
+	  <div class="row g-3 align-items-center mt-5">
 			<span></span>
 		</div>
 		
-	  	<div id="services" class="row g-3 align-items-center">
-	  		
-	  		<div  class="col-auto">
-	  			<div class="input-group ">
-					<label class="input-group-text" for="inputGroupSelect01">단위</label>
-					<select id=sel_candlesType class="form-select" id="inputGroupSelect01">
-						<option value="minutes" selected>분</option>
-						<option value="days">일</option>
-						<option value="weeks">주</option>
-						<option value="months">월</option>
-					</select>
-				</div>
-				
-			</div>
-			<div  class="col-auto">
-	  			<div class="input-group ">
-					<label class="input-group-text" for="inputGroupSelect02">분단위</label>
-					<select id="sel_minutes" class="form-select" id="inputGroupSelect02">
-						<option value="1" selected>1분</option>
-						<option value="3" selected>3분</option>
-						<option value="5" selected>5분</option>
-						<option value="10" selected>10분</option>
-						<option value="15" selected>15분</option>
-						<option value="30" selected>30분</option>
-						<option value="60" selected>1시간</option>
-						<option value="240" selected>4시간</option>
-					</select>
-				</div>
-				
-			</div>
-		  	<div class="col-auto">
-		  		<div class="input-group ">
-					<label class="input-group-text" for="inputGroupSelect03">갯수</label>
-					<select id="sel_count" class="form-select" id="inputGroupSelect03">
-						<option value="50" selected>50개</option>
-						<option value="100">100개</option>
-						<option value="200">200개</option>
-					</select>
-				</div>
-			</div>
-			<div class="col">
-				<span>최근 </span>
-			</div>
-			<div class="col-auto">
-				<span> 최근업데이트 : </span><span id="label_last"></span>
-			</div>
-		</div>
-		
-	
 	
 		<div class="row mt-5">
 			<table id="myTable" class="display">
@@ -132,11 +83,74 @@
 			</table>
 		</div>
 		
-
+		<div class="row g-3 align-items-center mt-5">
+			<span></span>
+		</div>
+		
+    <div id="services" class="row g-3 align-items-center">
+	  		
+	  	<div  class="col-auto">
+	  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelect01">단위</label>
+					<select id=sel_candlesType class="form-select" id="inputGroupSelect01">
+						<option value="minutes" selected>분</option>
+						<option value="days">일</option>
+						<option value="weeks">주</option>
+						<option value="months">월</option>
+					</select>
+				</div>
+			</div>
+			
+			<div  class="col-auto">
+	  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelect02">분단위</label>
+					<select id="sel_minutes" class="form-select" id="inputGroupSelect02">
+						<option value="1" >1분</option>
+						<option value="3" >3분</option>
+						<option value="5" >5분</option>
+						<option value="10" selected>10분</option>
+						<option value="15" >15분</option>
+						<option value="30" >30분</option>
+						<option value="60" >1시간</option>
+						<option value="240" >4시간</option>
+					</select>
+				</div>
+				
+			</div>
+		  	<div class="col-auto">
+		  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelect03">갯수</label>
+					<select id="sel_count" class="form-select" id="inputGroupSelect03">
+						<option value="50" >50개</option>
+						<option value="100" selected>100개</option>
+						<option value="200">200개</option>
+					</select>
+				</div>
+			</div>
+			<div class="col">
+				<span id="txt_nowCandel"> </span>
+			</div>
+			<div class="col-auto">
+				<span> </span><span id="label_last"></span>
+			</div>
+		</div>
+		
+		<div class="row mt-5">
+  		<table id="myTable2" class="display">
+  		    <thead>
+  		    </thead>
+  		    <tbody>
+  		    </tbody>
+  		</table>
+  	</div>
+	
 	</div>
   
-  	<!-- toast -->
-  	<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  	
+
+		
+	<!-- toast -->
+	<div class="toast-container position-fixed bottom-0 end-0 p-3">
 	  <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="10000">
 	    <div class="toast-header">
 	      <svg aria-hidden="true" class="bd-placeholder-img rounded me-2" height="20" preserveAspectRatio="xMidYMid slice" width="20" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#007aff"></rect></svg>
@@ -169,10 +183,7 @@
     	
     });
     
-    
-    const MONTH_CNT = 3; //3개월
-	let months = [];
-    
+    //전체 조회
     bit.selectAll = function(){	
 
     	const options = {method: 'GET', headers: {accept: 'application/json'}};
@@ -185,12 +196,13 @@
 	
     };
     
+    //전체 조회 그리기
     bit.loop = function(response){
 		
     	//1)테이블 생성
-    	var table = $('#myTable').DataTable(
+    	bit.table = $('#myTable').DataTable(
     			{ data: response,
-    			pageLength: 500,
+    			pageLength: 10,
     			"columns": [
     					{ "data": "checkbox", title : "check" }, 
     		            { "data": "market" , title : "market"}, 
@@ -210,33 +222,48 @@
 				}
     	);
     	
-		$('#myTable tbody').on('click', 'tr', function() {
-			        // 클릭된 행(<tr>)의 데이터를 가져옵니다.
-			        var data = table.row(this).data();
-
-			        if (data) { // data가 유효한 경우에만 실행
-			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
-			        }
-		});
+    	//2)테이블 생성
+    	bit.tableSlave = $('#myTable2').DataTable(
+    			{ data: [],
+    			pageLength: 30,
+    			"columns": [
+    		            { "data": "market" , title : "market"}, 
+    		            { "data": "candle_acc_trade_price" , title : "price" }, 
+    		            { "data": "candle_acc_trade_volume" , title : "volume"},
+    		            { "data": "avg" , title : "avg"},
+    		            { "data": "candle_date_time_kst", title : "kst" }
+    		      ]
+				}
+    	);
+    	
+  		$('#myTable tbody').on('click', 'tr', function() {
+  			        // 클릭된 행(<tr>)의 데이터를 가져옵니다.
+  			        var data = bit.table.row(this).data();
+  
+  			        if (data) { // data가 유효한 경우에만 실행
+  			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			        }
+  		});
     	  
-    	console.log(response);
-    	return;
+    	//console.log(response);
+    	//return;
     	
     	//2)시세
-        let index = 0;
+      let index = 0;
 
-        function callNext() {
-            if (index >= response.length) return;
+      function callNext() {
+          if (index >= 30/*response.length*/) return;
 
-            const r = response[index];
-            console.log(index + " : " + r.market);
-            bit.selectCandles(r.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+          const r = response[index];
+          console.log(index + " : " + r.market);
+          $("#txt_nowCandel").text(r.market);
+          bit.selectCandles(r.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
 
-            index++;
-            setTimeout(callNext, 100); // 0.3초 후 다음 호출
-        }
+          index++;
+          setTimeout(callNext, 200); // 0.2초 후 다음 호출
+      }
 
-        callNext();
+      callNext();
     }
     
     bit.selectCandles = function(market, candleType, minutes, count){	
@@ -245,11 +272,36 @@
 
     	fetch('https://api.bithumb.com/v1/candles/'+candleType+'/'+minutes+'?market='+market+'&count=' + count, options)
     	  .then(response => response.json())
-    	  .then(response => console.log(response))
+    	  .then(response => bit.volume(response))
     	  .catch(err => console.error(err));
 	
     };
     
+  	//거래량 체크 - 평균보다 높은 경우
+  	bit.volume = function(response){
+  		let vol = 0;
+  		let count = response.length-1;
+  		for(let i=count; i>=0; i--){
+  		  const r = response[i];
+  	    //console.log( r["candle_date_time_kst"] + "  " + r["candle_acc_trade_volume"]);
+        if(i == 0){
+          let avg = vol / response.length-1;
+          console.log( "vol Avg= "+ avg);
+          if(avg < r["candle_acc_trade_volume"]){
+    			  console.log( r);
+    			  r["avg"] = avg;
+    			  //평균보다 높으면 담기
+    			  bit.tableSlave.row.add(r).draw();
+          }
+  			  
+        }else{
+          vol += r["candle_acc_trade_volume"];
+        }
+        
+  		}
+      
+  	};
+
     bit.selectCaution = function(market){	
 
     	const options = {method: 'GET', headers: {accept: 'application/json'}};
