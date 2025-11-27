@@ -255,7 +255,11 @@
     		            { "data": "avg" , title : "avg"},
     		            { "data": "per" , title : "%"},
     		            { "data": "candle_date_time_kst", title : "kst" }
-    		      ]
+    		      ],
+    		  "columnDefs": [
+  		    	{ targets: 3 , render: $.fn.dataTable.render.number( ',' ) },
+  		    	//{ targets: 0,  data: null,  render: function (data, type, row, meta) {  return meta.row + 1;  }  }
+  		      ]
 				}
     	);
     	
