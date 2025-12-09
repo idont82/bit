@@ -102,6 +102,20 @@
 				</div>
 				
 			</div>
+			<div  class="col-auto">
+	  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelectAmt">거래금액</label>
+					<select id="sel_monitorAmt" class="form-select" id="inputGroupSelectAmt">
+					  <option value="100000000" >1억</option>
+						<option value="300000000" >3억</option>
+						<option value="500000000" selected>5억</option>
+						<option value="1000000000">10억</option>
+						<option value="5000000000">50억</option>
+						<option value="10000000000">100억</option>
+					</select>
+				</div>
+				
+			</div>
 			<div  class="col">
 			  <button id="btn_start" class="btn btn-primary align-middle ms-2">Search</button>
 			</div>
@@ -142,9 +156,9 @@
 						<option value="1" >1분</option>
 						<option value="3" >3분</option>
 						<option value="5" >5분</option>
-						<option value="10" selected>10분</option>
+						<option value="10" >10분</option>
 						<option value="15" >15분</option>
-						<option value="30" >30분</option>
+						<option value="30" selected>30분</option>
 						<option value="60" >1시간</option>
 						<option value="240" >4시간</option>
 					</select>
@@ -155,9 +169,22 @@
 		  		<div class="input-group ">
 					<label class="input-group-text" for="inputGroupSelect03">갯수</label>
 					<select id="sel_count" class="form-select" id="inputGroupSelect03">
+					  <option value="10" selected>10개</option>
 						<option value="50" >50개</option>
-						<option value="100" selected>100개</option>
+						<option value="100" >100개</option>
 						<option value="200">200개</option>
+					</select>
+				</div>
+			</div>
+			<div class="col-auto">
+		  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelect04">상승률</label>
+					<select id="sel_upPer" class="form-select" id="inputGroupSelect04">
+						<option value="1" selected>1%</option>
+						<option value="2" >2%</option>
+						<option value="3" >3%</option>
+						<option value="5" >5%</option>
+						<option value="7">7%</option>
 					</select>
 				</div>
 			</div>
@@ -226,17 +253,54 @@
     		            //{ "data": "market_warning", title : "warning" },
     		            { "data": "is_decline_name", title : "상/하" },
     		            { "data": "diff_per", title : "차이%" },
-    		            { "data": "candle_acc_trade_price", title : "누적거래금액" },
+    		            { "data": "candle_acc_trade_price", title : "오늘거래금액" },
+    		            { "data": "candle_acc_trade_price_prev", title : "전일거래금액" },
     
     		      ],
     		      
     		  "columnDefs": [
-  		    	{ targets: 4 , render: $.fn.dataTable.render.number( ',' ) },
+  		    	//{ targets: 4 , render: $.fn.dataTable.render.number( ',' ) },
+  		    	//{ targets: 5 , render: $.fn.dataTable.render.number( ',' ) },
   		    	//{ targets: 0,  data: null,  render: function (data, type, row, meta) {  return meta.row + 1;  }  }
+  		    	{ targets: 4,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+  		    	{ targets: 5,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
   		      ]
 				}
     	);
     	
+    	$('#myTable tbody').on('click', 'tr', function() {
+  			        // 클릭된 행(<tr>)의 데이터를 가져옵니다.
+  			        var data = bit.table.row(this).data();
+  
+  			        if (data) { // data가 유효한 경우에만 실행
+  			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			        }
+  		});
+  		
+    	//2)테이블 생성
+    	bit.tableSlave = $('#myTable2').DataTable(
+    			{ data: [],
+    			pageLength: 30,
+    			"columns": [
+    		            { "data": "market" , title : "market"}, 
+    		            { "data": "opening_price" , title : "시가" }, 
+    		            { "data": "high_price" , title : "고가"},
+    		            { "data": "low_price" , title : "저가"},
+    		            { "data": "trade_price" , title : "종가"},
+    		            //{ "data": "avg" , title : "avg"},
+    		            { "data": "per" , title : "%"},
+    		            { "data": "candle_date_time_kst", title : "kst" }
+    		      ],
+    		  "columnDefs": [
+  		    		{ targets: 1,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+  		    	  { targets: 2,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+  		      { targets: 3,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+  		      { targets: 4,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+  		      
+  		    	//{ targets: 0,  data: null,  render: function (data, type, row, meta) {  return meta.row + 1;  }  }
+  		      ]
+				}
+    	);
     	
     	
       $("#btn_start").on('click', function(event) {
@@ -262,15 +326,23 @@
     //아동평균 하락 체크
     bit.maCheckList = async function(marketList){
       
-      for(let market in marketList){
+      bit.table.clear().draw();
+      
+      for(let m in marketList){
         
-        if( parseInt($("#sel_monitorCnt").val()) <= market ) break;
+        if( !marketList[m].market.startsWith("KRW") ) continue;
+        if( parseInt($("#sel_monitorCnt").val()) <= m ) break;
         
-        const res = await bit.checkMADeclining(marketList[market].market);
+        const res = await bit.checkMADeclining(marketList[m].market);
         console.log(res);
-        const mergedObj = { ...marketList[market], ...res };
-        
-        bit.table.row.add(mergedObj).draw();
+        if(res != null 
+            && res["is_decline"] //하락여부
+            && res["candle_acc_trade_price_prev"] >= Number($("#sel_monitorAmt").val())
+            ) {
+          const mergedObj = { ...marketList[m], ...res };
+          
+          bit.table.row.add(mergedObj).draw();
+        }
         
         //console.log(market);
       }
@@ -346,6 +418,7 @@
         */
         
         console.log(`마켓: ${market}`);
+        //console.log(data);
         /*
         if (isDecline) {
           console.log(count + '일 하락');
@@ -371,7 +444,7 @@
         data[0]["is_decline_name"] = declineName;
         data[0]["diff_amt"] = Math.round(diff);
         data[0]["diff_per"] = percent;
-        //data[0]["trade_price_avg"] = tradePriceAvg.toFixed(2);
+        data[0]["candle_acc_trade_price_prev"] = data[1]["candle_acc_trade_price"];//전일
         
         return data[0];
         
@@ -404,35 +477,6 @@
     bit.loop = function(response){
 		
  
-    	
-    	//2)테이블 생성
-    	bit.tableSlave = $('#myTable2').DataTable(
-    			{ data: [],
-    			pageLength: 30,
-    			"columns": [
-    		            { "data": "market" , title : "market"}, 
-    		            { "data": "candle_acc_trade_price" , title : "price" }, 
-    		            { "data": "candle_acc_trade_volume" , title : "volume"},
-    		            { "data": "avg" , title : "avg"},
-    		            { "data": "per" , title : "%"},
-    		            { "data": "candle_date_time_kst", title : "kst" }
-    		      ],
-    		  "columnDefs": [
-  		    	{ targets: 3 , render: $.fn.dataTable.render.number( ',' ) },
-  		    	//{ targets: 0,  data: null,  render: function (data, type, row, meta) {  return meta.row + 1;  }  }
-  		      ]
-				}
-    	);
-    	
-  		$('#myTable tbody').on('click', 'tr', function() {
-  			        // 클릭된 행(<tr>)의 데이터를 가져옵니다.
-  			        var data = bit.table.row(this).data();
-  
-  			        if (data) { // data가 유효한 경우에만 실행
-  			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
-  			        }
-  		});
-    	  
     	//console.log(response);
     	//return;
     	
@@ -460,10 +504,38 @@
 
     	fetch('https://api.bithumb.com/v1/candles/'+candleType+'/'+minutes+'?market='+market+'&count=' + count, options)
     	  .then(response => response.json())
-    	  .then(response => bit.volume(response))
+    	  .then(response => bit.tradePer(response))
     	  .catch(err => console.error(err));
 	
     };
+    
+    
+    //상승률 체크 
+  	bit.tradePer = function(response){
+  		let prePrice = 0;
+  		let count = response.length-1;
+  		for(let i=count; i>=0; i--){
+  		  const r = response[i];
+        if(i == 0){
+          const per =  (r["trade_price"] / prePrice -1)*100;
+          console.log( "prePrice= "+ prePrice);
+          console.log( "trade_price= "+ r["trade_price"]);
+  			  console.log( "per= "+ per);
+  			  
+  			  $("#txt_nowCandel").text(r.market + ", Pre:" +prePrice+ " / Now:"+r["trade_price"] + ", " + per.toFixed(1) + "%");
+  			  
+  			  if( Number($("#sel_upPer").val()) <= per ){
+  			    r.per = per;
+  			    bit.tableSlave.row.add(r).draw();
+  			  }
+  			  
+        }else{
+          prePrice = r["trade_price"];
+        }
+        
+  		}
+      
+  	};
     
   	//거래량 체크 - 평균보다 높은 경우
   	bit.volume = function(response){
