@@ -92,8 +92,8 @@
 	  		<div class="input-group ">
 					<label class="input-group-text" for="inputGroupSelectCount">갯수</label>
 					<select id="sel_monitorCnt" class="form-select" id="inputGroupSelectCount">
-					  <option value="9999" >All</option>
-						<option value="50" selected>50개</option>
+					  <option value="9999" selected>All</option>
+						<option value="50" >50개</option>
 						<option value="100" >100개</option>
 						<option value="200">200개</option>
 						<option value="300">300개</option>
@@ -106,18 +106,19 @@
 	  		<div class="input-group ">
 					<label class="input-group-text" for="inputGroupSelectAmt">거래금액</label>
 					<select id="sel_monitorAmt" class="form-select" id="inputGroupSelectAmt">
-					  <option value="100000000" >1억</option>
-						<option value="300000000" >3억</option>
-						<option value="500000000" selected>5억</option>
-						<option value="1000000000">10억</option>
-						<option value="5000000000">50억</option>
-						<option value="10000000000">100억</option>
+					  <option value="100000000" >1억 이상</option>
+						<option value="300000000" >3억 이상</option>
+						<option value="500000000" >5억 이상</option>
+						<option value="1000000000" selected>10억 이상</option>
+						<option value="5000000000">50억 이상</option>
+						<option value="10000000000">100억 이상</option>
 					</select>
 				</div>
 				
 			</div>
 			<div  class="col">
-			  <button id="btn_start" class="btn btn-primary align-middle ms-2">Search</button>
+			  <button id="btn_search" class="btn btn-primary align-middle ms-2">Search</button>
+			  <button id="btn_monitor" class="btn btn-success align-middle ms-2">Monitor</button>
 			</div>
 		</div>
 		
@@ -283,6 +284,7 @@
     			pageLength: 30,
     			"columns": [
     		            { "data": "market" , title : "market"}, 
+    		            //{ "data": "korean_name" , title : "korean" }, 
     		            { "data": "opening_price" , title : "시가" }, 
     		            { "data": "high_price" , title : "고가"},
     		            { "data": "low_price" , title : "저가"},
@@ -292,10 +294,12 @@
     		            { "data": "candle_date_time_kst", title : "kst" }
     		      ],
     		  "columnDefs": [
-  		    		{ targets: 1,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
-  		    	  { targets: 2,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
-  		      { targets: 3,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
-  		      { targets: 4,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
+    		      { targets: 1,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 4}); } return data; }  },
+  		    		{ targets: 2,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 4}); } return data; }  },
+  		    	  { targets: 3,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 4}); } return data; }  },
+  		        { targets: 4,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 4}); } return data; }  },
+  		        { targets: 5,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 2}); } return data; }  },
+  		       // { targets: 6,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 0}); } return data; }  },
   		      
   		    	//{ targets: 0,  data: null,  render: function (data, type, row, meta) {  return meta.row + 1;  }  }
   		      ]
@@ -303,10 +307,13 @@
     	);
     	
     	
-      $("#btn_start").on('click', function(event) {
+      $("#btn_search").on('click', function(event) {
         bit.selectAll();
       });
         
+      $("#btn_monitor").on('click', function(event) {
+        bit.monitor();
+      });
     	
     });
     
@@ -471,6 +478,25 @@
     	);
     	
       
+    };
+    
+    //전체 조회 그리기
+    bit.monitor = function(){
+      
+      bit.tableSlave.clear().draw();
+      
+      bit.table.rows().every(function() {
+          var data = this.data(); // Get the data object for the current row
+          var rowNode = this.node(); // Get the HTML node for the current row
+      
+          console.log("Row Data:", data);
+          console.log("Row Node:", rowNode);
+          
+          if (data) { // data가 유효한 경우에만 실행
+  			        bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			   }
+      
+      });
     };
     
     //전체 조회 그리기
