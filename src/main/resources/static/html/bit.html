@@ -118,7 +118,12 @@
 			</div>
 			<div  class="col">
 			  <button id="btn_search" class="btn btn-primary align-middle ms-2">Search</button>
-			  <button id="btn_monitor" class="btn btn-success align-middle ms-2">Monitor</button>
+			</div>
+			<div class="col">
+				
+			</div>
+			<div class="col-auto">
+				  <span id="txt_nowSearch"> </span>
 			</div>
 		</div>
 		
@@ -189,10 +194,31 @@
 					</select>
 				</div>
 			</div>
+			<div  class="col-auto">
+			  <button id="btn_monitor" class="btn btn-success align-middle ms-2">Monitor</button>
+			</div>
+			<div class="col-auto">
+		  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSTime">인터벌시간</label>
+					<select id="sel_intervalTime" class="form-select" id="inputGroupSTime">
+						<option value="1000" >1초</option>
+						<option value="10000" >10초</option>
+						<option value="30000" selected>30초</option>
+						<option value="60000" >1분</option>
+						<option value="120000" >2분</option>
+						<option value="180000" >3분</option>
+						<option value="300000" >5분</option>
+					</select>
+				</div>
+			</div>
+			<div  class="col-auto">
+			  <button id="btn_stop" class="btn btn-warning align-middle ms-2">Stop</button>
+			</div>
 			<div class="col">
 				
 			</div>
 			<div class="col-auto">
+				  <span id="txt_nowTime"> </span>
 				  <span id="txt_nowCandel"> </span>
 			</div>
 		</div>
@@ -245,7 +271,7 @@
       //1)테이블 생성
     	bit.table = $('#myTable').DataTable(
     			{ data: [],
-    			order : "",
+    			order : [[ 5, "desc" ]],
     			pageLength: 10,
     			"columns": [
     		            { "data": "market" , title : "market"}, 
@@ -281,17 +307,20 @@
     	//2)테이블 생성
     	bit.tableSlave = $('#myTable2').DataTable(
     			{ data: [],
+    			order : [[ 7, "desc" ]],
     			pageLength: 30,
     			"columns": [
-    		            { "data": "market" , title : "market"}, 
-    		            //{ "data": "korean_name" , title : "korean" }, 
+    		            //{ "data": "market" , title : "market"}, 
+    		            { "data": "korean_name" , title : "korean" }, 
     		            { "data": "opening_price" , title : "시가" }, 
     		            { "data": "high_price" , title : "고가"},
     		            { "data": "low_price" , title : "저가"},
     		            { "data": "trade_price" , title : "종가"},
     		            //{ "data": "avg" , title : "avg"},
     		            { "data": "per" , title : "%"},
-    		            { "data": "candle_date_time_kst", title : "kst" }
+    		            { "data": "candle_date_time_kst", title : "기준시각" },
+    		            { "data": "timestamp", title : "종료 시각", render: DataTable.render.datetime() },
+    		            
     		      ],
     		  "columnDefs": [
     		      { targets: 1,  render: function (data, type, row, meta) {  if (type === 'display') { return data.toLocaleString('ko-KR', { maximumFractionDigits: 4}); } return data; }  },
@@ -312,8 +341,24 @@
       });
         
       $("#btn_monitor").on('click', function(event) {
+        var intervalTime = Number($("#sel_intervalTime").val());
+        
+        bit.itervalMonitor = setInterval(() => {
+          bit.monitor();
+        }, intervalTime);
+
         bit.monitor();
       });
+      
+      $("#btn_stop").on('click', function(event) {
+        if(bit.itervalMonitor != null){
+          clearInterval(bit.itervalMonitor);
+        }
+        
+        $("#txt_nowTime").text("Stop");
+      });
+      
+      
     	
     });
     
@@ -337,6 +382,8 @@
       
       for(let m in marketList){
         
+         $("#txt_nowSearch").text(marketList[m].market + ", " +m+ " / "+ (marketList.length-1));
+  			  
         if( !marketList[m].market.startsWith("KRW") ) continue;
         if( parseInt($("#sel_monitorCnt").val()) <= m ) break;
         
@@ -483,7 +530,9 @@
     //전체 조회 그리기
     bit.monitor = function(){
       
-      bit.tableSlave.clear().draw();
+      //bit.tableSlave.clear().draw();
+      
+      $("#txt_nowTime").text(new Date().toLocaleTimeString());
       
       bit.table.rows().every(function() {
           var data = this.data(); // Get the data object for the current row
@@ -493,7 +542,7 @@
           console.log("Row Node:", rowNode);
           
           if (data) { // data가 유효한 경우에만 실행
-  			        bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			        bit.selectCandles(data.market, data.korean_name, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
   			   }
       
       });
@@ -524,20 +573,26 @@
       callNext();
     }
     
-    bit.selectCandles = function(market, candleType, minutes, count){	
-
+    bit.selectCandles = function(market, koreanName, candleType, minutes, count){	
+      
+      if(candleType == "minutes"){
+        minutes = "/" + minutes;
+      }else{
+        minutes = "";
+      }
+      
     	const options = {method: 'GET', headers: {accept: 'application/json'}};
-
-    	fetch('https://api.bithumb.com/v1/candles/'+candleType+'/'+minutes+'?market='+market+'&count=' + count, options)
+      
+    	fetch('https://api.bithumb.com/v1/candles/'+candleType+minutes+'?market='+market+'&count=' + count, options)
     	  .then(response => response.json())
-    	  .then(response => bit.tradePer(response))
+    	  .then(response => bit.tradePer(response, koreanName))
     	  .catch(err => console.error(err));
 	
     };
     
     
     //상승률 체크 
-  	bit.tradePer = function(response){
+  	bit.tradePer = function(response, koreanName){
   		let prePrice = 0;
   		let count = response.length-1;
   		for(let i=count; i>=0; i--){
@@ -547,12 +602,16 @@
           console.log( "prePrice= "+ prePrice);
           console.log( "trade_price= "+ r["trade_price"]);
   			  console.log( "per= "+ per);
+  			  console.log( "market= "+ r.market);
+  			  console.log( "koreanName= "+ koreanName);
   			  
   			  $("#txt_nowCandel").text(r.market + ", Pre:" +prePrice+ " / Now:"+r["trade_price"] + ", " + per.toFixed(1) + "%");
   			  
   			  if( Number($("#sel_upPer").val()) <= per ){
   			    r.per = per;
+  			    r["korean_name"] = koreanName;
   			    bit.tableSlave.row.add(r).draw();
+  			   
   			  }
   			  
         }else{
@@ -578,7 +637,7 @@
     			  r["avg"] = avg;
     			  r["per"] = (avg / r["candle_acc_trade_volume"] * 100).toFixed(1);
     			  //평균보다 높으면 담기
-    			  bit.tableSlave.row.add(r).draw();
+    			  bit.tableSlave.Rows.InsertAt(r, 0);
           }
   			  
         }else{
