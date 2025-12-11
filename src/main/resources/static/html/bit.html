@@ -308,7 +308,7 @@
     	bit.tableSlave = $('#myTable2').DataTable(
     			{ data: [],
     			order : [[ 7, "desc" ]],
-    			pageLength: 30,
+    			pageLength: 10,
     			"columns": [
     		            //{ "data": "market" , title : "market"}, 
     		            { "data": "korean_name" , title : "korean" }, 
@@ -607,7 +607,9 @@
   			  
   			  $("#txt_nowCandel").text(r.market + ", Pre:" +prePrice+ " / Now:"+r["trade_price"] + ", " + per.toFixed(1) + "%");
   			  
-  			  if( Number($("#sel_upPer").val()) <= per ){
+  			  if( Number($("#sel_upPer").val()) <= per //이전보다 상승
+  			    && r["trade_price"] >= r["high_price"] //고가
+  			    ){ 
   			    r.per = per;
   			    r["korean_name"] = koreanName;
   			    bit.tableSlave.row.add(r).draw();
