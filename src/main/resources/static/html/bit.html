@@ -547,32 +547,7 @@
       
       });
     };
-    
-    //전체 조회 그리기
-    bit.loop = function(response){
-		
  
-    	//console.log(response);
-    	//return;
-    	
-    	//2)시세
-      let index = 1;
-      let totalCnt = $("#sel_monitorCnt").val() == "" ? response.length : $("#sel_monitorCnt").val();
-      function callNext() {
-          if (index > totalCnt || index > response.length) return;
-
-          const r = response[index-1];
-          console.log(index + " : " + r.market);
-          $("#txt_nowCandel").text(r.market + " " +index+ "/"+totalCnt);
-          bit.selectCandles(r.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
-
-          index++;
-          setTimeout(callNext, 200); // 0.2초 후 다음 호출
-      }
-
-      callNext();
-    }
-    
     bit.selectCandles = function(market, koreanName, candleType, minutes, count){	
       
       if(candleType == "minutes"){
@@ -599,11 +574,11 @@
   		  const r = response[i];
         if(i == 0){
           const per =  (r["trade_price"] / prePrice -1)*100;
-          console.log( "prePrice= "+ prePrice);
-          console.log( "trade_price= "+ r["trade_price"]);
-  			  console.log( "per= "+ per);
-  			  console.log( "market= "+ r.market);
-  			  console.log( "koreanName= "+ koreanName);
+          //console.log( "prePrice= "+ prePrice);
+          //console.log( "trade_price= "+ r["trade_price"]);
+  			  //console.log( "per= "+ per);
+  			  //console.log( "market= "+ r.market);
+  			  //console.log( "koreanName= "+ koreanName);
   			  
   			  $("#txt_nowCandel").text(r.market + ", Pre:" +prePrice+ " / Now:"+r["trade_price"] + ", " + per.toFixed(1) + "%");
   			  
@@ -612,7 +587,21 @@
   			    ){ 
   			    r.per = per;
   			    r["korean_name"] = koreanName;
-  			    bit.tableSlave.row.add(r).draw();
+  			    
+  			    var found = true;
+  			    //중복체크
+  			    bit.tableSlave.rows().every(function () {
+  			      var data = this.data();
+  			      if(data.market == r.market && data.trade_price == r.trade_price && data.timestamp == r.timestamp){
+  			        found = false;
+  			        console.log( "found 중복: "+ r.market);
+  			      }
+  			    });
+  			    
+  			    if(found){
+    			    bit.tableSlave.row.add(r).draw();
+    			    bit.sendTelegram(r);//알림발송
+  			    }
   			   
   			  }
   			  
@@ -624,41 +613,70 @@
       
   	};
     
-  	//거래량 체크 - 평균보다 높은 경우
-  	bit.volume = function(response){
-  		let vol = 0;
-  		let count = response.length-1;
-  		for(let i=count; i>=0; i--){
-  		  const r = response[i];
-  	    //console.log( r["candle_date_time_kst"] + "  " + r["candle_acc_trade_volume"]);
-        if(i == 0){
-          let avg = vol / response.length-1;
-          console.log( "vol Avg= "+ avg);
-          if(avg < r["candle_acc_trade_volume"]){
-    			  console.log( r);
-    			  r["avg"] = avg;
-    			  r["per"] = (avg / r["candle_acc_trade_volume"] * 100).toFixed(1);
-    			  //평균보다 높으면 담기
-    			  bit.tableSlave.Rows.InsertAt(r, 0);
-          }
-  			  
-        }else{
-          vol += r["candle_acc_trade_volume"];
-        }
-        
-  		}
+ 
+    bit.sendTelegram = async function(r){	
       
-  	};
-
-    bit.selectCaution = function(market){	
-
-    	const options = {method: 'GET', headers: {accept: 'application/json'}};
-
-    	fetch('https://api.bithumb.com/v1/market/virtual_asset_warning', options)
-    	  .then(response => response.json())
-    	  .then(response => console.log(response))
-    	  .catch(err => console.error(err));
+      const botToken = '8302658520:AAF0XxTa4THD1XzJgaR0RbWJUErgIpK01KU';
+      
+      
+      const chList = await bit.getChatIds(botToken);
+      console.log(chList);
+      
+      for (const ch of chList) {
+      
+      	const chatId =  ch;//'-1003377523932'; // 여기에 올바른 chat_id 입력
+        const messageText = r["market"] + " " +r["korean_name"]  + " [" + new Date(r["timestamp"]).toLocaleTimeString('ko-KR')+"]"
+            + "\nPer%:" +r["per"].toFixed(2)  + ", Price:" +r["trade_price"] 
+            
+            ;
+        
+        const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageText)}`;
+        
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                if (data.ok) {
+                    //alert('메시지 전송 성공!');
+                } else {
+                    //alert('메시지 전송 실패: ' + data.description);
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('네트워크 오류 발생');
+            });
+      }
 	
+    };
+    
+    bit.getChatIds = async function(botToken){	
+
+      const apiUrl = `https://api.telegram.org/bot${botToken}/getUpdates`;
+      const response = await fetch(apiUrl );
+      const data = await response.json();
+        
+      const results = data.result;
+      
+      let list = new Array();
+      
+      // 최신 업데이트부터 역순으로 탐색하여 채널 ID를 찾습니다.
+      for (let i = results.length - 1; i >= 0; i--) {
+          const update = results[i];
+  
+          // 1. 봇이 채널에 관리자로 추가되거나 변경된 경우 (my_chat_member)
+          if (update.my_chat_member && update.my_chat_member.chat.type === 'channel') {
+              list.push(update.my_chat_member.chat.id.toString());
+          }
+          
+          // 2. 채널에 메시지가 포스팅된 경우 (channel_post)
+          if (update.channel_post && update.channel_post.chat.type === 'channel') {
+              list.push(update.channel_post.chat.id.toString());
+          }
+      }
+	    
+	    return list;
+	    
     };
     
     </script>
