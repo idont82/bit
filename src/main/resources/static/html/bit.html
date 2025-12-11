@@ -592,7 +592,9 @@
   			    //중복체크
   			    bit.tableSlave.rows().every(function () {
   			      var data = this.data();
-  			      if(data.market == r.market && data.trade_price == r.trade_price && data.timestamp == r.timestamp){
+  			      if(data.market == r.market && data.trade_price == r.trade_price 
+  			          //&& data.timestamp == r.timestamp
+  			       ){
   			        found = false;
   			        console.log( "found 중복: "+ r.market);
   			      }
