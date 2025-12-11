@@ -662,6 +662,7 @@
       
       let list = new Array();
       
+      
       // 최신 업데이트부터 역순으로 탐색하여 채널 ID를 찾습니다.
       for (let i = results.length - 1; i >= 0; i--) {
           const update = results[i];
@@ -676,8 +677,14 @@
               list.push(update.channel_post.chat.id.toString());
           }
       }
+      
+      // Set으로 변환하여 중복 제거
+      let uniqueSet = new Set(list);
+
+      // 다시 배열로 변환
+      let uniqueList = [...uniqueSet]; // 또는 Array.from(uniqueSet)
 	    
-	    return list;
+	    return uniqueList;
 	    
     };
     
