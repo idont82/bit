@@ -212,7 +212,23 @@
 				</div>
 			</div>
 			<div  class="col-auto">
+	  		<div class="input-group ">
+					<label class="input-group-text" for="inputGroupSelectBid">매매비율 시간</label>
+					<select id="sel_bidmintime" class="form-select" id="inputGroupSelectBid">
+						<option value="60000" >1분전</option>
+						<option value="600000" >10분전</option>
+						<option value="1800000" selected>30분전</option>
+						<option value="3600000" >60분전</option>
+						<option value="7200000" >120분전</option>
+					</select>
+				</div>
+				
+			</div>
+			<div  class="col-auto">
 			  <button id="btn_stop" class="btn btn-warning align-middle ms-2">Stop</button>
+			</div>
+			<div  class="col-auto">
+			  <button id="btn_testSend" class="btn btn-dark align-middle ms-2">Send</button>
 			</div>
 			<div class="col">
 				
@@ -300,7 +316,8 @@
   			        var data = bit.table.row(this).data();
   
   			        if (data) { // data가 유효한 경우에만 실행
-  			        	bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			        	//bit.selectCandles(data.market, $('#sel_candlesType').val(), $('#sel_minutes').val(), $('#sel_count').val());
+  			        	bit.trades(data);
   			        }
   		});
   		
@@ -320,6 +337,7 @@
     		            { "data": "per" , title : "%"},
     		            { "data": "candle_date_time_kst", title : "기준시각" },
     		            { "data": "timestamp", title : "종료 시각", render: DataTable.render.datetime() },
+    		            { "data": "trades", title : "매매비율" },
     		            
     		      ],
     		  "columnDefs": [
@@ -358,6 +376,9 @@
         $("#txt_nowTime").text("Stop");
       });
       
+      $("#btn_testSend").on('click', function(event) {
+        bit.testTelegram();
+      });
       
     	
     });
@@ -567,7 +588,7 @@
     
     
     //상승률 체크 
-  	bit.tradePer = function(response, koreanName){
+  	bit.tradePer = async function(response, koreanName){
   		let prePrice = 0;
   		let count = response.length-1;
   		for(let i=count; i>=0; i--){
@@ -601,6 +622,9 @@
   			    });
   			    
   			    if(found){
+  			      
+  			      var trades = await bit.trades(r);//매매비율
+  			      r.trades = trades;
     			    bit.tableSlave.row.add(r).draw();
     			    bit.sendTelegram(r);//알림발송
   			    }
@@ -614,7 +638,85 @@
   		}
       
   	};
+  	
+  	//체결가
+    bit.trades = async function(r){	
+      const options = {method: 'GET', headers: {accept: 'application/json'}};
+
+      const apiUrl = `https://api.bithumb.com/v1/trades/ticks?market=${r.market}&count=500`;
+      const response = await fetch(apiUrl ,options);
+      const data = await response.json();
+        
+      const results = data;
+      const targetTimestamp = new Date() - Number($("#sel_bidmintime").val()); //3600000; //60000 = 1분
+      console.log(results);
+      
+      // 2. targetTimestamp 이후의 데이터만 필터링
+      const filteredResults = results.filter(trade => trade.timestamp > targetTimestamp);
+
+      const summary = filteredResults.reduce((acc, cur) => {
+            const type = cur.ask_bid; // "ASK 매도" 또는 "BID 매수"
+            
+            // 1. 해당 타입(ASK/BID)이 처음 등장하면 초기값 설정
+            if (!acc[type]) {
+                acc[type] = {
+                    count: 0,
+                    totalPrice: 0,
+                    totalVolume: 0,
+                    minTimestamp: cur.timestamp,
+                    maxTimestamp: cur.timestamp
+                };
+            }
+
+            // 2. 카운트 및 가격 합산
+            acc[type].count += 1;
+            acc[type].totalPrice += cur.trade_price;
+            acc[type].totalVolume += cur.trade_volume;
+            
+            // 3. timestamp 최솟값/최댓값 갱신
+            if (cur.timestamp < acc[type].minTimestamp) acc[type].minTimestamp = cur.timestamp;
+            if (cur.timestamp > acc[type].maxTimestamp) acc[type].maxTimestamp = cur.timestamp;
+
+            return acc;
+        }, {});
+      
+      // 한국 시간 포맷터 설정
+      const kstFormatter = new Intl.DateTimeFormat('ko-KR', {
+          //year: 'numeric',
+          //month: '2-digit',
+          //day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          //second: '2-digit',
+          hour12: false,
+          timeZone: 'Asia/Seoul'
+      });
+        
+      // 비율 계산을 위한 전체 거래량 합계
+      const totalVolumeSum = (summary['ASK']?.totalVolume || 0) + (summary['BID']?.totalVolume || 0);
+
+      // 숫자로 된 timestamp를 한국 시간 문자열로 변환하여 추가
+      for (let key in summary) {
+          summary[key].minTimeKST = kstFormatter.format(new Date(summary[key].minTimestamp));
+          summary[key].maxTimeKST = kstFormatter.format(new Date(summary[key].maxTimestamp));
+          
+          summary[key].volumePer = totalVolumeSum > 0 
+                ? ((summary[key].totalVolume / totalVolumeSum) * 100).toFixed(0) + '%' 
+                : '0%';
+      }
     
+      let rtnTxt = "매도" + (summary["ASK"]?.volumePer ||0)
+                + "/매수" + (summary["BID"]?.volumePer||0)
+                + "[" +filteredResults.length + "건]"
+                + " " + (summary["ASK"]?.minTimeKST||summary["BID"]?.minTimeKST||"")
+      ;
+      
+      console.log(summary);
+      console.log(rtnTxt);
+      
+      return rtnTxt;
+        
+    };
  
     bit.sendTelegram = async function(r){	
       
@@ -629,7 +731,7 @@
       	const chatId =  ch;//'-1003377523932'; // 여기에 올바른 chat_id 입력
         const messageText = r["market"] + " " +r["korean_name"]  + " [" + new Date(r["timestamp"]).toLocaleTimeString('ko-KR')+"]"
             + "\nPer%:" +r["per"].toFixed(2)  + ", Price:" +r["trade_price"] 
-            
+            + "\n" +r["trades"]
             ;
         
         const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageText)}`;
@@ -687,6 +789,41 @@
 	    return uniqueList;
 	    
     };
+    
+    
+    bit.testTelegram = async function(){	
+      
+      const botToken = '8302658520:AAF0XxTa4THD1XzJgaR0RbWJUErgIpK01KU';
+      
+      
+      const chList = await bit.getChatIds(botToken);
+      console.log(chList);
+      
+      for (const ch of chList) {
+      
+      	const chatId =  ch;//'-1003377523932'; // 여기에 올바른 chat_id 입력
+        const messageText = "test";
+        
+        const apiUrl = `https://api.telegram.org/bot${botToken}/sendMessage?chat_id=${chatId}&text=${encodeURIComponent(messageText)}`;
+        
+        fetch(apiUrl)
+            .then(response => response.json())
+            .then(data => {
+                console.log('Success:', data);
+                if (data.ok) {
+                    alert('메시지 전송 성공!');
+                } else {
+                    alert('메시지 전송 실패: ' + data.description);
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('네트워크 오류 발생');
+            });
+      }
+	
+    };
+    
     
     </script>
 </body>
