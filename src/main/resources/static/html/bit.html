@@ -670,7 +670,7 @@
 
             // 2. 카운트 및 가격 합산
             acc[type].count += 1;
-            acc[type].totalPrice += cur.trade_price;
+            acc[type].totalPrice += (cur.trade_price * cur.trade_volume);
             acc[type].totalVolume += cur.trade_volume;
             
             // 3. timestamp 최솟값/최댓값 갱신
@@ -705,10 +705,14 @@
                 : '0%';
       }
     
-      let rtnTxt = "매도" + (summary["ASK"]?.volumePer||0)+ (summary["ASK"]?"["+summary["ASK"].count+"건]":"")
-                + "/매수" + (summary["BID"]?.volumePer||0)+ (summary["BID"]?"["+summary["BID"].count+"건]":"")
+      let rtnTxt = "매도" + (summary["ASK"]?.volumePer||0)
+                + "/매수" + (summary["BID"]?.volumePer||0)
+                + " [" + (summary["ASK"]?.minTimeKST||summary["BID"]?.minTimeKST||"") +"]"
+                + "\n" + ((summary["ASK"]?.totalPrice||0)/10000).toFixed(0) + (summary["ASK"]?"["+summary["ASK"].count+"건]":"")
+                + "/" + ((summary["BID"]?.totalPrice||0)/10000).toFixed(0)+ (summary["BID"]?"["+summary["BID"].count+"건]":"")
+                +"(만원)"
                 //+ "[" +filteredResults.length + "건]"
-                + " " + (summary["ASK"]?.minTimeKST||summary["BID"]?.minTimeKST||"")
+                
       ;
       
       console.log(summary);
