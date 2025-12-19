@@ -705,9 +705,9 @@
                 : '0%';
       }
     
-      let rtnTxt = "매도" + (summary["ASK"]?.volumePer ||0)
-                + "/매수" + (summary["BID"]?.volumePer||0)
-                + "[" +filteredResults.length + "건]"
+      let rtnTxt = "매도" + (summary["ASK"]?.volumePer||0)+ (summary["ASK"]?"["+summary["ASK"].count+"건]":"")
+                + "/매수" + (summary["BID"]?.volumePer||0)+ (summary["BID"]?"["+summary["BID"].count+"건]":"")
+                //+ "[" +filteredResults.length + "건]"
                 + " " + (summary["ASK"]?.minTimeKST||summary["BID"]?.minTimeKST||"")
       ;
       
