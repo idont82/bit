@@ -1,0 +1,1848 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>분석기</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b12;
+    --surface: #0d1420;
+    --surface2: #131c2e;
+    --border: #1e2d47;
+    --accent: #00d4aa;
+    --accent2: #ff6b35;
+    --accent3: #4f8ef7;
+    --text: #e8f0fe;
+    --muted: #5a7090;
+    --up: #00d4aa;
+    --down: #ff4757;
+    --gold: #ffd700;
+    --silver: #c0c0c0;
+    --bronze: #cd7f32;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif;
+    min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(0,212,170,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(79,142,247,0.07) 0%, transparent 50%);
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(13,20,32,0.8);
+    backdrop-filter: blur(10px);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .logo { display: flex; align-items: center; gap: 12px; }
+
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--accent), var(--accent3));
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace;
+    font-weight: 700; font-size: 14px; color: #000;
+  }
+
+  .logo h1 {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 16px; font-weight: 600; color: var(--text);
+    letter-spacing: 0.05em;
+  }
+
+  .logo span {
+    font-size: 11px; color: var(--muted); display: block;
+    font-family: 'Noto Sans KR', sans-serif; font-weight: 300;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 16px; }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--accent); box-shadow: 0 0 8px var(--accent);
+    animation: pulse 2s infinite;
+  }
+  .status-dot.error { background: var(--down); box-shadow: 0 0 8px var(--down); }
+
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+  .status-text {
+    font-size: 12px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .refresh-btn {
+    background: var(--surface2); border: 1px solid var(--border);
+    color: var(--accent); padding: 8px 16px; border-radius: 6px;
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    cursor: pointer; transition: all 0.2s; letter-spacing: 0.05em;
+  }
+  .refresh-btn:hover { background: rgba(0,212,170,0.1); border-color: var(--accent); }
+  .refresh-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .nav-links { display: flex; gap: 8px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace; padding: 6px 12px;
+    border: 1px solid var(--border); border-radius: 6px;
+    transition: all 0.2s;
+  }
+  .nav-links a:hover { color: var(--accent); border-color: var(--accent); }
+
+  .main { max-width: 1200px; margin: 0 auto; padding: 30px 20px; }
+
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    gap: 16px; margin-bottom: 30px;
+  }
+
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px;
+    position: relative; overflow: hidden;
+  }
+  .stat-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0;
+    height: 2px; background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .stat-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px;
+  }
+
+  .stat-value {
+    font-size: 22px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace; color: var(--text);
+  }
+  .stat-value.up { color: var(--up); }
+  .stat-value.down { color: var(--down); }
+
+  .section-title {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; color: var(--muted);
+    letter-spacing: 0.1em; text-transform: uppercase;
+    margin-bottom: 16px; display: flex; align-items: center; gap: 10px;
+  }
+  .section-title::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+  .control-row {
+    display: flex; gap: 16px; margin-bottom: 20px; flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .control-group {
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  .control-label {
+    font-size: 11px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .tf-btn, .filter-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 7px 14px; border-radius: 20px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+    font-family: 'Noto Sans KR', sans-serif;
+  }
+  .tf-btn.active {
+    background: rgba(79,142,247,0.15); border-color: var(--accent3); color: var(--accent3);
+    font-weight: 700;
+  }
+  .rf-btn {
+    background: var(--surface); border: 1px solid var(--border);
+    color: var(--muted); padding: 7px 14px; border-radius: 20px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .rf-btn.active {
+    background: rgba(255,107,53,0.15); border-color: var(--accent2); color: var(--accent2);
+    font-weight: 700;
+  }
+  .filter-btn.active {
+    background: rgba(0,212,170,0.12); border-color: var(--accent); color: var(--accent);
+  }
+
+  .table-wrapper {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; overflow: hidden;
+  }
+
+  table { width: 100%; border-collapse: collapse; }
+
+  thead th {
+    background: var(--surface2); padding: 14px 16px; text-align: left;
+    font-size: 11px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.08em; text-transform: uppercase;
+    white-space: nowrap; border-bottom: 1px solid var(--border);
+    cursor: pointer; user-select: none;
+  }
+  thead th:hover { color: var(--accent); }
+  thead th.sort-asc::after { content: ' ↑'; color: var(--accent); }
+  thead th.sort-desc::after { content: ' ↓'; color: var(--accent); }
+
+  tbody tr {
+    border-bottom: 1px solid rgba(30,45,71,0.5);
+    transition: background 0.15s;
+  }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr:last-child { border-bottom: none; }
+
+  td { padding: 14px 16px; font-size: 13px; }
+
+  .rank-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; color: var(--muted); width: 50px;
+  }
+  .rank-1 { color: var(--gold) !important; font-weight: 700; }
+  .rank-2 { color: var(--silver) !important; font-weight: 700; }
+  .rank-3 { color: var(--bronze) !important; font-weight: 700; }
+
+  .coin-cell { display: flex; align-items: center; gap: 10px; }
+
+  .coin-icon {
+    width: 32px; height: 32px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace; flex-shrink: 0;
+  }
+
+  .coin-name { font-weight: 700; font-size: 14px; font-family: 'IBM Plex Mono', monospace; }
+  .coin-full { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  .price-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 600; white-space: nowrap;
+  }
+
+  .change-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 600;
+  }
+  .change-cell.up { color: var(--up); }
+  .change-cell.down { color: var(--down); }
+
+  .volume-cell {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; color: var(--muted); white-space: nowrap;
+  }
+
+  .score-cell { white-space: nowrap; }
+
+  .score-bar-wrap { display: flex; align-items: center; gap: 10px; }
+
+  .score-bar {
+    flex: 1; max-width: 100px; height: 6px;
+    background: var(--border); border-radius: 3px; overflow: hidden;
+  }
+
+  .score-fill { height: 100%; border-radius: 3px; transition: width 0.5s ease; }
+
+  .score-num {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 13px; font-weight: 700; min-width: 36px; text-align: right;
+  }
+
+  .signal-badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 10px; border-radius: 20px;
+    font-size: 11px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace; white-space: nowrap;
+  }
+  .signal-strong { background: rgba(0,212,170,0.15); color: var(--accent); border: 1px solid rgba(0,212,170,0.3); }
+  .signal-good { background: rgba(79,142,247,0.15); color: var(--accent3); border: 1px solid rgba(79,142,247,0.3); }
+  .signal-neutral { background: rgba(90,112,144,0.15); color: var(--muted); border: 1px solid var(--border); }
+  .signal-weak { background: rgba(255,71,87,0.1); color: var(--down); border: 1px solid rgba(255,71,87,0.2); }
+
+  .ma-badge {
+    display: inline-block; padding: 2px 6px; border-radius: 4px;
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace;
+    font-weight: 600; margin-left: 4px;
+  }
+  .ma-up { background: rgba(0,212,170,0.15); color: var(--up); }
+  .ma-down { background: rgba(255,71,87,0.1); color: var(--down); }
+
+  .loading {
+    text-align: center; padding: 80px 20px; color: var(--muted);
+  }
+
+  .loading-spinner {
+    width: 40px; height: 40px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; margin: 0 auto 20px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .progress-bar-wrap {
+    max-width: 300px; margin: 16px auto; height: 4px;
+    background: var(--border); border-radius: 2px; overflow: hidden;
+  }
+  .progress-bar-fill {
+    height: 100%; background: var(--accent); border-radius: 2px;
+    transition: width 0.3s ease; width: 0%;
+  }
+
+  .error-msg {
+    text-align: center; padding: 60px 20px;
+    color: var(--down); font-size: 14px;
+  }
+  .error-detail {
+    margin-top: 10px; font-size: 12px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+
+  .last-update {
+    font-size: 11px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace;
+    text-align: right; margin-top: 12px;
+  }
+
+  .algo-info {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 24px;
+    font-size: 12px; color: var(--muted); line-height: 1.8;
+  }
+  .algo-info strong { color: var(--accent); }
+
+  .tf-active-label {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 12px; color: var(--accent3);
+    margin-left: 8px;
+  }
+
+  .countdown {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--accent2); min-width: 40px; text-align: center;
+    font-weight: 600;
+  }
+  .now-refresh-btn {
+    background: rgba(255,107,53,0.12); border: 1px solid var(--accent2);
+    color: var(--accent2); padding: 7px 12px; border-radius: 20px;
+    font-size: 12px; cursor: pointer; transition: all 0.2s;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 600;
+  }
+  .now-refresh-btn:hover { background: rgba(255,107,53,0.25); }
+
+  tbody tr.coin-row { cursor: pointer; }
+  tr.expand-row > td { padding: 0 !important; background: var(--bg); }
+
+  .expand-panel { margin: 0 16px 10px 50px; }
+  .expand-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  @media (max-width: 768px) { .expand-grid { grid-template-columns: 1fr; } }
+
+  .exp-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .exp-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 0.04em;
+  }
+  .exp-card-header button {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 2px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+  .exp-card-header button:hover { border-color: var(--accent); color: var(--accent); }
+  .exp-card-body { padding: 12px 14px; }
+
+  .live-price {
+    font-family: 'IBM Plex Mono', monospace; font-size: 22px;
+    font-weight: 700; margin-bottom: 8px;
+  }
+  .live-meta { display: flex; gap: 16px; flex-wrap: wrap; }
+  .live-meta-item {
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .live-meta-label { color: var(--muted); margin-right: 4px; }
+
+  .deep-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+  @media (max-width: 768px) { .deep-grid { grid-template-columns: repeat(2, 1fr); } }
+  .deep-item {
+    background: rgba(13,20,32,0.5); border-radius: 6px; padding: 8px 10px;
+    text-align: center;
+  }
+  .deep-item-label {
+    font-size: 10px; color: var(--muted);
+    font-family: 'IBM Plex Mono', monospace; margin-bottom: 4px;
+    text-transform: uppercase; letter-spacing: 0.06em;
+  }
+  .deep-item-val {
+    font-size: 14px; font-weight: 700;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .deep-loading {
+    text-align: center; padding: 16px; color: var(--muted); font-size: 11px;
+  }
+
+  .hist-inner {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; overflow: hidden;
+  }
+  .hist-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 14px; border-bottom: 1px solid var(--border);
+  }
+  .hist-header span {
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+    color: var(--accent); letter-spacing: 0.06em;
+  }
+  .hist-header button {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    padding: 2px 8px; border-radius: 4px; font-size: 10px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+  .hist-header button:hover { border-color: var(--down); color: var(--down); }
+  .hist-body { max-height: 200px; overflow-y: auto; }
+  .hist-body table { width: 100%; border-collapse: collapse; }
+  .hist-body th {
+    background: rgba(13,20,32,0.6); padding: 6px 12px; text-align: left;
+    font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.06em; text-transform: uppercase;
+    border-bottom: 1px solid var(--border); position: sticky; top: 0;
+  }
+  .hist-body td {
+    padding: 5px 12px; font-size: 11px;
+    border-bottom: 1px solid rgba(30,45,71,0.25);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .hist-body tr:hover { background: rgba(255,255,255,0.02); }
+  .hist-empty {
+    text-align: center; padding: 16px; color: var(--muted); font-size: 11px;
+  }
+
+  @media (max-width: 768px) {
+    .stats-bar { grid-template-columns: repeat(2, 1fr); }
+    .score-bar { display: none; }
+    header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+    td, th { padding: 12px 10px; }
+    .coin-full { display: none; }
+    .nav-links { display: none; }
+    .control-row { gap: 8px; }
+  }
+
+  @media (max-width: 480px) {
+    .stats-bar { grid-template-columns: 1fr 1fr; }
+    .volume-cell { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">BT</div>
+    <div>
+      <h1>BITHUMB SCANNER</h1>
+      <span>상승 가능성 분석기</span>
+    </div>
+  </div>
+  <div class="header-right">
+    <div class="nav-links">
+      <a href="bit.html">Monitor</a>
+      <a href="trade.html">Trade</a>
+    </div>
+    <div class="status-dot" id="statusDot"></div>
+    <span class="status-text" id="statusText">READY</span>
+    <button class="refresh-btn" id="refreshBtn" onclick="fetchData()">새로고침</button>
+  </div>
+</header>
+
+<div class="main">
+
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-label">총 코인 수</div>
+      <div class="stat-value" id="totalCoins">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">상승 코인</div>
+      <div class="stat-value up" id="upCount">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">하락 코인</div>
+      <div class="stat-value down" id="downCount">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">강력 매수 신호</div>
+      <div class="stat-value" id="strongCount" style="color:var(--accent)">-</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">분석 진행</div>
+      <div class="stat-value" id="deepStatus" style="color:var(--accent3)">-</div>
+    </div>
+  </div>
+
+  <div class="algo-info">
+    <strong>점수 계산 알고리즘 (9개 지표 종합)</strong> —
+    <strong>호가매수압력</strong>(15pt) + <strong>RSI</strong>(15pt) + <strong>변동률</strong>(15pt) + <strong>거래량급증</strong>(10pt) + <strong>매수체결비율</strong>(10pt) + <strong>MACD</strong>(10pt) + <strong>연속상승</strong>(10pt) + <strong>거래대금</strong>(10pt) + <strong>BB위치</strong>(5pt).
+    <strong>심층</strong>: MA5/MA20 추세, RSI, 거래량 추세 보정.
+    실시간 Bithumb v1 API. <strong style="color:var(--accent2)">투자 참고용이며 투자 손실에 책임지지 않습니다.</strong>
+  </div>
+
+  <div class="section-title">분석 설정</div>
+
+  <!-- 기준 시간 선택 -->
+  <div class="control-row">
+    <div class="control-group">
+      <span class="control-label">기준 시간</span>
+      <button class="tf-btn" data-tf="10m" onclick="setTimeframe('10m', this)">10분</button>
+      <button class="tf-btn" data-tf="30m" onclick="setTimeframe('30m', this)">30분</button>
+      <button class="tf-btn" data-tf="1h" onclick="setTimeframe('1h', this)">1시간</button>
+      <button class="tf-btn" data-tf="4h" onclick="setTimeframe('4h', this)">4시간</button>
+      <button class="tf-btn" data-tf="12h" onclick="setTimeframe('12h', this)">12시간</button>
+      <button class="tf-btn active" data-tf="24h" onclick="setTimeframe('24h', this)">24시간</button>
+      <button class="tf-btn" data-tf="7d" onclick="setTimeframe('7d', this)">7일</button>
+    </div>
+  </div>
+
+  <!-- 신호 필터 + 새로고침 간격 -->
+  <div class="control-row">
+    <div class="control-group">
+      <span class="control-label">신호 필터</span>
+      <button class="filter-btn active" data-filter="all" onclick="setFilter('all', this)">전체</button>
+      <button class="filter-btn" data-filter="strong" onclick="setFilter('strong', this)">강력매수</button>
+      <button class="filter-btn" data-filter="good" onclick="setFilter('good', this)">매수</button>
+      <button class="filter-btn" data-filter="up" onclick="setFilter('up', this)">상승중</button>
+      <button class="filter-btn" data-filter="down" onclick="setFilter('down', this)">하락중</button>
+    </div>
+    <div class="control-group" style="margin-left:auto;">
+      <span class="control-label">자동 새로고침</span>
+      <button class="rf-btn" data-rf="0" onclick="setRefreshInterval(0, this)">OFF</button>
+      <button class="rf-btn" data-rf="30000" onclick="setRefreshInterval(30000, this)">30초</button>
+      <button class="rf-btn" data-rf="60000" onclick="setRefreshInterval(60000, this)">1분</button>
+      <button class="rf-btn active" data-rf="90000" onclick="setRefreshInterval(90000, this)">90초</button>
+      <button class="rf-btn" data-rf="180000" onclick="setRefreshInterval(180000, this)">3분</button>
+      <button class="rf-btn" data-rf="300000" onclick="setRefreshInterval(300000, this)">5분</button>
+      <span class="countdown" id="countdown"></span>
+      <button class="now-refresh-btn" onclick="forceRefresh()">즉시</button>
+    </div>
+  </div>
+
+  <div class="table-wrapper">
+    <div id="tableArea">
+      <div class="loading">
+        <div class="loading-spinner"></div>
+        <div>Bithumb API에서 데이터 불러오는 중...</div>
+        <div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>
+        <div id="loadingDetail" style="margin-top:8px;font-size:11px;color:var(--muted);font-family:'IBM Plex Mono',monospace;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="last-update" id="lastUpdate"></div>
+
+</div>
+
+<script>
+// ========================================
+// Bithumb v1 API
+// ========================================
+const API_BASE = 'https://api.bithumb.com/v1';
+
+let allCoins = [];
+let currentFilter = 'all';
+let sortKey = 'score';
+let sortDir = 'desc';
+let selectedTimeframe = '24h';
+let isLoading = false;
+let refreshIntervalMs = 90000;
+let refreshTimer = null;
+let countdownTimer = null;
+let nextRefreshAt = 0;
+let expandedSymbol = null;
+let liveTickerTimer = null;
+let expandedDeepData = {}; // symbol -> deep analysis result cache
+
+// 마켓 리스트 캐시
+let cachedMarkets = null;
+let cachedNameMap = {};
+
+// ========================================
+// 쿠키 유틸
+// ========================================
+function setCookie(name, value, days) {
+  const d = new Date();
+  d.setDate(d.getDate() + (days || 30));
+  document.cookie = name + '=' + encodeURIComponent(value) + ';expires=' + d.toUTCString() + ';path=/';
+}
+
+function getCookie(name) {
+  const cookies = document.cookie.split('; ');
+  for (let i = 0; i < cookies.length; i++) {
+    const parts = cookies[i].split('=');
+    if (parts[0] === name) return decodeURIComponent(parts[1]);
+  }
+  return '';
+}
+
+// 기준시간별 캔들 설정
+// candleCount: 기술적 분석용 (RSI 14 + MACD 26 필요 → 30개)
+// tfCandleCount: 기준시간 집계용 (변동률/고저 계산)
+const TF_CONFIG = {
+  '10m':  { label: '10분',   candleUnit: 'minutes/1',   candleCount: 30, tfCandleCount: 11, deepUnit: 'minutes/10',  deepCount: 21, deepLabel: '10분봉', tfMs: 600000     },
+  '30m':  { label: '30분',   candleUnit: 'minutes/3',   candleCount: 30, tfCandleCount: 11, deepUnit: 'minutes/30',  deepCount: 21, deepLabel: '30분봉', tfMs: 1800000    },
+  '1h':   { label: '1시간',  candleUnit: 'minutes/10',  candleCount: 30, tfCandleCount: 7,  deepUnit: 'minutes/60',  deepCount: 21, deepLabel: '1시간봉',tfMs: 3600000    },
+  '4h':   { label: '4시간',  candleUnit: 'minutes/60',  candleCount: 30, tfCandleCount: 5,  deepUnit: 'minutes/240', deepCount: 21, deepLabel: '4시간봉',tfMs: 14400000   },
+  '12h':  { label: '12시간', candleUnit: 'minutes/60',  candleCount: 30, tfCandleCount: 13, deepUnit: 'minutes/240', deepCount: 21, deepLabel: '4시간봉',tfMs: 43200000   },
+  '24h':  { label: '24시간', candleUnit: 'ticker',      candleCount: 0,  tfCandleCount: 0,  deepUnit: 'days',        deepCount: 21, deepLabel: '일봉',   tfMs: 86400000   },
+  '7d':   { label: '7일',    candleUnit: 'days',        candleCount: 30, tfCandleCount: 8,  deepUnit: 'days',        deepCount: 21, deepLabel: '일봉',   tfMs: 604800000  },
+};
+
+// ========================================
+// API
+// ========================================
+async function apiFetch(path) {
+  const res = await fetch(API_BASE + path, {
+    method: 'GET',
+    headers: { accept: 'application/json' }
+  });
+  if (!res.ok) throw new Error('API ' + res.status);
+  return res.json();
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ========================================
+// 기준시간 선택
+// ========================================
+function setTimeframe(tf, btn) {
+  if (isLoading) return;
+  selectedTimeframe = tf;
+  setCookie('ana_tf', tf);
+  document.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  fetchData();
+}
+
+// ========================================
+// 기술적 지표 계산
+// ========================================
+function calcRSI(candles, period) {
+  period = period || 14;
+  if (!candles || candles.length < period + 1) return null;
+  let gains = 0, losses = 0;
+  for (let i = 0; i < period; i++) {
+    const diff = candles[i].trade_price - candles[i + 1].trade_price;
+    if (diff >= 0) gains += diff; else losses += Math.abs(diff);
+  }
+  if (losses === 0) return 100;
+  return 100 - (100 / (1 + (gains / period) / (losses / period)));
+}
+
+function calcMACD(candles) {
+  if (!candles || candles.length < 27) return null;
+  // oldest→newest 순서로 변환
+  var prices = [];
+  for (var i = candles.length - 1; i >= 0; i--) prices.push(candles[i].trade_price);
+
+  function ema(data, period) {
+    var k = 2 / (period + 1);
+    var val = 0;
+    for (var j = 0; j < Math.min(period, data.length); j++) val += data[j];
+    val /= Math.min(period, data.length);
+    for (var j = period; j < data.length; j++) val = data[j] * k + val * (1 - k);
+    return val;
+  }
+
+  var macd = ema(prices, 12) - ema(prices, 26);
+  var prevPrices = prices.slice(0, -1);
+  var prevMacd = ema(prevPrices, 12) - ema(prevPrices, 26);
+
+  return {
+    macd: macd,
+    rising: macd > prevMacd,
+    positive: macd > 0,
+    crossUp: macd > 0 && prevMacd <= 0
+  };
+}
+
+function calcVolumeSpike(candles) {
+  if (!candles || candles.length < 5) return null;
+  var latestVol = candles[0].candle_acc_trade_volume || 0;
+  var avgVol = 0;
+  for (var i = 1; i < candles.length; i++) avgVol += (candles[i].candle_acc_trade_volume || 0);
+  avgVol /= (candles.length - 1);
+  return { ratio: avgVol > 0 ? latestVol / avgVol : 1 };
+}
+
+// 호가창 일괄 조회 (배치)
+async function fetchOrderbooks(markets) {
+  var map = {};
+  for (var i = 0; i < markets.length; i += 100) {
+    var batch = markets.slice(i, i + 100);
+    try {
+      var data = await apiFetch('/orderbook?markets=' + batch.join(','));
+      data.forEach(function(ob) {
+        var bidT = ob.total_bid_size || 0;
+        var askT = ob.total_ask_size || 0;
+        var total = bidT + askT;
+        map[ob.market] = { pressure: total > 0 ? bidT / total : 0.5 };
+      });
+    } catch (e) { }
+    if (i + 100 < markets.length) await sleep(200);
+  }
+  return map;
+}
+
+// ========================================
+// 점수 계산 (9개 지표 종합 100점)
+// ========================================
+function calcScore(data) {
+  var changeRate = data.changeRate || 0;
+  var tradeValue = data.tradeValue || 0;
+  var price = data.price || 1;
+  var high = data.high || price;
+  var low = data.low || price;
+
+  // 1. 호가 매수압력 (15pt) - 호가창 bid/ask 잔량 비율
+  var obScore = 7.5;
+  if (data.obPressure != null) obScore = data.obPressure * 15;
+
+  // 2. RSI 신호 (15pt) - 과매도 반등 + 상승 모멘텀
+  var rsiScore = 7.5;
+  if (data.rsi != null) {
+    var rsi = data.rsi;
+    if      (rsi < 25) rsiScore = 14;     // 극과매도 → 강한 반등 기대
+    else if (rsi < 30) rsiScore = 13;     // 과매도
+    else if (rsi < 40) rsiScore = 11;     // 약과매도, 반등 시작
+    else if (rsi < 50) rsiScore = 9;      // 중립하단, 상승 여력
+    else if (rsi < 60) rsiScore = 7;      // 중립상단
+    else if (rsi < 70) rsiScore = 5;      // 과매수 접근
+    else               rsiScore = 2;      // 과매수 → 하락 위험
+  }
+
+  // 3. 변동률 (15pt)
+  var changeScore = Math.min(Math.max((changeRate + 15) / 30 * 15, 0), 15);
+
+  // 4. 거래량 급증 (10pt) - 최근 캔들 거래량 vs 평균
+  var spikeScore = 5;
+  if (data.volSpike) {
+    spikeScore = Math.min(data.volSpike.ratio / 3 * 10, 10);
+  }
+
+  // 5. 매수체결 비율 (10pt) - 기준시간 내 BID 비율
+  var bidScore = 5;
+  if (data.bidRatio != null) bidScore = data.bidRatio * 10;
+
+  // 6. MACD 신호 (10pt) - 추세 전환/지속
+  var macdScore = 5;
+  if (data.macd) {
+    if (data.macd.crossUp)                           macdScore = 10;  // 제로라인 상향돌파
+    else if (data.macd.positive && data.macd.rising)  macdScore = 9;   // 양수+상승
+    else if (data.macd.rising)                        macdScore = 7;   // 음수지만 반등
+    else if (data.macd.positive)                      macdScore = 4;   // 양수지만 하락
+    else                                              macdScore = 1;   // 음수+하락
+  }
+
+  // 7. 연속상승 패턴 (10pt) - 캔들 상승 비율
+  var momScore = 5;
+  var candles = data.candles;
+  if (candles && candles.length >= 3) {
+    var risingCount = 0;
+    var len = Math.min(candles.length - 1, 10);
+    for (var i = 0; i < len; i++) {
+      if (candles[i].trade_price > candles[i + 1].trade_price) risingCount++;
+    }
+    momScore = (risingCount / len) * 10;
+  } else if (changeRate > 0) {
+    momScore = 5;
+  }
+
+  // 8. 거래대금 (10pt) - log 스케일
+  var volScore = Math.min((Math.log10(tradeValue + 1) / 12) * 10, 10);
+
+  // 9. 볼린저밴드 위치 (5pt) - 하단 + 상승중 = 반등 신호
+  var range = high - low || 1;
+  var pos = (price - low) / range;
+  var bbScore = 2.5;
+  if (pos < 0.3 && changeRate > 0) bbScore = 5;        // 하단에서 반등
+  else if (pos > 0.7 && changeRate > 2) bbScore = 4;    // 상단 돌파 (강한 상승)
+  else if (pos > 0.85 && changeRate < 0) bbScore = 0.5; // 과열 후 하락
+  else bbScore = pos * 4;
+
+  var total = obScore + rsiScore + changeScore + spikeScore + bidScore + macdScore + momScore + volScore + bbScore;
+  return Math.round(Math.min(Math.max(total, 0), 100));
+}
+
+// 심층분석 보정 (MA 추세, 거래량 추세)
+function applyDeepAnalysis(coin) {
+  if (!coin.deepCandles || coin.deepCandles.length < 7) return;
+  var candles = coin.deepCandles;
+  var bonus = 0;
+
+  // MA5
+  if (candles.length >= 6) {
+    var ma5 = candles.slice(0, 5).reduce(function(s, c) { return s + c.trade_price; }, 0) / 5;
+    var ma5prev = candles.slice(1, 6).reduce(function(s, c) { return s + c.trade_price; }, 0) / 5;
+    coin.ma5 = ma5;
+    coin.ma5trend = ma5 > ma5prev ? 'up' : 'down';
+    if (ma5 > ma5prev) bonus += 2; else bonus -= 1;
+  }
+
+  // MA20
+  if (candles.length >= 20) {
+    var ma20 = candles.slice(0, 20).reduce(function(s, c) { return s + c.trade_price; }, 0) / 20;
+    coin.ma20 = ma20;
+    if (coin.ma5 && coin.ma5 > ma20 && candles[0].trade_price > coin.ma5) {
+      bonus += 3;
+      coin.goldenCross = true;
+    }
+    if (coin.ma5 && coin.ma5 < ma20) bonus -= 2;
+  }
+
+  // 거래량 추세
+  if (candles.length >= 6) {
+    var recentVol = candles.slice(0, 3).reduce(function(s, c) { return s + c.candle_acc_trade_volume; }, 0);
+    var prevVol = candles.slice(3, 6).reduce(function(s, c) { return s + c.candle_acc_trade_volume; }, 0);
+    if (prevVol > 0) {
+      coin.volTrend = recentVol / prevVol;
+      if (coin.volTrend > 1.5) bonus += 2;
+      else if (coin.volTrend > 1.2) bonus += 1;
+    }
+  }
+
+  coin.score = Math.round(Math.min(Math.max(coin.score + bonus, 0), 100));
+  coin.deepDone = true;
+}
+
+function getSignal(score) {
+  if (score >= 70) return { label: '강력매수', cls: 'signal-strong' };
+  if (score >= 50) return { label: '매수', cls: 'signal-good' };
+  if (score >= 35) return { label: '중립', cls: 'signal-neutral' };
+  return { label: '관망', cls: 'signal-weak' };
+}
+
+function getScoreColor(score) {
+  if (score >= 70) return 'var(--accent)';
+  if (score >= 50) return 'var(--accent3)';
+  if (score >= 35) return 'var(--muted)';
+  return 'var(--down)';
+}
+
+// ========================================
+// 포맷
+// ========================================
+function fmt(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + '조';
+  if (n >= 1e8) return (n / 1e8).toFixed(1) + '억';
+  if (n >= 1e4) return (n / 1e4).toFixed(0) + '만';
+  return n.toFixed(0);
+}
+
+function fmtPrice(p) {
+  p = parseFloat(p);
+  if (p >= 1000) return p.toLocaleString('ko-KR') + '원';
+  if (p >= 1) return p.toFixed(2) + '원';
+  return p.toFixed(6) + '원';
+}
+
+// ========================================
+// 필터 / 정렬
+// ========================================
+function setFilter(f, btn) {
+  currentFilter = f;
+  setCookie('ana_filter', f);
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderTable();
+}
+
+function setRefreshInterval(ms, btn) {
+  refreshIntervalMs = ms;
+  setCookie('ana_refresh', String(ms));
+  document.querySelectorAll('.rf-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+
+  // 기존 타이머 제거 후 즉시 재스케줄
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = null;
+  nextRefreshAt = 0;
+  if (!isLoading) scheduleNextRefresh();
+  else updateCountdown();
+}
+
+function scheduleNextRefresh() {
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = null;
+  nextRefreshAt = 0;
+
+  if (refreshIntervalMs > 0) {
+    nextRefreshAt = Date.now() + refreshIntervalMs;
+    refreshTimer = setTimeout(function() {
+      nextRefreshAt = 0;
+      if (!isLoading) fetchData();
+    }, refreshIntervalMs);
+  }
+  updateCountdown();
+}
+
+function forceRefresh() {
+  if (isLoading) return;
+  if (refreshTimer) clearTimeout(refreshTimer);
+  refreshTimer = null;
+  nextRefreshAt = 0;
+  updateCountdown();
+  fetchData();
+}
+
+function updateCountdown() {
+  var el = document.getElementById('countdown');
+  if (!el) return;
+
+  if (countdownTimer) clearInterval(countdownTimer);
+  countdownTimer = null;
+
+  if (nextRefreshAt <= 0 || refreshIntervalMs <= 0) {
+    el.textContent = '';
+    return;
+  }
+
+  function tick() {
+    var remain = Math.max(0, Math.ceil((nextRefreshAt - Date.now()) / 1000));
+    if (remain <= 0) {
+      el.textContent = '';
+      if (countdownTimer) clearInterval(countdownTimer);
+      countdownTimer = null;
+      return;
+    }
+    el.textContent = remain + '초';
+  }
+  tick();
+  countdownTimer = setInterval(tick, 1000);
+}
+
+function setSort(key) {
+  if (sortKey === key) sortDir = sortDir === 'desc' ? 'asc' : 'desc';
+  else { sortKey = key; sortDir = 'desc'; }
+  renderTable();
+}
+
+// ========================================
+// 렌더링
+// ========================================
+const COIN_COLORS = [
+  ['#f7931a','#000'], ['#627eea','#fff'], ['#00aae4','#fff'], ['#9945ff','#fff'],
+  ['#0033ad','#fff'], ['#ba9f33','#000'], ['#8247e5','#fff'], ['#e6007a','#fff'],
+  ['#e84142','#fff'], ['#2a5ada','#fff'], ['#2e3148','#fff'], ['#00ec97','#000'],
+  ['#ff007a','#fff'], ['#bfbbbb','#000'], ['#0ac18e','#fff'], ['#328332','#fff'],
+  ['#ef0027','#fff'], ['#ffa409','#000'], ['#0088cc','#fff'], ['#2dd8a3','#000']
+];
+
+function renderTable() {
+  let data = [...allCoins];
+
+  if (currentFilter === 'strong') data = data.filter(c => c.score >= 70);
+  else if (currentFilter === 'good') data = data.filter(c => c.score >= 50 && c.score < 70);
+  else if (currentFilter === 'up') data = data.filter(c => c.changeRate > 0);
+  else if (currentFilter === 'down') data = data.filter(c => c.changeRate <= 0);
+
+  data.sort((a, b) => {
+    let av, bv;
+    if (sortKey === 'score') { av = a.score; bv = b.score; }
+    else if (sortKey === 'change') { av = a.changeRate; bv = b.changeRate; }
+    else if (sortKey === 'price') { av = a.trade_price; bv = b.trade_price; }
+    else if (sortKey === 'vol') { av = a.tradeValue; bv = b.tradeValue; }
+    else { av = a.score; bv = b.score; }
+    return sortDir === 'desc' ? bv - av : av - bv;
+  });
+
+  const tfLabel = TF_CONFIG[selectedTimeframe].label;
+
+  let html = '<table><thead><tr>'
+    + '<th class="rank-cell">#</th>'
+    + '<th>코인</th>'
+    + '<th onclick="setSort(\'price\')" class="' + (sortKey === 'price' ? 'sort-' + sortDir : '') + '">현재가</th>'
+    + '<th onclick="setSort(\'change\')" class="' + (sortKey === 'change' ? 'sort-' + sortDir : '') + '">' + tfLabel + ' 변동</th>'
+    + '<th onclick="setSort(\'vol\')" class="' + (sortKey === 'vol' ? 'sort-' + sortDir : '') + '">거래대금</th>'
+    + '<th onclick="setSort(\'score\')" class="' + (sortKey === 'score' ? 'sort-' + sortDir : '') + '">상승 점수</th>'
+    + '<th>신호</th>'
+    + '<th>지표</th>'
+    + '<th>심층(' + TF_CONFIG[selectedTimeframe].deepLabel + ')</th>'
+    + '</tr></thead><tbody>';
+
+  if (data.length === 0) {
+    html += '<tr><td colspan="9" style="text-align:center;padding:40px;color:var(--muted)">해당 조건의 코인이 없습니다</td></tr>';
+  }
+
+  data.slice(0, 50).forEach(function(coin, i) {
+    const isUp = coin.changeRate >= 0;
+    const signal = getSignal(coin.score);
+    const scoreColor = getScoreColor(coin.score);
+    const [bg, fg] = COIN_COLORS[i % COIN_COLORS.length];
+    const rankClass = i < 3 ? 'rank-' + (i + 1) : '';
+
+    // 기술 지표 태그 (1차 분석)
+    let indHtml = '';
+    let indTags = [];
+    if (coin.rsi != null) {
+      const rc = coin.rsi < 30 ? 'ma-up' : coin.rsi > 70 ? 'ma-down' : '';
+      indTags.push('<span class="ma-badge ' + rc + '">RSI ' + coin.rsi.toFixed(0) + '</span>');
+    }
+    if (coin.macdData) {
+      const mc = coin.macdData.crossUp ? 'ma-up' : coin.macdData.rising ? 'ma-up' : (coin.macdData.positive ? '' : 'ma-down');
+      const ml = coin.macdData.crossUp ? 'MACD↗' : coin.macdData.rising ? 'MACD↑' : (coin.macdData.positive ? 'MACD+' : 'MACD↓');
+      indTags.push('<span class="ma-badge ' + mc + '">' + ml + '</span>');
+    }
+    if (coin.obPressure != null) {
+      const op = (coin.obPressure * 100).toFixed(0);
+      const oc = coin.obPressure >= 0.55 ? 'ma-up' : coin.obPressure <= 0.45 ? 'ma-down' : '';
+      indTags.push('<span class="ma-badge ' + oc + '">호가 ' + op + '%</span>');
+    }
+    if (coin.volSpikeData && coin.volSpikeData.ratio > 1.5) {
+      indTags.push('<span class="ma-badge ma-up">VOL x' + coin.volSpikeData.ratio.toFixed(1) + '</span>');
+    }
+    indHtml = indTags.join('') || '';
+
+    // 심층 분석 태그
+    let deepHtml = '<span style="color:var(--muted);font-size:11px;">-</span>';
+    if (coin.deepDone) {
+      let tags = [];
+      if (coin.ma5trend === 'up') tags.push('<span class="ma-badge ma-up">MA5↑</span>');
+      else if (coin.ma5trend === 'down') tags.push('<span class="ma-badge ma-down">MA5↓</span>');
+      if (coin.goldenCross) tags.push('<span class="ma-badge ma-up">GC</span>');
+      if (coin.volTrend && coin.volTrend > 1.2) tags.push('<span class="ma-badge ma-up">VOL↑</span>');
+      deepHtml = tags.join('') || '<span style="color:var(--muted);font-size:11px;">-</span>';
+    }
+
+    // 매수비율
+    let bidInfo = '';
+    if (coin.bidRatio != null) {
+      const bidPct = (coin.bidRatio * 100).toFixed(0);
+      const bidColor = coin.bidRatio >= 0.55 ? 'var(--up)' : coin.bidRatio <= 0.45 ? 'var(--down)' : 'var(--muted)';
+      bidInfo = '<div style="font-size:10px;color:' + bidColor + ';margin-top:2px;">매수 ' + bidPct + '%</div>';
+    }
+
+    var isExpanded = expandedSymbol === coin.symbol;
+
+    html += '<tr class="coin-row" data-symbol="' + coin.symbol + '">'
+      + '<td class="rank-cell ' + rankClass + '">' + (i + 1) + '</td>'
+      + '<td><div class="coin-cell">'
+      + '<div class="coin-icon" style="background:' + bg + ';color:' + fg + '">' + coin.symbol.slice(0, 3) + '</div>'
+      + '<div><div class="coin-name">' + coin.symbol + (isExpanded ? ' ▲' : ' ▼') + '</div>'
+      + '<div class="coin-full">' + (coin.korean_name || coin.symbol) + '</div>'
+      + '</div></div></td>'
+      + '<td class="price-cell">' + fmtPrice(coin.trade_price) + bidInfo + '</td>'
+      + '<td class="change-cell ' + (isUp ? 'up' : 'down') + '">' + (isUp ? '+' : '') + coin.changeRate.toFixed(2) + '%</td>'
+      + '<td class="volume-cell">' + fmt(coin.tradeValue) + '원</td>'
+      + '<td class="score-cell"><div class="score-bar-wrap">'
+      + '<div class="score-bar"><div class="score-fill" style="width:' + coin.score + '%;background:' + scoreColor + '"></div></div>'
+      + '<span class="score-num" style="color:' + scoreColor + '">' + coin.score + '</span>'
+      + '</div></td>'
+      + '<td><span class="signal-badge ' + signal.cls + '">' + signal.label + '</span></td>'
+      + '<td>' + (indHtml || '<span style="color:var(--muted);font-size:11px;">-</span>') + '</td>'
+      + '<td>' + deepHtml + '</td>'
+      + '</tr>';
+
+    // 펼쳐진 코인이면 서브행 삽입
+    if (isExpanded) {
+      html += '<tr class="expand-row"><td colspan="9">'
+        + '<div class="expand-panel">'
+        + '<div class="expand-grid">'
+        + '<div class="exp-card"><div class="exp-card-header">실시간 시세<button onclick="refreshLiveTicker(\'' + coin.market + '\', event)">갱신</button></div>'
+        + '<div class="exp-card-body" id="livePrice_' + coin.symbol + '"><div class="deep-loading">로딩 중...</div></div></div>'
+        + '<div class="exp-card"><div class="exp-card-header">심층 분석<button onclick="runCoinDeep(\'' + coin.market + '\', \'' + coin.symbol + '\', event)">분석</button></div>'
+        + '<div class="exp-card-body" id="deepPanel_' + coin.symbol + '">'
+        + (expandedDeepData[coin.symbol] ? buildDeepHtml(expandedDeepData[coin.symbol]) : '<div class="deep-loading">클릭하여 분석 시작</div>')
+        + '</div></div>'
+        + '</div>'
+        + buildCoinHistory(coin.symbol)
+        + '</div>'
+        + '</td></tr>';
+    }
+  });
+
+  html += '</tbody></table>';
+  document.getElementById('tableArea').innerHTML = html;
+
+  // 행 클릭 이벤트 바인딩
+  document.querySelectorAll('.coin-row').forEach(function(row) {
+    row.addEventListener('click', function() {
+      var sym = this.dataset.symbol;
+      if (expandedSymbol === sym) {
+        expandedSymbol = null;
+        stopLiveTicker();
+      } else {
+        expandedSymbol = sym;
+        stopLiveTicker();
+      }
+      renderTable();
+      // 펼쳤으면 실시간 시세 시작
+      if (expandedSymbol) {
+        var market = 'KRW-' + expandedSymbol;
+        fetchLiveTicker(market, expandedSymbol);
+        startLiveTicker(market, expandedSymbol);
+      }
+    });
+  });
+}
+
+// ========================================
+// 실시간 시세
+// ========================================
+function stopLiveTicker() {
+  if (liveTickerTimer) clearInterval(liveTickerTimer);
+  liveTickerTimer = null;
+}
+
+function startLiveTicker(market, symbol) {
+  stopLiveTicker();
+  liveTickerTimer = setInterval(function() {
+    fetchLiveTicker(market, symbol);
+  }, 3000);
+}
+
+function refreshLiveTicker(market, evt) {
+  evt.stopPropagation();
+  var symbol = market.replace('KRW-', '');
+  fetchLiveTicker(market, symbol);
+}
+
+async function fetchLiveTicker(market, symbol) {
+  var el = document.getElementById('livePrice_' + symbol);
+  if (!el) return;
+  try {
+    var data = await apiFetch('/ticker?markets=' + market);
+    if (!data || data.length === 0) return;
+    var t = data[0];
+    var price = t.trade_price || 0;
+    var change = (t.signed_change_rate || 0) * 100;
+    var isUp = change >= 0;
+    var vol24 = t.acc_trade_price_24h || 0;
+    var high = t.high_price || 0;
+    var low = t.low_price || 0;
+    var now = new Date().toLocaleTimeString('ko-KR');
+
+    el.innerHTML = '<div class="live-price" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">'
+      + fmtPrice(price) + ' <span style="font-size:13px">' + (isUp ? '+' : '') + change.toFixed(2) + '%</span></div>'
+      + '<div class="live-meta">'
+      + '<span class="live-meta-item"><span class="live-meta-label">고가</span><span style="color:var(--up)">' + fmtPrice(high) + '</span></span>'
+      + '<span class="live-meta-item"><span class="live-meta-label">저가</span><span style="color:var(--down)">' + fmtPrice(low) + '</span></span>'
+      + '<span class="live-meta-item"><span class="live-meta-label">거래대금</span>' + fmt(vol24) + '원</span>'
+      + '<span class="live-meta-item" style="color:var(--muted)">' + now + '</span>'
+      + '</div>';
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--down);font-size:11px;">시세 조회 실패</div>';
+  }
+}
+
+// ========================================
+// 개별 코인 심층 분석
+// ========================================
+async function runCoinDeep(market, symbol, evt) {
+  evt.stopPropagation();
+  var el = document.getElementById('deepPanel_' + symbol);
+  if (!el) return;
+  el.innerHTML = '<div class="deep-loading">분석 중...</div>';
+
+  try {
+    var config = TF_CONFIG[selectedTimeframe];
+
+    // 1) 캔들 30개 (기술적 지표용)
+    var candles = await apiFetch('/candles/' + config.candleUnit + '?market=' + market + '&count=30');
+
+    // 2) 심층 캔들 (MA용)
+    var deepCandles = await apiFetch('/candles/' + config.deepUnit + '?market=' + market + '&count=' + config.deepCount);
+
+    // 3) 호가창
+    var obData = await apiFetch('/orderbook?markets=' + market);
+    var ob = obData && obData[0] ? obData[0] : null;
+    var bidTotal = ob ? (ob.total_bid_size || 0) : 0;
+    var askTotal = ob ? (ob.total_ask_size || 0) : 0;
+    var obPressure = (bidTotal + askTotal) > 0 ? bidTotal / (bidTotal + askTotal) : 0.5;
+
+    // 4) 체결 (매수비율)
+    var trades = await apiFetch('/trades/ticks?market=' + market + '&count=500');
+    var cutoff = Date.now() - config.tfMs;
+    var bidVol = 0, askVol = 0;
+    trades.forEach(function(t) {
+      if (t.timestamp < cutoff) return;
+      if (t.ask_bid === 'BID') bidVol += t.trade_volume; else askVol += t.trade_volume;
+    });
+    var bidRatio = (bidVol + askVol) > 0 ? bidVol / (bidVol + askVol) : 0.5;
+
+    // 지표 계산
+    var rsi = calcRSI(candles, 14);
+    var macd = calcMACD(candles);
+    var volSpike = calcVolumeSpike(candles);
+
+    // MA5, MA20
+    var ma5 = null, ma5trend = null, ma20 = null, goldenCross = false;
+    if (deepCandles && deepCandles.length >= 6) {
+      ma5 = deepCandles.slice(0, 5).reduce(function(s, c) { return s + c.trade_price; }, 0) / 5;
+      var ma5prev = deepCandles.slice(1, 6).reduce(function(s, c) { return s + c.trade_price; }, 0) / 5;
+      ma5trend = ma5 > ma5prev ? 'up' : 'down';
+    }
+    if (deepCandles && deepCandles.length >= 20) {
+      ma20 = deepCandles.slice(0, 20).reduce(function(s, c) { return s + c.trade_price; }, 0) / 20;
+      if (ma5 && ma5 > ma20 && deepCandles[0].trade_price > ma5) goldenCross = true;
+    }
+
+    // 거래량 추세
+    var volTrend = null;
+    if (deepCandles && deepCandles.length >= 6) {
+      var rv = deepCandles.slice(0, 3).reduce(function(s, c) { return s + c.candle_acc_trade_volume; }, 0);
+      var pv = deepCandles.slice(3, 6).reduce(function(s, c) { return s + c.candle_acc_trade_volume; }, 0);
+      if (pv > 0) volTrend = rv / pv;
+    }
+
+    var result = {
+      rsi: rsi, macd: macd, volSpike: volSpike,
+      obPressure: obPressure, bidRatio: bidRatio,
+      ma5: ma5, ma5trend: ma5trend, ma20: ma20,
+      goldenCross: goldenCross, volTrend: volTrend,
+      price: candles[0] ? candles[0].trade_price : 0
+    };
+
+    expandedDeepData[symbol] = result;
+    el.innerHTML = buildDeepHtml(result);
+  } catch (e) {
+    el.innerHTML = '<div style="color:var(--down);font-size:11px;">분석 실패: ' + e.message + '</div>';
+  }
+}
+
+function buildDeepHtml(d) {
+  function valColor(val, goodMin, badMax) {
+    if (val == null) return 'var(--muted)';
+    if (val >= goodMin) return 'var(--up)';
+    if (val <= badMax) return 'var(--down)';
+    return 'var(--text)';
+  }
+
+  var html = '<div class="deep-grid">';
+
+  // RSI
+  var rsiTxt = d.rsi != null ? d.rsi.toFixed(1) : '-';
+  var rsiColor = d.rsi != null ? (d.rsi < 30 ? 'var(--up)' : d.rsi > 70 ? 'var(--down)' : 'var(--text)') : 'var(--muted)';
+  var rsiLabel = d.rsi != null ? (d.rsi < 30 ? '과매도' : d.rsi > 70 ? '과매수' : d.rsi < 50 ? '중립↓' : '중립↑') : '';
+  html += '<div class="deep-item"><div class="deep-item-label">RSI (14)</div>'
+    + '<div class="deep-item-val" style="color:' + rsiColor + '">' + rsiTxt + '</div>'
+    + '<div style="font-size:9px;color:' + rsiColor + '">' + rsiLabel + '</div></div>';
+
+  // MACD
+  var macdTxt = '-', macdColor = 'var(--muted)', macdLabel = '';
+  if (d.macd) {
+    macdTxt = d.macd.macd.toFixed(2);
+    macdColor = d.macd.crossUp ? 'var(--accent)' : d.macd.rising ? 'var(--up)' : d.macd.positive ? 'var(--text)' : 'var(--down)';
+    macdLabel = d.macd.crossUp ? '골든크로스' : d.macd.rising ? '상승전환' : d.macd.positive ? '양수' : '음수하락';
+  }
+  html += '<div class="deep-item"><div class="deep-item-label">MACD</div>'
+    + '<div class="deep-item-val" style="color:' + macdColor + '">' + macdTxt + '</div>'
+    + '<div style="font-size:9px;color:' + macdColor + '">' + macdLabel + '</div></div>';
+
+  // 호가 압력
+  var obPct = d.obPressure != null ? (d.obPressure * 100).toFixed(1) + '%' : '-';
+  var obColor = d.obPressure != null ? (d.obPressure >= 0.55 ? 'var(--up)' : d.obPressure <= 0.45 ? 'var(--down)' : 'var(--text)') : 'var(--muted)';
+  html += '<div class="deep-item"><div class="deep-item-label">호가 매수압력</div>'
+    + '<div class="deep-item-val" style="color:' + obColor + '">' + obPct + '</div></div>';
+
+  // 매수 체결비율
+  var bidPct = d.bidRatio != null ? (d.bidRatio * 100).toFixed(1) + '%' : '-';
+  var bidColor = d.bidRatio != null ? (d.bidRatio >= 0.55 ? 'var(--up)' : d.bidRatio <= 0.45 ? 'var(--down)' : 'var(--text)') : 'var(--muted)';
+  html += '<div class="deep-item"><div class="deep-item-label">매수 체결비율</div>'
+    + '<div class="deep-item-val" style="color:' + bidColor + '">' + bidPct + '</div></div>';
+
+  // 거래량 급증
+  var spkTxt = d.volSpike ? 'x' + d.volSpike.ratio.toFixed(1) : '-';
+  var spkColor = d.volSpike ? (d.volSpike.ratio > 2 ? 'var(--accent)' : d.volSpike.ratio > 1.5 ? 'var(--up)' : 'var(--text)') : 'var(--muted)';
+  html += '<div class="deep-item"><div class="deep-item-label">거래량 급증</div>'
+    + '<div class="deep-item-val" style="color:' + spkColor + '">' + spkTxt + '</div></div>';
+
+  // MA5 추세
+  var ma5Txt = d.ma5trend === 'up' ? 'MA5 ↑' : d.ma5trend === 'down' ? 'MA5 ↓' : '-';
+  var ma5Color = d.ma5trend === 'up' ? 'var(--up)' : d.ma5trend === 'down' ? 'var(--down)' : 'var(--muted)';
+  html += '<div class="deep-item"><div class="deep-item-label">MA5 추세</div>'
+    + '<div class="deep-item-val" style="color:' + ma5Color + '">' + ma5Txt + '</div></div>';
+
+  // MA20 & 골든크로스
+  var ma20Txt = d.ma20 != null ? fmtPrice(d.ma20) : '-';
+  var gcLabel = d.goldenCross ? '<div style="font-size:9px;color:var(--accent);font-weight:700">골든크로스!</div>' : '';
+  html += '<div class="deep-item"><div class="deep-item-label">MA20</div>'
+    + '<div class="deep-item-val" style="font-size:12px">' + ma20Txt + '</div>' + gcLabel + '</div>';
+
+  // 거래량 추세
+  var vtTxt = d.volTrend != null ? 'x' + d.volTrend.toFixed(2) : '-';
+  var vtColor = d.volTrend != null ? (d.volTrend > 1.5 ? 'var(--accent)' : d.volTrend > 1.2 ? 'var(--up)' : d.volTrend < 0.8 ? 'var(--down)' : 'var(--text)') : 'var(--muted)';
+  html += '<div class="deep-item"><div class="deep-item-label">거래량 추세</div>'
+    + '<div class="deep-item-val" style="color:' + vtColor + '">' + vtTxt + '</div></div>';
+
+  // 종합 판단
+  var bullCount = 0, bearCount = 0;
+  if (d.rsi != null && d.rsi < 40) bullCount++; if (d.rsi != null && d.rsi > 65) bearCount++;
+  if (d.macd && d.macd.rising) bullCount++; if (d.macd && !d.macd.rising && !d.macd.positive) bearCount++;
+  if (d.obPressure != null && d.obPressure >= 0.55) bullCount++; if (d.obPressure != null && d.obPressure <= 0.45) bearCount++;
+  if (d.bidRatio != null && d.bidRatio >= 0.55) bullCount++; if (d.bidRatio != null && d.bidRatio <= 0.45) bearCount++;
+  if (d.ma5trend === 'up') bullCount++; if (d.ma5trend === 'down') bearCount++;
+  if (d.goldenCross) bullCount++;
+  if (d.volTrend && d.volTrend > 1.2) bullCount++;
+  var verdict = bullCount >= 5 ? '강력 매수' : bullCount >= 3 ? '매수 우세' : bearCount >= 4 ? '매도 우세' : '중립';
+  var verdictColor = bullCount >= 5 ? 'var(--accent)' : bullCount >= 3 ? 'var(--up)' : bearCount >= 4 ? 'var(--down)' : 'var(--muted)';
+  html += '<div class="deep-item" style="background:rgba(0,212,170,0.05)"><div class="deep-item-label">종합 판단</div>'
+    + '<div class="deep-item-val" style="color:' + verdictColor + '">' + verdict + '</div>'
+    + '<div style="font-size:9px;color:var(--muted)">매수' + bullCount + ' / 매도' + bearCount + '</div></div>';
+
+  html += '</div>';
+  return html;
+}
+
+// ========================================
+// 캔들에서 기간 집계 데이터 추출
+// candles: [0]=최신, [N]=가장 오래된 것
+// ========================================
+function aggregateCandles(candles) {
+  if (!candles || candles.length === 0) return null;
+
+  const newest = candles[0];
+  const oldest = candles[candles.length - 1];
+
+  const openPrice = oldest.opening_price;
+  const closePrice = newest.trade_price;
+  let high = 0, low = Infinity, volume = 0, tradeValue = 0;
+
+  candles.forEach(function(c) {
+    if (c.high_price > high) high = c.high_price;
+    if (c.low_price < low) low = c.low_price;
+    volume += c.candle_acc_trade_volume || 0;
+    tradeValue += c.candle_acc_trade_price || 0;
+  });
+
+  const changeRate = openPrice > 0 ? ((closePrice - openPrice) / openPrice) * 100 : 0;
+
+  return {
+    price: closePrice,
+    openPrice: openPrice,
+    high: high,
+    low: low === Infinity ? closePrice : low,
+    changeRate: changeRate,
+    volume: volume,
+    tradeValue: tradeValue
+  };
+}
+
+// ========================================
+// 메인 데이터 로드
+// ========================================
+async function fetchData() {
+  if (isLoading) return;
+  isLoading = true;
+  stopLiveTicker();
+
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true;
+  btn.textContent = '로딩 중...';
+  document.getElementById('statusText').textContent = 'LOADING';
+  document.getElementById('statusDot').classList.remove('error');
+  document.getElementById('deepStatus').textContent = '-';
+
+  // 로딩 표시
+  document.getElementById('tableArea').innerHTML =
+    '<div class="loading"><div class="loading-spinner"></div>'
+    + '<div>Bithumb API에서 데이터 불러오는 중...</div>'
+    + '<div class="progress-bar-wrap"><div class="progress-bar-fill" id="progressBar"></div></div>'
+    + '<div id="loadingDetail" style="margin-top:8px;font-size:11px;color:var(--muted);font-family:\'IBM Plex Mono\',monospace;"></div>'
+    + '</div>';
+
+  try {
+    const tf = selectedTimeframe;
+    const config = TF_CONFIG[tf];
+
+    // 1) 마켓 리스트 (캐시)
+    setProgress(5, '마켓 리스트...');
+    if (!cachedMarkets) {
+      const markets = await apiFetch('/market/all?isDetails=true');
+      cachedMarkets = markets.filter(function(m) { return m.market.startsWith('KRW-'); });
+      cachedMarkets.forEach(function(m) { cachedNameMap[m.market] = m.korean_name; });
+    }
+
+    const marketCodes = cachedMarkets.map(function(m) { return m.market; });
+
+    if (config.candleUnit === 'ticker') {
+      // ====== 24시간: 티커 API 사용 (빠름) ======
+      await fetchWith24hTicker(marketCodes);
+    } else {
+      // ====== 기타 시간대: 캔들 API 사용 ======
+      await fetchWithCandles(marketCodes, config);
+    }
+
+    // 통계 업데이트
+    updateStats();
+
+    setProgress(100, '완료!');
+    renderTable();
+
+    // 1차 분석 완료 → 70점 이상 즉시 저장
+    addCoinsToHistory();
+
+    const now = new Date().toLocaleTimeString('ko-KR');
+    document.getElementById('lastUpdate').textContent = '마지막 업데이트: ' + now + ' [' + config.label + ']';
+    document.getElementById('statusText').textContent = 'LIVE';
+
+    // 심층분석 (백그라운드) - 모든 시간대에서 실행
+    startDeepAnalysis();
+
+    // 펼쳐진 코인 있으면 실시간 시세 재시작
+    if (expandedSymbol) {
+      var market = 'KRW-' + expandedSymbol;
+      fetchLiveTicker(market, expandedSymbol);
+      startLiveTicker(market, expandedSymbol);
+    }
+
+  } catch (err) {
+    console.error('fetchData 오류:', err);
+    document.getElementById('tableArea').innerHTML =
+      '<div class="error-msg">데이터를 불러오지 못했습니다'
+      + '<div class="error-detail">' + err.message + '</div></div>';
+    document.getElementById('statusText').textContent = 'ERROR';
+    document.getElementById('statusDot').classList.add('error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '새로고침';
+    isLoading = false;
+  }
+}
+
+// ========================================
+// 24시간 모드: 티커 일괄 조회 (빠름)
+// ========================================
+async function fetchWith24hTicker(marketCodes) {
+  setProgress(20, '티커 데이터...');
+
+  let allTickers = [];
+  for (let i = 0; i < marketCodes.length; i += 100) {
+    const batch = marketCodes.slice(i, i + 100);
+    const tickers = await apiFetch('/ticker?markets=' + batch.join(','));
+    allTickers = allTickers.concat(tickers);
+    if (i + 100 < marketCodes.length) await sleep(200);
+  }
+
+  // 거래대금 정렬
+  const sorted = [...allTickers].sort(function(a, b) {
+    return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0);
+  });
+  const topMarkets = sorted.slice(0, 30).map(function(t) { return t.market; });
+
+  // 매수/매도 비율 (거래대금 상위 30개)
+  setProgress(35, '매수/매도 비율 분석...');
+  const tradeDataMap = await fetchBidRatios(topMarkets, 35, 60);
+
+  // 호가창 압력 (상위 30개)
+  setProgress(60, '호가창 분석...');
+  const obMap = await fetchOrderbooks(topMarkets);
+
+  setProgress(85, '점수 계산...');
+
+  // 코인 데이터 조합
+  const coins = [];
+  allTickers.forEach(function(t) {
+    const symbol = t.market.replace('KRW-', '');
+    const td = tradeDataMap[t.market] || null;
+    const ob = obMap[t.market] || null;
+    const changeRate = (t.signed_change_rate || 0) * 100;
+
+    const coin = {
+      market: t.market,
+      symbol: symbol,
+      korean_name: cachedNameMap[t.market] || symbol,
+      trade_price: t.trade_price || 0,
+      changeRate: changeRate,
+      tradeValue: t.acc_trade_price_24h || 0,
+      high_price: t.high_price || 0,
+      low_price: t.low_price || 0,
+      bidRatio: td ? td.bidRatio : null,
+      obPressure: ob ? ob.pressure : null,
+      score: 0,
+      deepDone: false
+    };
+
+    coin.score = calcScore({
+      changeRate: changeRate,
+      tradeValue: coin.tradeValue,
+      price: coin.trade_price,
+      high: coin.high_price,
+      low: coin.low_price,
+      bidRatio: coin.bidRatio,
+      obPressure: coin.obPressure
+    });
+
+    coins.push(coin);
+  });
+
+  allCoins = coins;
+}
+
+// ========================================
+// 캔들 기반 모드: 각 코인별 캔들 조회 (점진적)
+// ========================================
+async function fetchWithCandles(marketCodes, config) {
+  // 먼저 티커로 현재가 + 24h 거래대금을 가져와서 상위 코인 선별
+  setProgress(10, '티커 데이터...');
+  let allTickers = [];
+  for (let i = 0; i < marketCodes.length; i += 100) {
+    const batch = marketCodes.slice(i, i + 100);
+    const tickers = await apiFetch('/ticker?markets=' + batch.join(','));
+    allTickers = allTickers.concat(tickers);
+    if (i + 100 < marketCodes.length) await sleep(200);
+  }
+
+  // 24h 거래대금 상위 80개만 분석 (API 호출 최적화)
+  const tickerSorted = [...allTickers].sort(function(a, b) {
+    return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0);
+  });
+  const targetTickers = tickerSorted.slice(0, 80);
+  const targetMarkets = targetTickers.map(function(t) { return t.market; });
+
+  // 티커 맵
+  const tickerMap = {};
+  allTickers.forEach(function(t) { tickerMap[t.market] = t; });
+
+  // 매수/매도 비율 (상위 30개만)
+  setProgress(18, '매수/매도 비율...');
+  const top30 = targetMarkets.slice(0, 30);
+  const tradeDataMap = await fetchBidRatios(top30, 18, 30);
+
+  // 호가창 압력 (상위 30개)
+  setProgress(30, '호가창 분석...');
+  const obMap = await fetchOrderbooks(top30);
+
+  // 캔들 데이터 수집 (점진적)
+  setProgress(35, '캔들 데이터 수집...');
+  const coins = [];
+  let done = 0;
+
+  for (const market of targetMarkets) {
+    const symbol = market.replace('KRW-', '');
+    const t = tickerMap[market];
+    const td = tradeDataMap[market] || null;
+    const ob = obMap[market] || null;
+
+    let coinData = {
+      market: market,
+      symbol: symbol,
+      korean_name: cachedNameMap[market] || symbol,
+      trade_price: t.trade_price || 0,
+      changeRate: 0,
+      tradeValue: 0,
+      high_price: 0,
+      low_price: 0,
+      bidRatio: td ? td.bidRatio : null,
+      obPressure: ob ? ob.pressure : null,
+      rsi: null,
+      macdData: null,
+      volSpikeData: null,
+      score: 0,
+      deepDone: false
+    };
+
+    let fetchedCandles = null;
+    try {
+      const candlePath = '/candles/' + config.candleUnit + '?market=' + market + '&count=' + config.candleCount;
+      fetchedCandles = await apiFetch(candlePath);
+
+      // 기준시간 집계용: tfCandleCount 개로 변동률/고저 계산
+      const tfCandles = fetchedCandles.slice(0, config.tfCandleCount);
+      const agg = aggregateCandles(tfCandles);
+
+      if (agg) {
+        coinData.changeRate = agg.changeRate;
+        coinData.tradeValue = agg.tradeValue;
+        coinData.high_price = agg.high;
+        coinData.low_price = agg.low;
+        coinData.trade_price = agg.price;
+      }
+
+      // 기술적 지표: 전체 30개 캔들 사용
+      coinData.rsi = calcRSI(fetchedCandles, 14);
+      coinData.macdData = calcMACD(fetchedCandles);
+      coinData.volSpikeData = calcVolumeSpike(fetchedCandles);
+    } catch (e) {
+      // 캔들 실패시 24h 티커 데이터 사용
+      coinData.changeRate = (t.signed_change_rate || 0) * 100;
+      coinData.tradeValue = t.acc_trade_price_24h || 0;
+      coinData.high_price = t.high_price || 0;
+      coinData.low_price = t.low_price || 0;
+    }
+
+    coinData.score = calcScore({
+      changeRate: coinData.changeRate,
+      tradeValue: coinData.tradeValue,
+      price: coinData.trade_price,
+      high: coinData.high_price,
+      low: coinData.low_price,
+      bidRatio: coinData.bidRatio,
+      obPressure: coinData.obPressure,
+      rsi: coinData.rsi,
+      macd: coinData.macdData,
+      volSpike: coinData.volSpikeData,
+      candles: fetchedCandles
+    });
+
+    coins.push(coinData);
+    done++;
+
+    const pct = 35 + (done / targetMarkets.length) * 60;
+    setProgress(pct, symbol + ' (' + done + '/' + targetMarkets.length + ')');
+
+    // 10개 분석마다 중간 렌더
+    if (done % 10 === 0) {
+      allCoins = coins;
+      updateStats();
+      renderTable();
+    }
+
+    // rate limit 방지
+    if (done % 8 === 0) await sleep(300);
+    else await sleep(100);
+  }
+
+  allCoins = coins;
+}
+
+// ========================================
+// 매수/매도 비율 조회
+// ========================================
+async function fetchBidRatios(markets, progressStart, progressEnd) {
+  const map = {};
+  const cutoff = Date.now() - TF_CONFIG[selectedTimeframe].tfMs;
+
+  for (let i = 0; i < markets.length; i++) {
+    try {
+      const trades = await apiFetch('/trades/ticks?market=' + markets[i] + '&count=500');
+      let bidVol = 0, askVol = 0;
+      trades.forEach(function(t) {
+        if (t.timestamp < cutoff) return; // 기준시간 밖 체결 제외
+        if (t.ask_bid === 'BID') bidVol += t.trade_volume;
+        else askVol += t.trade_volume;
+      });
+      const total = bidVol + askVol;
+      map[markets[i]] = {
+        bidRatio: total > 0 ? bidVol / total : 0.5
+      };
+    } catch (e) { }
+
+    const pct = progressStart + ((i + 1) / markets.length) * (progressEnd - progressStart);
+    setProgress(pct, markets[i].replace('KRW-', '') + ' 체결 분석...');
+
+    if (i % 5 === 4) await sleep(300);
+  }
+
+  return map;
+}
+
+// ========================================
+// 심층분석 (백그라운드, 일봉 기반)
+// ========================================
+async function startDeepAnalysis() {
+  const config = TF_CONFIG[selectedTimeframe];
+  const deepPath = '/candles/' + config.deepUnit;
+  const deepCount = config.deepCount;
+
+  const targets = [...allCoins]
+    .sort(function(a, b) { return b.score - a.score; })
+    .slice(0, 30);
+
+  let done = 0;
+  document.getElementById('deepStatus').textContent = '0/' + targets.length + ' (' + config.deepLabel + ')';
+
+  for (const coin of targets) {
+    try {
+      const candles = await apiFetch(deepPath + '?market=' + coin.market + '&count=' + deepCount);
+      coin.deepCandles = candles;
+      applyDeepAnalysis(coin);
+    } catch (e) { }
+
+    done++;
+    document.getElementById('deepStatus').textContent = done + '/' + targets.length + ' (' + config.deepLabel + ')';
+    if (done % 5 === 0 || done === targets.length) renderTable();
+    await sleep(200);
+  }
+
+  document.getElementById('deepStatus').textContent = 'Done (' + config.deepLabel + ')';
+  updateStats();
+  renderTable();
+
+  // 심층 완료 후 히스토리 저장
+  addCoinsToHistory();
+
+  // 심층분석 완료 후 다음 새로고침 타이머 시작
+  scheduleNextRefresh();
+}
+
+// ========================================
+// 통계 업데이트
+// ========================================
+function updateStats() {
+  const up = allCoins.filter(c => c.changeRate > 0).length;
+  const down = allCoins.filter(c => c.changeRate <= 0).length;
+  const strong = allCoins.filter(c => c.score >= 70).length;
+
+  document.getElementById('totalCoins').textContent = allCoins.length;
+  document.getElementById('upCount').textContent = up;
+  document.getElementById('downCount').textContent = down;
+  document.getElementById('strongCount').textContent = strong;
+}
+
+function setProgress(pct, msg) {
+  const bar = document.getElementById('progressBar');
+  const detail = document.getElementById('loadingDetail');
+  if (bar) bar.style.width = pct + '%';
+  if (detail) detail.textContent = msg || '';
+}
+
+// ========================================
+// 강력매수 히스토리 (localStorage, 최근 1시간)
+// ========================================
+const HISTORY_KEY = 'ana_strong_history';
+const HISTORY_TTL = 3600000; // 1시간 (ms)
+
+function loadHistory() {
+  try {
+    var data = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+    // 1시간 초과 항목 제거
+    var cutoff = Date.now() - HISTORY_TTL;
+    return data.filter(function(r) { return r.ts >= cutoff; });
+  } catch (e) { return []; }
+}
+
+function saveHistory(records) {
+  try {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(records));
+  } catch (e) { }
+}
+
+function addCoinsToHistory() {
+  if (allCoins.length === 0) return;
+
+  var records = loadHistory();
+  var now = Date.now();
+  var tf = selectedTimeframe;
+
+  // 점수 높은 순 상위 50개 저장
+  var sorted = [...allCoins].sort(function(a, b) { return b.score - a.score; });
+  sorted.slice(0, 50).forEach(function(coin) {
+    records.push({
+      ts: now,
+      symbol: coin.symbol,
+      name: coin.korean_name || coin.symbol,
+      price: coin.trade_price,
+      score: coin.score,
+      change: coin.changeRate,
+      tf: tf
+    });
+  });
+
+  // 1시간 초과 제거 후 저장
+  var cutoff = now - HISTORY_TTL;
+  records = records.filter(function(r) { return r.ts >= cutoff; });
+  saveHistory(records);
+}
+
+function clearCoinHistory(symbol, evt) {
+  evt.stopPropagation();
+  var records = loadHistory();
+  records = records.filter(function(r) { return r.symbol !== symbol; });
+  saveHistory(records);
+  renderTable();
+}
+
+function buildCoinHistory(symbol) {
+  var allRecords = loadHistory();
+  var records = allRecords.filter(function(r) { return r.symbol === symbol; });
+  var total = allRecords.length;
+
+  if (records.length === 0) {
+    return '<div class="hist-inner">'
+      + '<div class="hist-header"><span>' + symbol + ' 히스토리 (최근 1시간)</span>'
+      + '<button onclick="clearCoinHistory(\'' + symbol + '\', event)">삭제</button></div>'
+      + '<div class="hist-empty">기록 없음</div></div>';
+  }
+
+  // 최신순 정렬
+  records.sort(function(a, b) { return b.ts - a.ts; });
+
+  var html = '<div class="hist-inner">'
+    + '<div class="hist-header"><span>' + symbol + ' 히스토리 (' + records.length + '건)</span>'
+    + '<button onclick="clearCoinHistory(\'' + symbol + '\', event)">삭제</button></div>'
+    + '<div class="hist-body"><table><thead><tr>'
+    + '<th>시간</th><th>현재가</th><th>변동률</th><th>점수</th><th>기준</th>'
+    + '</tr></thead><tbody>';
+
+  records.forEach(function(r) {
+    var time = new Date(r.ts);
+    var timeStr = ('0' + time.getHours()).slice(-2) + ':' + ('0' + time.getMinutes()).slice(-2) + ':' + ('0' + time.getSeconds()).slice(-2);
+    var diffSec = Math.floor((Date.now() - r.ts) / 1000);
+    var ago = diffSec < 60 ? diffSec + '초전' : Math.floor(diffSec / 60) + '분전';
+    var isUp = r.change >= 0;
+    var scoreColor = r.score >= 70 ? 'var(--accent)' : r.score >= 50 ? 'var(--accent3)' : r.score >= 35 ? 'var(--muted)' : 'var(--down)';
+
+    html += '<tr>'
+      + '<td style="color:var(--muted)">' + timeStr + ' <span style="color:var(--accent3)">(' + ago + ')</span></td>'
+      + '<td>' + fmtPrice(r.price) + '</td>'
+      + '<td style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (isUp ? '+' : '') + r.change.toFixed(2) + '%</td>'
+      + '<td style="color:' + scoreColor + ';font-weight:700">' + r.score + '</td>'
+      + '<td style="color:var(--accent3)">' + (TF_CONFIG[r.tf] ? TF_CONFIG[r.tf].label : r.tf) + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table></div></div>';
+  return html;
+}
+
+// ========================================
+// 초기화 - 쿠키에서 설정값 복원
+// ========================================
+(function init() {
+  // 기준시간 복원
+  const savedTf = getCookie('ana_tf');
+  if (savedTf && TF_CONFIG[savedTf]) {
+    selectedTimeframe = savedTf;
+    document.querySelectorAll('.tf-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.tf === savedTf);
+    });
+  }
+
+  // 신호필터 복원
+  const savedFilter = getCookie('ana_filter');
+  if (savedFilter) {
+    currentFilter = savedFilter;
+    document.querySelectorAll('.filter-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.filter === savedFilter);
+    });
+  }
+
+  // 새로고침 간격 복원
+  const savedRefresh = getCookie('ana_refresh');
+  if (savedRefresh !== '') {
+    refreshIntervalMs = Number(savedRefresh);
+    document.querySelectorAll('.rf-btn').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.rf === savedRefresh);
+    });
+  }
+
+  // 데이터 로드 (타이머는 심층분석 완료 후 자동 시작)
+  fetchData();
+})();
+</script>
+</body>
+</html>
