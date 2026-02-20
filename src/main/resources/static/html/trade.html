@@ -1,0 +1,1265 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=1400, initial-scale=1">
+
+    <title>BIT Trade</title>
+    <meta name="description" content="Bithumb Trading">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-4Q6Gf2aSP4eDXB8Miphtr37CMZZQ5oXLH2yaXMJ2w8e2ZtHTl7GptT4jmndRuHDT" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" integrity="sha384-j1CDi7MgGQ12Z7Qab0qlWQ/Qqz24Gc6BM0thvEMVjHnfYGF0rmFCozFSxQBxwHKO" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.dataTables.min.css" />
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.3.2/css/dataTables.bootstrap5.css" />
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.js"></script>
+    <script src="https://cdn.datatables.net/2.3.2/js/dataTables.bootstrap5.js"></script>
+
+    <style>
+        header { padding-top: 4.5rem; }
+
+        .price-up { color: #d60000; }
+        .price-down { color: #0051c7; }
+        .price-same { color: #333; }
+
+        .ask-row { background-color: #e8f4fd !important; }
+        .bid-row { background-color: #fde8e8 !important; }
+
+        .orderbook-table td { padding: 2px 8px !important; font-size: 0.85rem; }
+        .orderbook-table th { padding: 4px 8px !important; font-size: 0.8rem; }
+
+        .current-price { font-size: 2rem; font-weight: bold; }
+        .change-rate { font-size: 1.1rem; }
+
+        .market-item { cursor: pointer; padding: 4px 8px; border-bottom: 1px solid #eee; font-size: 0.85rem; }
+        .market-item:hover { background-color: #f0f0f0; }
+        .market-item.active { background-color: #e3f2fd; font-weight: bold; }
+
+        .market-list-wrap { max-height: 500px; overflow-y: auto; }
+
+        #div_orderbook { max-height: 600px; overflow-y: auto; }
+
+        .badge-ask { background-color: #0051c7; }
+        .badge-bid { background-color: #d60000; }
+
+        .btn-buy { background-color: #d60000; border-color: #d60000; color: #fff; }
+        .btn-buy:hover { background-color: #b50000; border-color: #b50000; color: #fff; }
+        .btn-sell { background-color: #0051c7; border-color: #0051c7; color: #fff; }
+        .btn-sell:hover { background-color: #003da0; border-color: #003da0; color: #fff; }
+
+        .tab-buy .nav-link.active { color: #d60000; border-bottom: 2px solid #d60000; }
+        .tab-sell .nav-link.active { color: #0051c7; border-bottom: 2px solid #0051c7; }
+
+        .vol-bar-ask { background-color: rgba(0, 81, 199, 0.15); height: 100%; position: absolute; right: 0; top: 0; }
+        .vol-bar-bid { background-color: rgba(214, 0, 0, 0.15); height: 100%; position: absolute; left: 0; top: 0; }
+
+        .ob-row { position: relative; }
+        .ob-row td { position: relative; z-index: 1; }
+
+        .key-input { font-family: monospace; font-size: 0.85rem; }
+
+        .balance-coin { font-weight: bold; }
+        .balance-avail { color: #28a745; }
+        .balance-locked { color: #dc3545; }
+    </style>
+</head>
+
+<body>
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top" id="mainNav">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="bit.html">BIT</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarResponsive">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarResponsive">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link active" href="trade.html">Trade</a></li>
+                    <li class="nav-item"><a class="nav-link" href="bit.html">Monitor</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#" data-bs-toggle="modal" data-bs-target="#apiKeyModal">API Key</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid" style="padding-top: 60px;">
+
+        <!-- API Key 미설정 알림 -->
+        <div id="div_apiAlert" class="alert alert-warning alert-dismissible fade show mt-2" role="alert" style="display:none;">
+            API Key가 설정되지 않았습니다. <a href="#" data-bs-toggle="modal" data-bs-target="#apiKeyModal">API Key 설정</a>을 먼저 해주세요.
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div class="row mt-2">
+
+            <!-- 좌측: 마켓 리스트 -->
+            <div class="col-md-2">
+                <div class="card">
+                    <div class="card-header py-2">
+                        <input type="text" id="txt_marketSearch" class="form-control form-control-sm" placeholder="마켓 검색 (BTC, 비트코인...)">
+                    </div>
+                    <div class="card-body p-0 market-list-wrap" id="div_marketList">
+                    </div>
+                </div>
+            </div>
+
+            <!-- 중앙: 호가/차트/주문 -->
+            <div class="col-md-7">
+                <div class="row">
+                    <!-- 현재가 정보 -->
+                    <div class="col-12">
+                        <div class="card mb-2">
+                            <div class="card-body py-2">
+                                <div class="d-flex align-items-center justify-content-between">
+                                    <div>
+                                        <span id="txt_marketName" class="fs-5 fw-bold">마켓을 선택하세요</span>
+                                        <span id="txt_marketCode" class="text-muted ms-2"></span>
+                                    </div>
+                                    <div class="text-end">
+                                        <span id="txt_currentPrice" class="current-price">-</span>
+                                        <span id="txt_changeRate" class="change-rate ms-2">-</span>
+                                        <br>
+                                        <small class="text-muted">거래량(24H): <span id="txt_volume24h">-</span></small>
+                                        <small class="text-muted ms-3">거래대금(24H): <span id="txt_tradePrice24h">-</span></small>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <!-- 호가창 -->
+                    <div class="col-md-5">
+                        <div class="card">
+                            <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                                <strong>호가</strong>
+                                <button id="btn_refreshOrderbook" class="btn btn-sm btn-outline-secondary">새로고침</button>
+                            </div>
+                            <div class="card-body p-0" id="div_orderbook">
+                                <table class="table table-sm table-hover orderbook-table mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th class="text-end">매도잔량</th>
+                                            <th class="text-center">가격</th>
+                                            <th>매수잔량</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody_orderbook">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 주문 영역 -->
+                    <div class="col-md-7">
+                        <div class="card">
+                            <div class="card-header py-2">
+                                <ul class="nav nav-tabs card-header-tabs" id="orderTab" role="tablist">
+                                    <li class="nav-item tab-buy" role="presentation">
+                                        <button class="nav-link active" id="buy-tab" data-bs-toggle="tab" data-bs-target="#buyPane" type="button">매수</button>
+                                    </li>
+                                    <li class="nav-item tab-sell" role="presentation">
+                                        <button class="nav-link" id="sell-tab" data-bs-toggle="tab" data-bs-target="#sellPane" type="button">매도</button>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div class="card-body">
+                                <div class="tab-content" id="orderTabContent">
+
+                                    <!-- 매수 탭 -->
+                                    <div class="tab-pane fade show active" id="buyPane">
+                                        <div class="mb-2">
+                                            <div class="btn-group btn-group-sm w-100" role="group">
+                                                <input type="radio" class="btn-check" name="buyOrderType" id="buyLimit" value="limit" checked>
+                                                <label class="btn btn-outline-secondary" for="buyLimit">지정가</label>
+                                                <input type="radio" class="btn-check" name="buyOrderType" id="buyMarket" value="price">
+                                                <label class="btn btn-outline-secondary" for="buyMarket">시장가</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2" id="div_buyLimitFields">
+                                            <label class="form-label mb-1 small">주문가격 (KRW)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="txt_buyPrice" class="form-control text-end" placeholder="0">
+                                                <span class="input-group-text">KRW</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2" id="div_buyVolume">
+                                            <label class="form-label mb-1 small">주문수량</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="txt_buyVolume" class="form-control text-end" placeholder="0">
+                                                <span class="input-group-text" id="txt_buyCoinUnit">-</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2" id="div_buyTotalPrice" style="display:none;">
+                                            <label class="form-label mb-1 small">주문총액 (시장가)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="txt_buyTotalPrice" class="form-control text-end" placeholder="0">
+                                                <span class="input-group-text">KRW</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between small text-muted">
+                                                <span>주문가능: <span id="txt_buyAvailKRW">-</span> KRW</span>
+                                                <span>총액: <span id="txt_buyTotal">0</span> KRW</span>
+                                            </div>
+                                        </div>
+                                        <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                                            <button class="btn btn-outline-secondary btn-buy-pct" data-pct="10">10%</button>
+                                            <button class="btn btn-outline-secondary btn-buy-pct" data-pct="25">25%</button>
+                                            <button class="btn btn-outline-secondary btn-buy-pct" data-pct="50">50%</button>
+                                            <button class="btn btn-outline-secondary btn-buy-pct" data-pct="100">100%</button>
+                                        </div>
+                                        <button id="btn_buyOrder" class="btn btn-buy w-100">매수</button>
+                                    </div>
+
+                                    <!-- 매도 탭 -->
+                                    <div class="tab-pane fade" id="sellPane">
+                                        <div class="mb-2">
+                                            <div class="btn-group btn-group-sm w-100" role="group">
+                                                <input type="radio" class="btn-check" name="sellOrderType" id="sellLimit" value="limit" checked>
+                                                <label class="btn btn-outline-secondary" for="sellLimit">지정가</label>
+                                                <input type="radio" class="btn-check" name="sellOrderType" id="sellMarket" value="market">
+                                                <label class="btn btn-outline-secondary" for="sellMarket">시장가</label>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2" id="div_sellLimitFields">
+                                            <label class="form-label mb-1 small">주문가격 (KRW)</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="txt_sellPrice" class="form-control text-end" placeholder="0">
+                                                <span class="input-group-text">KRW</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2" id="div_sellVolume">
+                                            <label class="form-label mb-1 small">주문수량</label>
+                                            <div class="input-group input-group-sm">
+                                                <input type="text" id="txt_sellVolume" class="form-control text-end" placeholder="0">
+                                                <span class="input-group-text" id="txt_sellCoinUnit">-</span>
+                                            </div>
+                                        </div>
+
+                                        <div class="mb-2">
+                                            <div class="d-flex justify-content-between small text-muted">
+                                                <span>주문가능: <span id="txt_sellAvailCoin">-</span> <span id="txt_sellAvailUnit">-</span></span>
+                                                <span>총액: <span id="txt_sellTotal">0</span> KRW</span>
+                                            </div>
+                                        </div>
+                                        <div class="btn-group btn-group-sm w-100 mb-2" role="group">
+                                            <button class="btn btn-outline-secondary btn-sell-pct" data-pct="10">10%</button>
+                                            <button class="btn btn-outline-secondary btn-sell-pct" data-pct="25">25%</button>
+                                            <button class="btn btn-outline-secondary btn-sell-pct" data-pct="50">50%</button>
+                                            <button class="btn btn-outline-secondary btn-sell-pct" data-pct="100">100%</button>
+                                        </div>
+                                        <button id="btn_sellOrder" class="btn btn-sell w-100">매도</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 체결 내역 -->
+                        <div class="card mt-2">
+                            <div class="card-header py-2"><strong>최근 체결</strong></div>
+                            <div class="card-body p-0" style="max-height: 200px; overflow-y: auto;">
+                                <table class="table table-sm table-hover mb-0" style="font-size:0.8rem;">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>시간</th>
+                                            <th class="text-end">가격</th>
+                                            <th class="text-end">수량</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tbody_trades">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 우측: 잔고/미체결 -->
+            <div class="col-md-3">
+                <!-- 자산 -->
+                <div class="card mb-2">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <strong>내 자산</strong>
+                        <button id="btn_refreshBalance" class="btn btn-sm btn-outline-secondary">새로고침</button>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm mb-0" style="font-size:0.85rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>코인</th>
+                                    <th class="text-end">보유</th>
+                                    <th class="text-end">주문중</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_balance">
+                                <tr><td colspan="3" class="text-center text-muted">API Key를 설정하세요</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 미체결 주문 -->
+                <div class="card mb-2">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <strong>미체결 주문</strong>
+                        <div>
+                            <button id="btn_refreshOrders" class="btn btn-sm btn-outline-secondary">새로고침</button>
+                            <button id="btn_cancelAll" class="btn btn-sm btn-outline-danger ms-1">전체취소</button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 300px; overflow-y: auto;">
+                        <table class="table table-sm mb-0" style="font-size:0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>마켓</th>
+                                    <th>구분</th>
+                                    <th class="text-end">가격</th>
+                                    <th class="text-end">수량</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_openOrders">
+                                <tr><td colspan="5" class="text-center text-muted">-</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 체결 완료 주문 -->
+                <div class="card">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <strong>체결 완료</strong>
+                        <button id="btn_refreshDone" class="btn btn-sm btn-outline-secondary">새로고침</button>
+                    </div>
+                    <div class="card-body p-0" style="max-height: 250px; overflow-y: auto;">
+                        <table class="table table-sm mb-0" style="font-size:0.8rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>시간</th>
+                                    <th>마켓</th>
+                                    <th>구분</th>
+                                    <th class="text-end">가격</th>
+                                    <th class="text-end">수량</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbody_doneOrders">
+                                <tr><td colspan="5" class="text-center text-muted">-</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- API Key 설정 모달 -->
+    <div class="modal fade" id="apiKeyModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">API Key 설정</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="alert alert-info small">
+                        Bithumb에서 발급받은 API Key를 입력하세요.<br>
+                        Key는 브라우저 localStorage에 저장됩니다.
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Access Key</label>
+                        <input type="text" id="txt_accessKey" class="form-control key-input" placeholder="Access Key 입력">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Secret Key</label>
+                        <input type="password" id="txt_secretKey" class="form-control key-input" placeholder="Secret Key 입력">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-danger" id="btn_clearKey">초기화</button>
+                    <button type="button" class="btn btn-primary" id="btn_saveKey">저장</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 주문 확인 모달 -->
+    <div class="modal fade" id="orderConfirmModal" tabindex="-1">
+        <div class="modal-dialog modal-sm">
+            <div class="modal-content">
+                <div class="modal-header py-2">
+                    <h6 class="modal-title" id="txt_orderConfirmTitle">주문 확인</h6>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="div_orderConfirmBody">
+                </div>
+                <div class="modal-footer py-1">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">취소</button>
+                    <button type="button" class="btn btn-sm" id="btn_orderConfirm">주문</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container position-fixed bottom-0 end-0 p-3">
+        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true" data-bs-delay="5000">
+            <div class="toast-header">
+                <svg class="bd-placeholder-img rounded me-2" height="20" width="20" xmlns="http://www.w3.org/2000/svg"><rect width="100%" height="100%" fill="#007aff"></rect></svg>
+                <strong class="me-auto">Trade</strong>
+                <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+            </div>
+            <div class="toast-body"></div>
+        </div>
+    </div>
+
+    <script>
+
+    const toastEl = document.getElementById('liveToast');
+    const toastInst = bootstrap.Toast.getOrCreateInstance(toastEl);
+
+    function toastMsg(msg, isError) {
+        const body = toastEl.querySelector('.toast-body');
+        body.textContent = msg;
+        toastEl.querySelector('rect').setAttribute('fill', isError ? '#dc3545' : '#007aff');
+        toastInst.show();
+    }
+
+    // ========================================
+    // JWT / 인증 유틸
+    // ========================================
+    function base64url(input) {
+        let str;
+        if (typeof input === 'string') {
+            str = btoa(unescape(encodeURIComponent(input)));
+        } else {
+            str = btoa(String.fromCharCode(...new Uint8Array(input)));
+        }
+        return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+    }
+
+    function uuidv4() {
+        if (crypto.randomUUID) return crypto.randomUUID();
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    async function sha512(message) {
+        const encoder = new TextEncoder();
+        const data = encoder.encode(message);
+        const hashBuffer = await crypto.subtle.digest('SHA-512', data);
+        const hashArray = Array.from(new Uint8Array(hashBuffer));
+        return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+
+    async function generateJWT(queryString) {
+        const accessKey = trade.accessKey;
+        const secretKey = trade.secretKey;
+
+        if (!accessKey || !secretKey) {
+            throw new Error('API Key가 설정되지 않았습니다.');
+        }
+
+        const header = { alg: 'HS256', typ: 'JWT' };
+        const payload = {
+            access_key: accessKey,
+            nonce: uuidv4(),
+            timestamp: Date.now()
+        };
+
+        if (queryString) {
+            payload.query_hash = await sha512(queryString);
+            payload.query_hash_alg = 'SHA512';
+        }
+
+        const encodedHeader = base64url(JSON.stringify(header));
+        const encodedPayload = base64url(JSON.stringify(payload));
+        const signingInput = encodedHeader + '.' + encodedPayload;
+
+        const key = await crypto.subtle.importKey(
+            'raw',
+            new TextEncoder().encode(secretKey),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false,
+            ['sign']
+        );
+
+        const signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+        return signingInput + '.' + base64url(signature);
+    }
+
+    // 인증 API 호출
+    async function apiAuth(method, url, params) {
+        let queryString = '';
+        let fetchUrl = url;
+
+        if (params && Object.keys(params).length > 0) {
+            queryString = new URLSearchParams(params).toString();
+            if (method === 'GET' || method === 'DELETE') {
+                fetchUrl = url + '?' + queryString;
+            }
+        }
+
+        const token = await generateJWT(queryString || undefined);
+
+        const options = {
+            method: method,
+            headers: {
+                'Authorization': 'Bearer ' + token,
+                'Content-Type': 'application/json'
+            }
+        };
+
+        if ((method === 'POST') && params) {
+            options.body = JSON.stringify(params);
+        }
+
+        const response = await fetch(fetchUrl, options);
+        const data = await response.json();
+
+        if (data.error) {
+            throw new Error(data.error.message || data.error.name || 'API 오류');
+        }
+
+        return data;
+    }
+
+    // 공개 API 호출
+    async function apiPublic(url) {
+        const response = await fetch(url, { method: 'GET', headers: { accept: 'application/json' } });
+        return response.json();
+    }
+
+    // ========================================
+    // 메인 로직
+    // ========================================
+    const trade = {
+        accessKey: '',
+        secretKey: '',
+        currentMarket: '',
+        currentCoin: '',
+        currentKoreanName: '',
+        marketList: [],
+        balanceMap: {},
+        tickerInterval: null,
+        orderbookInterval: null,
+        tradesInterval: null
+    };
+
+    $(document).ready(function() {
+
+        // API Key 로드
+        trade.accessKey = localStorage.getItem('bit_access_key') || '';
+        trade.secretKey = localStorage.getItem('bit_secret_key') || '';
+
+        $('#txt_accessKey').val(trade.accessKey);
+        $('#txt_secretKey').val(trade.secretKey);
+
+        if (!trade.accessKey || !trade.secretKey) {
+            $('#div_apiAlert').show();
+        }
+
+        // API Key 저장
+        $('#btn_saveKey').on('click', function() {
+            trade.accessKey = $('#txt_accessKey').val().trim();
+            trade.secretKey = $('#txt_secretKey').val().trim();
+            localStorage.setItem('bit_access_key', trade.accessKey);
+            localStorage.setItem('bit_secret_key', trade.secretKey);
+            bootstrap.Modal.getInstance(document.getElementById('apiKeyModal')).hide();
+            $('#div_apiAlert').hide();
+            toastMsg('API Key가 저장되었습니다.');
+            loadBalance();
+        });
+
+        // API Key 초기화
+        $('#btn_clearKey').on('click', function() {
+            trade.accessKey = '';
+            trade.secretKey = '';
+            localStorage.removeItem('bit_access_key');
+            localStorage.removeItem('bit_secret_key');
+            $('#txt_accessKey').val('');
+            $('#txt_secretKey').val('');
+            toastMsg('API Key가 초기화되었습니다.');
+        });
+
+        // 마켓 리스트 로드
+        loadMarketList();
+
+        // 마켓 검색
+        $('#txt_marketSearch').on('input', function() {
+            const keyword = $(this).val().toLowerCase();
+            $('.market-item').each(function() {
+                const text = $(this).text().toLowerCase();
+                $(this).toggle(text.indexOf(keyword) >= 0);
+            });
+        });
+
+        // 매수 주문 타입 변경
+        $('input[name="buyOrderType"]').on('change', function() {
+            const val = $(this).val();
+            if (val === 'price') {
+                // 시장가 매수: 총액 입력
+                $('#div_buyLimitFields').hide();
+                $('#div_buyVolume').hide();
+                $('#div_buyTotalPrice').show();
+            } else {
+                // 지정가 매수: 가격+수량
+                $('#div_buyLimitFields').show();
+                $('#div_buyVolume').show();
+                $('#div_buyTotalPrice').hide();
+            }
+        });
+
+        // 매도 주문 타입 변경
+        $('input[name="sellOrderType"]').on('change', function() {
+            const val = $(this).val();
+            if (val === 'market') {
+                $('#div_sellLimitFields').hide();
+            } else {
+                $('#div_sellLimitFields').show();
+            }
+        });
+
+        // 매수가/수량 변경 시 총액 계산
+        $('#txt_buyPrice, #txt_buyVolume').on('input', function() {
+            calcBuyTotal();
+        });
+
+        // 매도가/수량 변경 시 총액 계산
+        $('#txt_sellPrice, #txt_sellVolume').on('input', function() {
+            calcSellTotal();
+        });
+
+        // 매수 비율 버튼
+        $('.btn-buy-pct').on('click', function() {
+            const pct = Number($(this).data('pct'));
+            const avail = trade.balanceMap['KRW'] ? parseFloat(trade.balanceMap['KRW'].balance) : 0;
+            const orderType = $('input[name="buyOrderType"]:checked').val();
+
+            if (orderType === 'price') {
+                // 시장가
+                const total = Math.floor(avail * pct / 100);
+                $('#txt_buyTotalPrice').val(total);
+            } else {
+                // 지정가
+                const price = parseNumber($('#txt_buyPrice').val());
+                if (price > 0) {
+                    const volume = (avail * pct / 100) / price;
+                    $('#txt_buyVolume').val(volume.toFixed(8));
+                    calcBuyTotal();
+                }
+            }
+        });
+
+        // 매도 비율 버튼
+        $('.btn-sell-pct').on('click', function() {
+            const pct = Number($(this).data('pct'));
+            const coin = trade.currentCoin;
+            const avail = trade.balanceMap[coin] ? parseFloat(trade.balanceMap[coin].balance) : 0;
+            const volume = avail * pct / 100;
+            $('#txt_sellVolume').val(volume.toFixed(8));
+            calcSellTotal();
+        });
+
+        // 매수 주문
+        $('#btn_buyOrder').on('click', function() {
+            const orderType = $('input[name="buyOrderType"]:checked').val();
+            let price, volume, totalPrice;
+
+            if (orderType === 'price') {
+                totalPrice = parseNumber($('#txt_buyTotalPrice').val());
+                if (!totalPrice || totalPrice < 5000) {
+                    toastMsg('최소 주문 금액은 5,000원입니다.', true);
+                    return;
+                }
+                showOrderConfirm('buy', {
+                    market: trade.currentMarket,
+                    side: 'bid',
+                    ord_type: 'price',
+                    price: String(totalPrice)
+                });
+            } else {
+                price = parseNumber($('#txt_buyPrice').val());
+                volume = parseNumber($('#txt_buyVolume').val());
+                if (!price || !volume) {
+                    toastMsg('가격과 수량을 입력하세요.', true);
+                    return;
+                }
+                if (price * volume < 5000) {
+                    toastMsg('최소 주문 금액은 5,000원입니다.', true);
+                    return;
+                }
+                showOrderConfirm('buy', {
+                    market: trade.currentMarket,
+                    side: 'bid',
+                    ord_type: 'limit',
+                    price: String(price),
+                    volume: String(volume)
+                });
+            }
+        });
+
+        // 매도 주문
+        $('#btn_sellOrder').on('click', function() {
+            const orderType = $('input[name="sellOrderType"]:checked').val();
+            let price, volume;
+
+            volume = parseNumber($('#txt_sellVolume').val());
+            if (!volume) {
+                toastMsg('수량을 입력하세요.', true);
+                return;
+            }
+
+            if (orderType === 'market') {
+                showOrderConfirm('sell', {
+                    market: trade.currentMarket,
+                    side: 'ask',
+                    ord_type: 'market',
+                    volume: String(volume)
+                });
+            } else {
+                price = parseNumber($('#txt_sellPrice').val());
+                if (!price) {
+                    toastMsg('가격을 입력하세요.', true);
+                    return;
+                }
+                showOrderConfirm('sell', {
+                    market: trade.currentMarket,
+                    side: 'ask',
+                    ord_type: 'limit',
+                    price: String(price),
+                    volume: String(volume)
+                });
+            }
+        });
+
+        // 새로고침 버튼들
+        $('#btn_refreshOrderbook').on('click', function() { loadOrderbook(); });
+        $('#btn_refreshBalance').on('click', function() { loadBalance(); });
+        $('#btn_refreshOrders').on('click', function() { loadOpenOrders(); });
+        $('#btn_refreshDone').on('click', function() { loadDoneOrders(); });
+
+        // 전체 주문 취소
+        $('#btn_cancelAll').on('click', function() {
+            if (!confirm('미체결 주문을 전체 취소하시겠습니까?')) return;
+            cancelAllOrders();
+        });
+
+        // 잔고 로드
+        if (trade.accessKey && trade.secretKey) {
+            loadBalance();
+        }
+    });
+
+    function parseNumber(str) {
+        if (!str) return 0;
+        return Number(String(str).replace(/,/g, ''));
+    }
+
+    function formatKRW(num) {
+        if (num == null) return '-';
+        return Number(num).toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+    }
+
+    function formatPrice(num) {
+        if (num == null) return '-';
+        num = Number(num);
+        if (num >= 100) return num.toLocaleString('ko-KR', { maximumFractionDigits: 0 });
+        if (num >= 1) return num.toLocaleString('ko-KR', { maximumFractionDigits: 2 });
+        return num.toLocaleString('ko-KR', { maximumFractionDigits: 8 });
+    }
+
+    function formatVolume(num) {
+        if (num == null) return '-';
+        return Number(num).toLocaleString('ko-KR', { maximumFractionDigits: 8 });
+    }
+
+    function calcBuyTotal() {
+        const price = parseNumber($('#txt_buyPrice').val());
+        const volume = parseNumber($('#txt_buyVolume').val());
+        const total = price * volume;
+        $('#txt_buyTotal').text(formatKRW(total));
+    }
+
+    function calcSellTotal() {
+        const price = parseNumber($('#txt_sellPrice').val());
+        const volume = parseNumber($('#txt_sellVolume').val());
+        const total = price * volume;
+        $('#txt_sellTotal').text(formatKRW(total));
+    }
+
+    // ========================================
+    // 마켓 리스트
+    // ========================================
+    async function loadMarketList() {
+        try {
+            const data = await apiPublic('https://api.bithumb.com/v1/market/all?isDetails=true');
+            trade.marketList = data.filter(m => m.market.startsWith('KRW-'));
+
+            // 정렬: 한글 이름
+            trade.marketList.sort((a, b) => a.korean_name.localeCompare(b.korean_name, 'ko'));
+
+            renderMarketList();
+        } catch (e) {
+            console.error('마켓 로드 실패:', e);
+        }
+    }
+
+    function renderMarketList() {
+        const $list = $('#div_marketList');
+        $list.empty();
+
+        trade.marketList.forEach(function(m) {
+            const $item = $('<div class="market-item"></div>')
+                .attr('data-market', m.market)
+                .html('<span class="fw-bold">' + m.korean_name + '</span> <small class="text-muted">' + m.market.replace('KRW-', '') + '</small>');
+
+            $item.on('click', function() {
+                selectMarket(m.market, m.korean_name);
+                $('.market-item').removeClass('active');
+                $(this).addClass('active');
+            });
+
+            $list.append($item);
+        });
+    }
+
+    // ========================================
+    // 마켓 선택
+    // ========================================
+    function selectMarket(market, koreanName) {
+        trade.currentMarket = market;
+        trade.currentCoin = market.replace('KRW-', '');
+        trade.currentKoreanName = koreanName;
+
+        $('#txt_marketName').text(koreanName);
+        $('#txt_marketCode').text(market);
+        $('#txt_buyCoinUnit').text(trade.currentCoin);
+        $('#txt_sellCoinUnit').text(trade.currentCoin);
+        $('#txt_sellAvailUnit').text(trade.currentCoin);
+
+        // 이전 인터벌 정리
+        clearIntervals();
+
+        // 데이터 로드
+        loadTicker();
+        loadOrderbook();
+        loadRecentTrades();
+
+        if (trade.accessKey) {
+            loadOpenOrders();
+            loadDoneOrders();
+            updateBalanceDisplay();
+        }
+
+        // 자동 갱신
+        trade.tickerInterval = setInterval(loadTicker, 3000);
+        trade.orderbookInterval = setInterval(loadOrderbook, 5000);
+        trade.tradesInterval = setInterval(loadRecentTrades, 5000);
+    }
+
+    function clearIntervals() {
+        if (trade.tickerInterval) clearInterval(trade.tickerInterval);
+        if (trade.orderbookInterval) clearInterval(trade.orderbookInterval);
+        if (trade.tradesInterval) clearInterval(trade.tradesInterval);
+    }
+
+    // ========================================
+    // 현재가 (Ticker)
+    // ========================================
+    async function loadTicker() {
+        if (!trade.currentMarket) return;
+
+        try {
+            const data = await apiPublic('https://api.bithumb.com/v1/ticker?markets=' + trade.currentMarket);
+            if (!data || !data.length) return;
+
+            const t = data[0];
+            const price = t.trade_price;
+            const change = t.change; // RISE, FALL, EVEN
+            const changeRate = (t.signed_change_rate * 100).toFixed(2);
+            const changePrice = t.signed_change_price;
+
+            let priceClass = 'price-same';
+            let changeText = '';
+            if (change === 'RISE') {
+                priceClass = 'price-up';
+                changeText = '+' + changeRate + '% (' + formatPrice(changePrice) + ')';
+            } else if (change === 'FALL') {
+                priceClass = 'price-down';
+                changeText = changeRate + '% (' + formatPrice(changePrice) + ')';
+            } else {
+                changeText = '0.00%';
+            }
+
+            $('#txt_currentPrice').text(formatPrice(price)).removeClass('price-up price-down price-same').addClass(priceClass);
+            $('#txt_changeRate').text(changeText).removeClass('price-up price-down price-same').addClass(priceClass);
+            $('#txt_volume24h').text(formatVolume(t.acc_trade_volume_24h));
+            $('#txt_tradePrice24h').text(formatKRW(t.acc_trade_price_24h) + ' KRW');
+
+            // 매수/매도 가격 자동 설정 (비어있을 때만)
+            if (!$('#txt_buyPrice').val()) {
+                $('#txt_buyPrice').val(price);
+            }
+            if (!$('#txt_sellPrice').val()) {
+                $('#txt_sellPrice').val(price);
+            }
+
+            document.title = formatPrice(price) + ' ' + trade.currentCoin + ' - BIT Trade';
+
+        } catch (e) {
+            console.error('Ticker 오류:', e);
+        }
+    }
+
+    // ========================================
+    // 호가창
+    // ========================================
+    async function loadOrderbook() {
+        if (!trade.currentMarket) return;
+
+        try {
+            const data = await apiPublic('https://api.bithumb.com/v1/orderbook?markets=' + trade.currentMarket);
+            if (!data || !data.length) return;
+
+            const ob = data[0];
+            const askUnits = ob.orderbook_units;
+
+            // 최대 잔량 (바 길이 계산용)
+            let maxSize = 0;
+            askUnits.forEach(u => {
+                maxSize = Math.max(maxSize, u.ask_size, u.bid_size);
+            });
+
+            let html = '';
+
+            // 매도 호가 (높은 가격 → 낮은 가격, 위→아래)
+            for (let i = askUnits.length - 1; i >= 0; i--) {
+                const u = askUnits[i];
+                const barWidth = maxSize > 0 ? (u.ask_size / maxSize * 100).toFixed(1) : 0;
+                html += '<tr class="ob-row ask-row" data-price="' + u.ask_price + '">'
+                    + '<td class="text-end" style="width:35%;">'
+                    + '<div class="vol-bar-ask" style="width:' + barWidth + '%;"></div>'
+                    + formatVolume(u.ask_size)
+                    + '</td>'
+                    + '<td class="text-center price-down fw-bold" style="width:30%;">' + formatPrice(u.ask_price) + '</td>'
+                    + '<td style="width:35%;"></td>'
+                    + '</tr>';
+            }
+
+            // 매수 호가 (높은 가격 → 낮은 가격, 위→아래)
+            for (let i = 0; i < askUnits.length; i++) {
+                const u = askUnits[i];
+                const barWidth = maxSize > 0 ? (u.bid_size / maxSize * 100).toFixed(1) : 0;
+                html += '<tr class="ob-row bid-row" data-price="' + u.bid_price + '">'
+                    + '<td class="text-end" style="width:35%;"></td>'
+                    + '<td class="text-center price-up fw-bold" style="width:30%;">' + formatPrice(u.bid_price) + '</td>'
+                    + '<td style="width:35%;">'
+                    + '<div class="vol-bar-bid" style="width:' + barWidth + '%;"></div>'
+                    + formatVolume(u.bid_size)
+                    + '</td>'
+                    + '</tr>';
+            }
+
+            $('#tbody_orderbook').html(html);
+
+            // 호가 클릭 시 가격 설정
+            $('#tbody_orderbook tr').on('click', function() {
+                const price = $(this).data('price');
+                if (price) {
+                    $('#txt_buyPrice').val(price);
+                    $('#txt_sellPrice').val(price);
+                    calcBuyTotal();
+                    calcSellTotal();
+                }
+            });
+
+        } catch (e) {
+            console.error('호가 오류:', e);
+        }
+    }
+
+    // ========================================
+    // 최근 체결
+    // ========================================
+    async function loadRecentTrades() {
+        if (!trade.currentMarket) return;
+
+        try {
+            const data = await apiPublic('https://api.bithumb.com/v1/trades/ticks?market=' + trade.currentMarket + '&count=30');
+
+            let html = '';
+            data.forEach(function(t) {
+                const time = new Date(t.timestamp).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+                const priceClass = t.ask_bid === 'BID' ? 'price-up' : 'price-down';
+                html += '<tr>'
+                    + '<td>' + time + '</td>'
+                    + '<td class="text-end ' + priceClass + '">' + formatPrice(t.trade_price) + '</td>'
+                    + '<td class="text-end">' + formatVolume(t.trade_volume) + '</td>'
+                    + '</tr>';
+            });
+
+            $('#tbody_trades').html(html);
+        } catch (e) {
+            console.error('체결 오류:', e);
+        }
+    }
+
+    // ========================================
+    // 잔고 조회
+    // ========================================
+    async function loadBalance() {
+        if (!trade.accessKey || !trade.secretKey) return;
+
+        try {
+            const data = await apiAuth('GET', 'https://api.bithumb.com/v1/accounts');
+
+            trade.balanceMap = {};
+            let html = '';
+
+            data.forEach(function(b) {
+                trade.balanceMap[b.currency] = b;
+
+                const balance = parseFloat(b.balance);
+                const locked = parseFloat(b.locked);
+                if (balance === 0 && locked === 0) return; // 잔고 없으면 스킵
+
+                html += '<tr>'
+                    + '<td class="balance-coin">' + b.currency + '</td>'
+                    + '<td class="text-end balance-avail">' + (b.currency === 'KRW' ? formatKRW(balance) : formatVolume(balance)) + '</td>'
+                    + '<td class="text-end balance-locked">' + (locked > 0 ? (b.currency === 'KRW' ? formatKRW(locked) : formatVolume(locked)) : '-') + '</td>'
+                    + '</tr>';
+            });
+
+            if (!html) html = '<tr><td colspan="3" class="text-center text-muted">잔고 없음</td></tr>';
+            $('#tbody_balance').html(html);
+
+            updateBalanceDisplay();
+
+        } catch (e) {
+            console.error('잔고 조회 오류:', e);
+            toastMsg('잔고 조회 실패: ' + e.message, true);
+        }
+    }
+
+    function updateBalanceDisplay() {
+        // 매수 가능 KRW
+        const krw = trade.balanceMap['KRW'];
+        $('#txt_buyAvailKRW').text(krw ? formatKRW(parseFloat(krw.balance)) : '0');
+
+        // 매도 가능 코인
+        const coin = trade.balanceMap[trade.currentCoin];
+        $('#txt_sellAvailCoin').text(coin ? formatVolume(parseFloat(coin.balance)) : '0');
+    }
+
+    // ========================================
+    // 미체결 주문 조회
+    // ========================================
+    async function loadOpenOrders() {
+        if (!trade.accessKey || !trade.secretKey) return;
+
+        try {
+            const params = { state: 'wait' };
+            if (trade.currentMarket) {
+                params.market = trade.currentMarket;
+            }
+
+            const data = await apiAuth('GET', 'https://api.bithumb.com/v1/orders', params);
+
+            let html = '';
+            data.forEach(function(o) {
+                const sideClass = o.side === 'bid' ? 'badge-bid' : 'badge-ask';
+                const sideText = o.side === 'bid' ? '매수' : '매도';
+                const remaining = parseFloat(o.remaining_volume);
+
+                html += '<tr>'
+                    + '<td>' + o.market + '</td>'
+                    + '<td><span class="badge ' + sideClass + '">' + sideText + '</span></td>'
+                    + '<td class="text-end">' + formatPrice(o.price) + '</td>'
+                    + '<td class="text-end">' + formatVolume(remaining) + '</td>'
+                    + '<td><button class="btn btn-sm btn-outline-danger py-0 px-1 btn-cancel-order" data-uuid="' + o.uuid + '">X</button></td>'
+                    + '</tr>';
+            });
+
+            if (!html) html = '<tr><td colspan="5" class="text-center text-muted">미체결 없음</td></tr>';
+            $('#tbody_openOrders').html(html);
+
+            // 취소 버튼
+            $('.btn-cancel-order').on('click', function() {
+                const uuid = $(this).data('uuid');
+                cancelOrder(uuid);
+            });
+
+        } catch (e) {
+            console.error('미체결 조회 오류:', e);
+        }
+    }
+
+    // ========================================
+    // 체결 완료 주문 조회
+    // ========================================
+    async function loadDoneOrders() {
+        if (!trade.accessKey || !trade.secretKey) return;
+
+        try {
+            const params = { state: 'done', limit: '20' };
+            if (trade.currentMarket) {
+                params.market = trade.currentMarket;
+            }
+
+            const data = await apiAuth('GET', 'https://api.bithumb.com/v1/orders', params);
+
+            let html = '';
+            data.forEach(function(o) {
+                const sideClass = o.side === 'bid' ? 'badge-bid' : 'badge-ask';
+                const sideText = o.side === 'bid' ? '매수' : '매도';
+                const time = new Date(o.created_at).toLocaleString('ko-KR', {
+                    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false
+                });
+
+                html += '<tr>'
+                    + '<td>' + time + '</td>'
+                    + '<td>' + o.market.replace('KRW-', '') + '</td>'
+                    + '<td><span class="badge ' + sideClass + '">' + sideText + '</span></td>'
+                    + '<td class="text-end">' + formatPrice(o.price) + '</td>'
+                    + '<td class="text-end">' + formatVolume(o.executed_volume) + '</td>'
+                    + '</tr>';
+            });
+
+            if (!html) html = '<tr><td colspan="5" class="text-center text-muted">체결 내역 없음</td></tr>';
+            $('#tbody_doneOrders').html(html);
+
+        } catch (e) {
+            console.error('체결 완료 조회 오류:', e);
+        }
+    }
+
+    // ========================================
+    // 주문
+    // ========================================
+    function showOrderConfirm(type, params) {
+        if (!trade.currentMarket) {
+            toastMsg('마켓을 선택하세요.', true);
+            return;
+        }
+
+        const isBuy = type === 'buy';
+        const title = isBuy ? '매수 주문 확인' : '매도 주문 확인';
+        const btnClass = isBuy ? 'btn-buy' : 'btn-sell';
+
+        let body = '<table class="table table-sm mb-0">';
+        body += '<tr><td>마켓</td><td class="fw-bold">' + trade.currentKoreanName + ' (' + trade.currentMarket + ')</td></tr>';
+        body += '<tr><td>구분</td><td><span class="badge ' + (isBuy ? 'badge-bid' : 'badge-ask') + '">' + (isBuy ? '매수' : '매도') + '</span></td></tr>';
+
+        if (params.ord_type === 'limit') {
+            body += '<tr><td>주문가격</td><td>' + formatPrice(params.price) + ' KRW</td></tr>';
+            body += '<tr><td>주문수량</td><td>' + params.volume + ' ' + trade.currentCoin + '</td></tr>';
+            body += '<tr><td>주문총액</td><td class="fw-bold">' + formatKRW(parseFloat(params.price) * parseFloat(params.volume)) + ' KRW</td></tr>';
+        } else if (params.ord_type === 'price') {
+            body += '<tr><td>주문유형</td><td>시장가 매수</td></tr>';
+            body += '<tr><td>주문총액</td><td class="fw-bold">' + formatKRW(params.price) + ' KRW</td></tr>';
+        } else {
+            body += '<tr><td>주문유형</td><td>시장가 매도</td></tr>';
+            body += '<tr><td>주문수량</td><td>' + params.volume + ' ' + trade.currentCoin + '</td></tr>';
+        }
+        body += '</table>';
+
+        $('#txt_orderConfirmTitle').text(title);
+        $('#div_orderConfirmBody').html(body);
+        $('#btn_orderConfirm').removeClass('btn-buy btn-sell').addClass(btnClass).text(isBuy ? '매수' : '매도');
+
+        // 기존 이벤트 제거 후 새로 바인딩
+        $('#btn_orderConfirm').off('click').on('click', function() {
+            executeOrder(params);
+            bootstrap.Modal.getInstance(document.getElementById('orderConfirmModal')).hide();
+        });
+
+        new bootstrap.Modal(document.getElementById('orderConfirmModal')).show();
+    }
+
+    async function executeOrder(params) {
+        try {
+            const data = await apiAuth('POST', 'https://api.bithumb.com/v1/orders', params);
+
+            const sideText = params.side === 'bid' ? '매수' : '매도';
+            toastMsg(sideText + ' 주문이 접수되었습니다. (' + data.uuid + ')');
+
+            // 입력값 초기화
+            $('#txt_buyVolume').val('');
+            $('#txt_sellVolume').val('');
+            $('#txt_buyTotalPrice').val('');
+            $('#txt_buyTotal').text('0');
+            $('#txt_sellTotal').text('0');
+
+            // 데이터 갱신
+            setTimeout(function() {
+                loadBalance();
+                loadOpenOrders();
+                loadDoneOrders();
+            }, 1000);
+
+        } catch (e) {
+            console.error('주문 오류:', e);
+            toastMsg('주문 실패: ' + e.message, true);
+        }
+    }
+
+    // ========================================
+    // 주문 취소
+    // ========================================
+    async function cancelOrder(uuid) {
+        try {
+            await apiAuth('DELETE', 'https://api.bithumb.com/v1/order', { uuid: uuid });
+            toastMsg('주문이 취소되었습니다.');
+
+            setTimeout(function() {
+                loadBalance();
+                loadOpenOrders();
+            }, 500);
+
+        } catch (e) {
+            console.error('주문 취소 오류:', e);
+            toastMsg('주문 취소 실패: ' + e.message, true);
+        }
+    }
+
+    async function cancelAllOrders() {
+        try {
+            const params = { state: 'wait' };
+            if (trade.currentMarket) {
+                params.market = trade.currentMarket;
+            }
+
+            const orders = await apiAuth('GET', 'https://api.bithumb.com/v1/orders', params);
+
+            for (const o of orders) {
+                await apiAuth('DELETE', 'https://api.bithumb.com/v1/order', { uuid: o.uuid });
+            }
+
+            toastMsg(orders.length + '건의 주문이 취소되었습니다.');
+
+            setTimeout(function() {
+                loadBalance();
+                loadOpenOrders();
+            }, 500);
+
+        } catch (e) {
+            console.error('전체 취소 오류:', e);
+            toastMsg('전체 취소 실패: ' + e.message, true);
+        }
+    }
+
+    </script>
+</body>
+
+</html>

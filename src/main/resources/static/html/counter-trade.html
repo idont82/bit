@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>역추세 매매 알림</title>
+<title>스캘핑 매매</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
 <style>
   :root {
@@ -321,8 +321,8 @@
   <div class="logo">
     <div class="logo-icon">CT</div>
     <div>
-      <h1>COUNTER-TREND ALERT</h1>
-      <span>변동성 역추세 매매 알림</span>
+      <h1>SCALPING TRADE</h1>
+      <span>거래량 브레이크아웃 스캘핑</span>
     </div>
   </div>
   <div class="header-right">
@@ -340,8 +340,8 @@
 <div class="main">
 
   <div class="algo-info">
-    <strong>변동성 역추세 전략</strong> —
-    <strong>BB(20,2)</strong> 하단 이탈 + <strong>RSI(7)</strong> 20이하 과매도 + <strong>확정신호</strong>(밴드 재진입 or RSI↑돌파) + <strong>거래량 급증</strong>(x1.5↑) 동시 충족 시 <strong style="color:var(--accent)">매수</strong> 알림.
+    <strong>거래량 브레이크아웃 스캘핑</strong> —
+    <strong>거래량 급등</strong>(평균 대비 x2.0↑) + <strong>양봉 상승</strong> + <strong>모멘텀↑</strong>(3캔들 우상향 or 상승률 0.1%↑) 동시 충족 시 <strong style="color:var(--accent)">매수</strong>. 시간 초과 시 자동 손절.
     <strong style="color:var(--accent2)">투자 참고용이며 투자 손실에 책임지지 않습니다.</strong>
   </div>
 
@@ -367,6 +367,21 @@
       <input type="text" class="trade-input" id="inProfitTarget" placeholder="0.5" value="0.5" style="width:70px" onchange="saveTradeSettings()"> <span style="font-size:11px;color:var(--muted)">%</span>
       <span style="font-size:10px;color:var(--muted);margin-left:8px">(수수료 0.08% 제외 후 순이익 기준)</span>
     </div>
+    <div class="trade-row">
+      <span class="trade-lbl">거래량 배수</span>
+      <input type="text" class="trade-input" id="inVolMult" placeholder="2.0" value="2.0" style="width:70px" onchange="saveTradeSettings()">
+      <span style="font-size:11px;color:var(--muted)">x 이상</span>
+      <span class="trade-lbl" style="margin-left:16px">손절 시간</span>
+      <button class="tf-btn sl-btn" data-sl="3" onclick="setStopLoss(3,this)">3분</button>
+      <button class="tf-btn sl-btn active" data-sl="5" onclick="setStopLoss(5,this)">5분</button>
+      <button class="tf-btn sl-btn" data-sl="10" onclick="setStopLoss(10,this)">10분</button>
+      <button class="tf-btn sl-btn" data-sl="15" onclick="setStopLoss(15,this)">15분</button>
+      <button class="tf-btn sl-btn" data-sl="20" onclick="setStopLoss(20,this)">20분</button>
+      <button class="tf-btn sl-btn" data-sl="30" onclick="setStopLoss(30,this)">30분</button>
+      <span class="trade-lbl" style="margin-left:16px">최대 포지션</span>
+      <input type="text" class="trade-input" id="inMaxPos" placeholder="3" value="3" style="width:50px" onchange="saveTradeSettings()">
+      <span style="font-size:11px;color:var(--muted)">개</span>
+    </div>
   </div>
 
   <!-- 보유 포지션 -->
@@ -385,7 +400,7 @@
       <div class="stat-value" id="buyCount" style="color:var(--accent)">-</div>
     </div>
     <div class="stat-card">
-      <div class="stat-label">과매도 대기</div>
+      <div class="stat-label">대기</div>
       <div class="stat-value" id="waitCount" style="color:var(--gold)">-</div>
     </div>
     <div class="stat-card">
@@ -400,17 +415,6 @@
       <button class="tf-btn active" data-tf="1" onclick="setTf('1',this)">1분</button>
       <button class="tf-btn" data-tf="3" onclick="setTf('3',this)">3분</button>
       <button class="tf-btn" data-tf="5" onclick="setTf('5',this)">5분</button>
-      <button class="tf-btn" data-tf="10" onclick="setTf('10',this)">10분</button>
-      <button class="tf-btn" data-tf="30" onclick="setTf('30',this)">30분</button>
-      <button class="tf-btn" data-tf="60" onclick="setTf('60',this)">1시간</button>
-    </div>
-  </div>
-
-  <div class="control-row">
-    <div class="control-group">
-      <span class="control-label">매수 조건</span>
-      <button class="tf-btn active sig-btn" data-sig="1" onclick="setSignalMode('1',this)">(재진입 OR RSI돌파) + 거래량</button>
-      <button class="tf-btn sig-btn" data-sig="2" onclick="setSignalMode('2',this)">3캔들내 재진입 + RSI돌파 + 거래량</button>
     </div>
   </div>
 
@@ -419,7 +423,7 @@
       <span class="control-label">필터</span>
       <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">전체</button>
       <button class="filter-btn" data-f="buy" onclick="setFilter('buy',this)">매수 신호</button>
-      <button class="filter-btn" data-f="wait" onclick="setFilter('wait',this)">과매도 대기</button>
+      <button class="filter-btn" data-f="wait" onclick="setFilter('wait',this)">대기</button>
     </div>
     <div class="control-group" style="margin-left:auto;">
       <span class="control-label">자동 스캔</span>
@@ -458,9 +462,9 @@
 // Config
 // ========================================
 const API = 'https://api.bithumb.com/v1';
-const BB_LEN = 20, BB_STD = 2;
-const RSI_LEN = 7, RSI_OS = 20, RSI_OB = 80;
-const CANDLE_COUNT = 50; // BB(20) + 여유
+const CANDLE_COUNT = 20; // 거래량 평균 산출용
+const COOLDOWN_MS = 180000; // 재진입 쿨다운 3분
+const POS_CHECK_INTERVAL = 10000; // 포지션 체크 10초
 const ALERT_KEY = 'ct_alerts';
 const ALERT_TTL = 259200000; // 3일 (ms)
 
@@ -471,11 +475,12 @@ let sortKey = 'signal';
 let sortDir = 'desc';
 let isLoading = false;
 let scanAborted = false;
-let signalMode = '1'; // '1'=OR+거래량, '2'=3캔들윈도우AND
 let refreshMs = 30000;
 let refreshTimer = null;
 let countdownTimer = null;
 let nextRefreshAt = 0;
+let posTimer = null;
+let cooldownMap = {};
 
 let cachedMarkets = null;
 let cachedNameMap = {};
@@ -507,179 +512,105 @@ function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 // 기술적 지표 계산
 // ========================================
 
-// 볼린저 밴드 (candles: [0]=최신, oldest last)
-function calcBB(candles) {
-  if (!candles || candles.length < BB_LEN) return null;
-  var closes = [];
-  for (var i = 0; i < BB_LEN; i++) closes.push(candles[i].trade_price);
-  var sum = 0;
-  for (var i = 0; i < closes.length; i++) sum += closes[i];
-  var sma = sum / BB_LEN;
-  var sqSum = 0;
-  for (var i = 0; i < closes.length; i++) sqSum += (closes[i] - sma) * (closes[i] - sma);
-  var std = Math.sqrt(sqSum / BB_LEN);
-  return {
-    middle: sma,
-    upper: sma + BB_STD * std,
-    lower: sma - BB_STD * std,
-    width: (BB_STD * std * 2) / sma * 100 // 밴드폭 %
-  };
-}
-
-// RSI(7) - candles[0]=최신
-function calcRSI7(candles) {
-  if (!candles || candles.length < RSI_LEN + 1) return null;
-  var gains = 0, losses = 0;
-  for (var i = 0; i < RSI_LEN; i++) {
-    var diff = candles[i].trade_price - candles[i + 1].trade_price;
-    if (diff >= 0) gains += diff; else losses += Math.abs(diff);
-  }
-  if (losses === 0) return 100;
-  return 100 - (100 / (1 + (gains / RSI_LEN) / (losses / RSI_LEN)));
-}
-
-// 이전 캔들 기준 RSI (1봉 전 시점)
-function calcPrevRSI7(candles) {
-  if (!candles || candles.length < RSI_LEN + 2) return null;
-  return calcRSI7(candles.slice(1));
-}
-
-// 거래량 급증 (최근 1봉 vs 이전 평균)
-function calcVolSpike(candles) {
-  if (!candles || candles.length < 6) return { ratio: 1 };
+// 거래량 브레이크아웃 체크
+function calcVolBreakout(candles) {
+  if (!candles || candles.length < 2) return { breakout: false, ratio: 1 };
   var latest = candles[0].candle_acc_trade_volume || 0;
-  var avg = 0;
-  for (var i = 1; i < Math.min(candles.length, 20); i++) avg += (candles[i].candle_acc_trade_volume || 0);
-  avg /= Math.min(candles.length - 1, 19);
-  return { ratio: avg > 0 ? latest / avg : 1 };
+  var sum = 0;
+  for (var i = 1; i < candles.length; i++) sum += (candles[i].candle_acc_trade_volume || 0);
+  var avg = sum / (candles.length - 1);
+  var ratio = avg > 0 ? latest / avg : 0;
+  return { breakout: ratio >= tradeConfig.volMult, ratio: ratio };
+}
+
+// 양봉 + 전봉 대비 상승 체크
+function checkBullish(candles) {
+  if (!candles || candles.length < 2) return false;
+  var c0 = candles[0], c1 = candles[1];
+  return c0.trade_price > c0.opening_price && c0.trade_price > c1.trade_price;
+}
+
+// 모멘텀 체크: 3캔들 우상향 또는 최신 캔들 상승률 > 0.1%
+function checkMomentum(candles) {
+  if (!candles || candles.length < 3) return false;
+  var c0 = candles[0], c1 = candles[1], c2 = candles[2];
+  if (c0.trade_price > c1.trade_price && c1.trade_price > c2.trade_price) return true;
+  var chgRate = c0.opening_price > 0 ? ((c0.trade_price - c0.opening_price) / c0.opening_price) * 100 : 0;
+  return chgRate > 0.1;
+}
+
+// 체결강도 계산: 최근 체결 내역에서 매수금액/매도금액 비율 (%)
+async function calcTradeIntensity(market) {
+  try {
+    var trades = await apiFetch('/trades/ticks?market=' + market + '&count=500');
+    if (!trades || trades.length === 0) return 0;
+    var buyAmt = 0, sellAmt = 0;
+    trades.forEach(function(t) {
+      var amt = Math.abs(t.trade_price * t.trade_volume) || 0;
+      if (t.ask_bid === 'BID') buyAmt += amt;
+      else sellAmt += amt;
+    });
+    if (sellAmt === 0) return buyAmt > 0 ? 999 : 0;
+    return (buyAmt / sellAmt) * 100;
+  } catch (e) {
+    return 0;
+  }
 }
 
 // ========================================
 // 매수 신호 판정
 // ========================================
-function detectSignal(candles) {
-  if (!candles || candles.length < BB_LEN + 2) return { signal: 'none', detail: '' };
+function detectSignal(candles, tradeIntensity) {
+  if (!candles || candles.length < 3) return { signal: 'none', detail: '', badges: [], volRatio: 1, intensity: 0 };
 
-  var bb = calcBB(candles);
-  var rsi = calcRSI7(candles);
-  var prevRsi = calcPrevRSI7(candles);
-  var vol = calcVolSpike(candles);
-  var bbPrev = calcBB(candles.slice(1));
-
-  if (!bb || rsi === null) return { signal: 'none', detail: '' };
-
-  var c0 = candles[0]; // 최신 캔들
-  var c1 = candles[1]; // 직전 캔들
-  var price = c0.trade_price;
-  var open0 = c0.opening_price;
-  var close1 = c1.trade_price;
-  var open1 = c1.opening_price;
+  var vol = calcVolBreakout(candles);
+  var bullish = checkBullish(candles);
+  var momentum = checkMomentum(candles);
+  var price = candles[0].trade_price;
+  var ti = tradeIntensity || 0;
+  var tiOk = ti >= 100;
 
   var result = {
     signal: 'none',
-    bb: bb, rsi: rsi, prevRsi: prevRsi, vol: vol,
-    bbPos: 0, detail: '', badges: []
+    volRatio: vol.ratio,
+    intensity: ti,
+    price: price,
+    detail: '',
+    badges: []
   };
 
-  // BB 위치 (0=하단, 0.5=중간, 1=상단)
-  var range = bb.upper - bb.lower;
-  result.bbPos = range > 0 ? (price - bb.lower) / range : 0.5;
+  // 거래량 배지 항상 표시
+  result.badges.push({
+    text: 'VOL x' + vol.ratio.toFixed(1),
+    cls: vol.breakout ? 'badge-up' : 'badge-info'
+  });
 
-  // --- 조건 체크 ---
+  // 체결강도 배지 항상 표시
+  result.badges.push({
+    text: '체결 ' + ti.toFixed(0) + '%',
+    cls: tiOk ? 'badge-up' : 'badge-info'
+  });
 
-  // 1) 직전 캔들이 BB 하단 이탈 (종가가 lower 아래)
-  var prevBroke = false;
-  if (bbPrev && c1.trade_price < bbPrev.lower) prevBroke = true;
-  // 또는 현재 캔들 저가가 하단 이탈
-  if (c0.low_price < bb.lower) prevBroke = true;
-
-  // 2) RSI 과매도
-  var wasOversold = (prevRsi !== null && prevRsi <= RSI_OS) || rsi <= RSI_OS;
-
-  // 3-a) 밴드 재진입: 가격이 다시 lower 위로
-  var reEntered = prevBroke && price >= bb.lower;
-
-  // 3-b) RSI 상향 돌파: 이전 RSI <= 20이었고 현재 RSI > 20
-  var rsiCrossUp = prevRsi !== null && prevRsi <= RSI_OS && rsi > RSI_OS;
-
-  var volSpiked = vol.ratio > 1.5;
-
-  // 모드2: 최근 3캔들 윈도우에서 각 조건 발생 여부
-  var winReEntered = reEntered, winRsiCrossUp = rsiCrossUp;
-  if (signalMode === '2' && candles.length >= BB_LEN + 4) {
-    for (var wi = 1; wi <= 2; wi++) {
-      var wc = candles[wi], wc1 = candles[wi + 1];
-      var wbb = calcBB(candles.slice(wi));
-      var wbbPrev = calcBB(candles.slice(wi + 1));
-      var wRsi = calcRSI7(candles.slice(wi));
-      var wPrevRsi = calcRSI7(candles.slice(wi + 1));
-      if (wbb && wbbPrev) {
-        var wBroke = wc1.trade_price < wbbPrev.lower || wc.low_price < wbb.lower;
-        if (wBroke && wc.trade_price >= wbb.lower) winReEntered = true;
-        if (!prevBroke && wBroke) prevBroke = true;
-        if (!wasOversold && wPrevRsi !== null && wPrevRsi <= RSI_OS) wasOversold = true;
-      }
-      if (wPrevRsi !== null && wPrevRsi <= RSI_OS && wRsi !== null && wRsi > RSI_OS) winRsiCrossUp = true;
-    }
-  }
-
-  // 과매도 대기 (BB 이탈 + RSI 과매도이지만 확정 신호 없음)
-  if (prevBroke && wasOversold) {
-    result.badges.push({ text: 'BB 하단', cls: 'badge-down' });
-    result.badges.push({ text: 'RSI ' + rsi.toFixed(0), cls: rsi <= RSI_OS ? 'badge-down' : 'badge-info' });
-
-    if (signalMode === '1') {
-      // ★ 모드1: (밴드재진입 OR RSI돌파) + 거래량 ★
-      if ((reEntered || rsiCrossUp) && volSpiked) {
-        result.signal = 'buy';
-        var reasons = [];
-        if (reEntered) reasons.push('밴드재진입');
-        if (rsiCrossUp) reasons.push('RSI↑돌파');
-        reasons.push('VOL x' + vol.ratio.toFixed(1));
-        result.detail = reasons.join('+');
-        result.badges.push({ text: result.detail, cls: 'badge-up' });
-      } else if (reEntered || rsiCrossUp) {
-        result.signal = 'wait';
-        var reasons = [];
-        if (reEntered) reasons.push('밴드재진입');
-        if (rsiCrossUp) reasons.push('RSI↑돌파');
-        result.detail = reasons.join('+') + ' (거래량 부족)';
-        result.badges.push({ text: reasons.join('+'), cls: 'badge-warn' });
-        result.badges.push({ text: 'VOL x' + vol.ratio.toFixed(1), cls: 'badge-info' });
-      } else {
-        result.signal = 'wait';
-        result.detail = '확정 대기';
-        result.badges.push({ text: '확정 대기', cls: 'badge-warn' });
-      }
-    } else {
-      // ★ 모드2: 최근 3캔들내 밴드재진입 + RSI돌파 + 거래량 (AND) ★
-      if (winReEntered && winRsiCrossUp && volSpiked) {
-        result.signal = 'buy';
-        var reasons = [];
-        reasons.push(reEntered ? '밴드재진입' : '밴드재진입(이전캔들)');
-        reasons.push(rsiCrossUp ? 'RSI↑돌파' : 'RSI↑돌파(이전캔들)');
-        reasons.push('VOL x' + vol.ratio.toFixed(1));
-        result.detail = reasons.join('+');
-        result.badges.push({ text: result.detail, cls: 'badge-up' });
-      } else {
-        result.signal = 'wait';
-        var met = [], unmet = [];
-        if (winReEntered) met.push('밴드재진입'); else unmet.push('밴드재진입');
-        if (winRsiCrossUp) met.push('RSI↑돌파'); else unmet.push('RSI↑돌파');
-        if (volSpiked) met.push('VOL'); else unmet.push('거래량');
-        result.detail = (met.length > 0 ? met.join('+') : '') + ' (' + unmet.join('+') + ' 미충족)';
-        if (met.length > 0) result.badges.push({ text: met.join('+'), cls: 'badge-warn' });
-        result.badges.push({ text: unmet.join('+') + ' 미충족', cls: 'badge-info' });
-      }
-    }
-  } else {
-    // BB 상단 과열 체크 (참고용)
-    if (rsi >= RSI_OB && price > bb.upper) {
-      result.signal = 'overbought';
-      result.badges.push({ text: 'BB 상단', cls: 'badge-down' });
-      result.badges.push({ text: 'RSI ' + rsi.toFixed(0), cls: 'badge-down' });
-      result.detail = '과매수 주의';
-    }
+  if (vol.breakout && bullish && momentum && tiOk) {
+    // ★ 매수 신호: 거래량 브레이크아웃 + 양봉상승 + 모멘텀 + 체결강도 ★
+    result.signal = 'buy';
+    result.detail = 'VOL x' + vol.ratio.toFixed(1) + '+양봉+모멘텀+체결' + ti.toFixed(0) + '%';
+    result.badges.push({ text: '양봉상승', cls: 'badge-up' });
+    result.badges.push({ text: '모멘텀↑', cls: 'badge-up' });
+  } else if (vol.breakout && bullish && momentum && !tiOk) {
+    result.signal = 'wait';
+    result.detail = 'VOL+양봉+모멘텀 (체결강도 부족 ' + ti.toFixed(0) + '%)';
+    result.badges.push({ text: '양봉상승', cls: 'badge-warn' });
+    result.badges.push({ text: '모멘텀↑', cls: 'badge-warn' });
+  } else if (vol.breakout && bullish) {
+    result.signal = 'wait';
+    result.detail = 'VOL x' + vol.ratio.toFixed(1) + '+양봉 (모멘텀 부족)';
+    result.badges.push({ text: '양봉상승', cls: 'badge-warn' });
+    result.badges.push({ text: '모멘텀 부족', cls: 'badge-info' });
+  } else if (vol.breakout) {
+    result.signal = 'wait';
+    result.detail = 'VOL x' + vol.ratio.toFixed(1) + ' (방향성 미확인)';
+    result.badges.push({ text: '방향성 대기', cls: 'badge-warn' });
   }
 
   return result;
@@ -700,16 +631,11 @@ function setTf(tf, btn) {
   }
 }
 
-function setSignalMode(mode, btn) {
-  signalMode = mode;
-  setCookie('ct_sigmode', mode);
-  document.querySelectorAll('.sig-btn').forEach(function(b) { b.classList.remove('active'); });
+function setStopLoss(min, btn) {
+  tradeConfig.stopLossMin = min;
+  setCookie('ct_slmin', String(min));
+  document.querySelectorAll('.sl-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  if (isLoading) {
-    scanAborted = true;
-  } else {
-    fetchData();
-  }
 }
 
 function setFilter(f, btn) {
@@ -790,55 +716,37 @@ function renderTable() {
   data.sort(function(a, b) {
     var av, bv;
     if (sortKey === 'signal') {
-      var rank = { buy: 3, wait: 2, overbought: 1, none: 0 };
+      var rank = { buy: 3, wait: 2, none: 0 };
       av = rank[a.sig] || 0; bv = rank[b.sig] || 0;
-    } else if (sortKey === 'rsi') { av = a.rsi || 50; bv = b.rsi || 50; }
-    else if (sortKey === 'bb') { av = a.bbPos || 0.5; bv = b.bbPos || 0.5; }
-    else if (sortKey === 'vol') { av = a.tradeValue; bv = b.tradeValue; }
+    } else if (sortKey === 'vol') { av = a.volRatio || 1; bv = b.volRatio || 1; }
+    else if (sortKey === 'intensity') { av = a.intensity || 0; bv = b.intensity || 0; }
     else if (sortKey === 'change') { av = a.changeRate; bv = b.changeRate; }
     else { av = 0; bv = 0; }
     return sortDir === 'desc' ? bv - av : av - bv;
   });
 
-  var tfLabel = selectedTf + '분';
-  if (selectedTf === '60') tfLabel = '1시간';
-
   var html = '<table><thead><tr>'
     + '<th style="width:40px">#</th>'
     + '<th>코인</th>'
     + '<th onclick="setSort(\'change\')" class="' + (sortKey==='change'?'sort-'+sortDir:'') + '">변동률</th>'
-    + '<th onclick="setSort(\'bb\')" class="' + (sortKey==='bb'?'sort-'+sortDir:'') + '">BB 위치</th>'
-    + '<th onclick="setSort(\'rsi\')" class="' + (sortKey==='rsi'?'sort-'+sortDir:'') + '">RSI(7)</th>'
-    + '<th onclick="setSort(\'vol\')" class="' + (sortKey==='vol'?'sort-'+sortDir:'') + '">거래량</th>'
+    + '<th onclick="setSort(\'vol\')" class="' + (sortKey==='vol'?'sort-'+sortDir:'') + '">거래량배수</th>'
+    + '<th onclick="setSort(\'intensity\')" class="' + (sortKey==='intensity'?'sort-'+sortDir:'') + '">체결강도</th>'
     + '<th onclick="setSort(\'signal\')" class="' + (sortKey==='signal'?'sort-'+sortDir:'') + '">신호</th>'
     + '<th>상세</th>'
     + '</tr></thead><tbody>';
 
   if (data.length === 0) {
-    html += '<tr><td colspan="8" style="text-align:center;padding:40px;color:var(--muted)">해당 조건의 코인이 없습니다</td></tr>';
+    html += '<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--muted)">해당 조건의 코인이 없습니다</td></tr>';
   }
 
   data.slice(0, 60).forEach(function(c, i) {
     var cl = COLORS[i % COLORS.length];
     var isUp = c.changeRate >= 0;
 
-    // BB 위치 바
-    var bbPct = Math.round((c.bbPos || 0.5) * 100);
-    var bbColor = bbPct < 15 ? 'var(--down)' : bbPct > 85 ? 'var(--down)' : bbPct < 30 ? 'var(--gold)' : 'var(--accent3)';
-    var bbBar = '<div style="display:flex;align-items:center;gap:6px">'
-      + '<div style="flex:1;max-width:60px;height:4px;background:var(--border);border-radius:2px;overflow:hidden;position:relative">'
-      + '<div style="position:absolute;left:' + bbPct + '%;top:-1px;width:6px;height:6px;border-radius:50%;background:' + bbColor + ';transform:translateX(-50%)"></div>'
-      + '</div><span class="mono" style="font-size:11px;color:' + bbColor + '">' + bbPct + '%</span></div>';
-
-    // RSI
-    var rsiVal = c.rsi != null ? c.rsi.toFixed(0) : '-';
-    var rsiColor = c.rsi != null ? (c.rsi <= RSI_OS ? 'var(--down)' : c.rsi >= RSI_OB ? 'var(--down)' : c.rsi < 40 ? 'var(--gold)' : 'var(--text)') : 'var(--muted)';
-
     // 신호
     var sigHtml = '<span class="no-signal">-</span>';
     if (c.sig === 'buy') sigHtml = '<span class="buy-signal">매수</span>';
     else if (c.sig === 'wait') sigHtml = '<span class="badge badge-warn" style="font-size:11px;padding:4px 10px">대기</span>';
-    else if (c.sig === 'overbought') sigHtml = '<span class="sell-signal">과매수</span>';
 
     // 상세 배지
     var badgesHtml = '';
@@ -846,10 +754,15 @@ function renderTable() {
       c.badges.forEach(function(b) { badgesHtml += '<span class="badge ' + b.cls + '">' + b.text + '</span>'; });
     }
 
-    // 거래량
+    // 거래량 배수
     var volRatio = c.volRatio || 1;
-    var volColor = volRatio > 2 ? 'var(--accent)' : volRatio > 1.5 ? 'var(--up)' : 'var(--muted)';
+    var volColor = volRatio >= tradeConfig.volMult ? 'var(--accent)' : volRatio > 1.5 ? 'var(--up)' : 'var(--muted)';
     var volHtml = '<span class="mono" style="font-size:11px;color:' + volColor + '">x' + volRatio.toFixed(1) + '</span>';
+
+    // 체결강도
+    var ti = c.intensity || 0;
+    var tiColor = ti >= 100 ? 'var(--up)' : ti > 0 ? 'var(--down)' : 'var(--muted)';
+    var tiHtml = ti > 0 ? '<span class="mono" style="font-size:11px;color:' + tiColor + '">' + ti.toFixed(0) + '%</span>' : '<span class="mono" style="font-size:11px;color:var(--muted)">-</span>';
 
     html += '<tr class="clickable" onclick="showLivePrice(\'KRW-' + c.symbol + '\',\'' + c.symbol + '\',\'' + c.name + '\')">'
       + '<td class="mono" style="color:var(--muted);font-size:11px">' + (i + 1) + '</td>'
@@ -858,9 +771,8 @@ function renderTable() {
       + '<div><div class="coin-name">' + c.symbol + '</div>'
       + '<div class="coin-full">' + c.name + '</div></div></div></td>'
       + '<td class="mono ' + (isUp ? 'up' : 'down') + '" style="font-size:12px;font-weight:600">' + (isUp ? '+' : '') + c.changeRate.toFixed(2) + '%</td>'
-      + '<td>' + bbBar + '</td>'
-      + '<td class="mono" style="font-weight:700;color:' + rsiColor + '">' + rsiVal + '</td>'
       + '<td>' + volHtml + '</td>'
+      + '<td>' + tiHtml + '</td>'
       + '<td>' + sigHtml + '</td>'
       + '<td>' + (badgesHtml || '<span class="no-signal">-</span>') + '</td>'
       + '</tr>';
@@ -948,9 +860,8 @@ async function fetchData() {
         changeRate: (t.signed_change_rate || 0) * 100,
         tradeValue: t.acc_trade_price_24h || 0,
         sig: 'none',
-        rsi: null,
-        bbPos: 0.5,
         volRatio: 1,
+        intensity: 0,
         badges: [],
         detail: ''
       };
@@ -958,15 +869,22 @@ async function fetchData() {
       try {
         var candles = await apiFetch('/candles/minutes/' + selectedTf + '?market=' + market + '&count=' + CANDLE_COUNT);
 
-        if (candles && candles.length >= BB_LEN + 2) {
-          var result = detectSignal(candles);
+        if (candles && candles.length >= 3) {
+          // 거래량 브레이크아웃 먼저 체크 — 통과한 코인만 체결강도 조회 (API 호출 절약)
+          var volCheck = calcVolBreakout(candles);
+          var ti = 0;
+          if (volCheck.breakout) {
+            ti = await calcTradeIntensity(market);
+            await sleep(100);
+          }
+
+          var result = detectSignal(candles, ti);
           coinData.sig = result.signal;
-          coinData.rsi = result.rsi;
-          coinData.bbPos = result.bbPos;
-          coinData.volRatio = result.vol ? result.vol.ratio : 1;
+          coinData.volRatio = result.volRatio;
+          coinData.intensity = result.intensity;
           coinData.badges = result.badges;
           coinData.detail = result.detail;
-          coinData.price = candles[0].trade_price;
+          coinData.price = result.price || candles[0].trade_price;
 
           if (result.signal === 'buy') {
             newBuys.push({
@@ -974,7 +892,6 @@ async function fetchData() {
               symbol: symbol,
               name: coinData.name,
               price: coinData.price,
-              rsi: result.rsi,
               detail: result.detail,
               tf: selectedTf
             });
@@ -1003,10 +920,10 @@ async function fetchData() {
       if (tradeConfig.autoBuy) executeAutoBuys(newBuys);
     }
     renderAlerts();
-    checkPositionsForSell();
+    startPosTimer();
 
     var now = new Date().toLocaleTimeString('ko-KR');
-    var tfLabel = selectedTf === '60' ? '1시간' : selectedTf + '분';
+    var tfLabel = selectedTf + '분';
     document.getElementById('lastUpdate').textContent = '마지막 스캔: ' + now + ' [' + tfLabel + '봉]';
     document.getElementById('statusText').textContent = 'LIVE';
 
@@ -1121,7 +1038,8 @@ function renderAlerts() {
 // ========================================
 var tradeConfig = {
   accessKey: '', secretKey: '',
-  autoBuy: false, buyAmount: 10000, profitTarget: 0.5
+  autoBuy: false, buyAmount: 10000, profitTarget: 0.5,
+  volMult: 2.0, stopLossMin: 5, maxPositions: 3
 };
 const POS_KEY = 'ct_positions';
 const FEE_RATE = 0.0004; // 0.04% 편도
@@ -1200,6 +1118,15 @@ async function fetchAccounts() {
       area.innerHTML = '<span style="color:var(--muted)">보유 자산 없음</span>';
       return;
     }
+    // KRW 상장 코인 목록 조회
+    var listedSet = new Set(['KRW']);
+    try {
+      var markets = await apiFetch('/market/all');
+      markets.forEach(function(m) {
+        if (m.market.startsWith('KRW-')) listedSet.add(m.market.replace('KRW-', ''));
+      });
+    } catch (e) { }
+
     var html = '<table style="width:100%;border-collapse:collapse;font-size:11px">'
       + '<tr style="color:var(--accent3);border-bottom:1px solid var(--border)">'
       + '<th style="text-align:left;padding:3px 6px">코인</th>'
@@ -1212,10 +1139,12 @@ async function fetchAccounts() {
     data.forEach(function(a) {
       var bal = parseFloat(a.balance) || 0;
       var locked = parseFloat(a.locked) || 0;
+      if (bal + locked <= 0) return;
+      if (!listedSet.has(a.currency)) return;
       var avg = parseFloat(a.avg_buy_price) || 0;
       var evalAmt = (bal + locked) * avg;
       if (a.currency === 'KRW') evalAmt = bal + locked;
-      if (bal + locked <= 0) return;
+      if (evalAmt <= 0) return;
       totalKrw += evalAmt;
       html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">'
         + '<td style="padding:3px 6px;font-weight:700">' + a.currency + '</td>'
@@ -1238,9 +1167,13 @@ function saveTradeSettings() {
   tradeConfig.autoBuy = document.getElementById('chkAutoBuy').checked;
   tradeConfig.buyAmount = parseInt(document.getElementById('inBuyAmount').value) || 10000;
   tradeConfig.profitTarget = parseFloat(document.getElementById('inProfitTarget').value) || 0.5;
+  tradeConfig.volMult = parseFloat(document.getElementById('inVolMult').value) || 2.0;
+  tradeConfig.maxPositions = parseInt(document.getElementById('inMaxPos').value) || 3;
   setCookie('ct_autobuy', tradeConfig.autoBuy ? '1' : '0');
   setCookie('ct_buyamt', String(tradeConfig.buyAmount));
   setCookie('ct_profit', String(tradeConfig.profitTarget));
+  setCookie('ct_volmult', String(tradeConfig.volMult));
+  setCookie('ct_maxpos', String(tradeConfig.maxPositions));
 }
 function loadTradeSettings() {
   tradeConfig.accessKey = localStorage.getItem('bit_access_key') || '';
@@ -1255,9 +1188,21 @@ function loadTradeSettings() {
   var pt = getCookie('ct_profit');
   if (pt !== '') tradeConfig.profitTarget = parseFloat(pt) || 0.5;
 
+  var vm = getCookie('ct_volmult');
+  if (vm !== '') tradeConfig.volMult = parseFloat(vm) || 2.0;
+  var sl = getCookie('ct_slmin');
+  if (sl !== '') tradeConfig.stopLossMin = parseInt(sl) || 5;
+  var mp = getCookie('ct_maxpos');
+  if (mp !== '') tradeConfig.maxPositions = parseInt(mp) || 3;
+
   document.getElementById('chkAutoBuy').checked = tradeConfig.autoBuy;
   document.getElementById('inBuyAmount').value = tradeConfig.buyAmount;
   document.getElementById('inProfitTarget').value = tradeConfig.profitTarget;
+  document.getElementById('inVolMult').value = tradeConfig.volMult;
+  document.getElementById('inMaxPos').value = tradeConfig.maxPositions;
+  document.querySelectorAll('.sl-btn').forEach(function(b) {
+    b.classList.toggle('active', parseInt(b.dataset.sl) === tradeConfig.stopLossMin);
+  });
 }
 
 // ========================================
@@ -1276,15 +1221,40 @@ async function executeAutoBuys(buys) {
   var amount = tradeConfig.buyAmount;
   if (amount < 5000) return;
 
+  // KRW 잔고 확인
+  var krwBalance = 0;
+  try {
+    var accounts = await apiAuth('GET', '/accounts');
+    var krwAcc = accounts.find(function(a) { return a.currency === 'KRW'; });
+    if (krwAcc) krwBalance = parseFloat(krwAcc.balance) || 0;
+  } catch (e) {
+    console.error('잔고 조회 실패:', e.message);
+    return;
+  }
+  if (krwBalance < amount) {
+    console.log('KRW 잔고 부족:', krwBalance, '< 필요:', amount);
+    return;
+  }
+
   var positions = loadPositions();
+  var holdCount = positions.filter(function(p) { return p.status === 'hold'; }).length;
 
   for (var i = 0; i < buys.length; i++) {
+    // 포지션 한도 체크
+    if (holdCount >= tradeConfig.maxPositions) break;
+    // 잔고 체크
+    if (krwBalance < amount) break;
+
     var b = buys[i];
     var market = 'KRW-' + b.symbol;
 
     // 이미 보유 중이면 스킵
     var already = positions.some(function(p) { return p.market === market && p.status === 'hold'; });
     if (already) continue;
+
+    // 쿨다운 체크 (매도 후 3분 이내 재진입 방지)
+    var lastSold = cooldownMap[b.symbol] || 0;
+    if (Date.now() - lastSold < COOLDOWN_MS) continue;
 
     try {
       var result = await apiAuth('POST', '/orders', {
@@ -1326,6 +1296,9 @@ async function executeAutoBuys(buys) {
       });
       savePositions(positions);
       renderPositions();
+      holdCount++;
+      krwBalance -= amount;
+      startPosTimer();
     } catch (e) {
       console.error('자동매수 실패:', b.symbol, e.message);
     }
@@ -1333,7 +1306,7 @@ async function executeAutoBuys(buys) {
   }
 }
 
-// 매도 체크: 목표 수익률 도달 시 시장가 매도
+// 매도 체크: 목표 수익률 도달 또는 시간 초과 시 시장가 매도
 async function checkPositionsForSell() {
   if (!tradeConfig.accessKey || !tradeConfig.secretKey) { renderPositions(); return; }
 
@@ -1365,8 +1338,18 @@ async function checkPositionsForSell() {
       p.grossPct = grossPct;
       p.netPct = netPct;
 
-      // 목표 도달 시 매도
+      // 매도 사유 판정
+      var sellReason = null;
+      var elapsed = Date.now() - p.buyTime;
+      var limitMs = tradeConfig.stopLossMin * 60 * 1000;
+
       if (grossPct >= requiredPct && !p.sellOrderId) {
+        sellReason = 'profit';
+      } else if (elapsed >= limitMs && !p.sellOrderId) {
+        sellReason = 'timeout';
+      }
+
+      if (sellReason) {
         try {
           var vol = parseFloat(p.volume);
           var sellResult = await apiAuth('POST', '/orders', {
@@ -1377,6 +1360,7 @@ async function checkPositionsForSell() {
           });
           p.sellOrderId = sellResult.uuid;
           p.sellTime = Date.now();
+          p.sellReason = sellReason;
           // 체결 확인 (최대 10초)
           for (var sr = 0; sr < 5; sr++) {
             await sleep(2000);
@@ -1396,6 +1380,7 @@ async function checkPositionsForSell() {
           p.status = 'sold';
           p.grossPct = ((p.sellPrice - p.buyPrice) / p.buyPrice) * 100;
           p.netPct = p.grossPct - (FEE_ROUND * 100);
+          cooldownMap[p.symbol] = Date.now();
         } catch (e) {
           console.error('매도 실패:', p.symbol, e.message);
         }
@@ -1407,6 +1392,21 @@ async function checkPositionsForSell() {
   } catch (e) { }
 
   renderPositions();
+}
+
+// 포지션 독립 타이머 (10초마다)
+function startPosTimer() {
+  if (posTimer) return;
+  posTimer = setInterval(function() {
+    var positions = loadPositions();
+    var hasHold = positions.some(function(p) { return p.status === 'hold'; });
+    if (hasHold) {
+      checkPositionsForSell();
+    } else {
+      clearInterval(posTimer);
+      posTimer = null;
+    }
+  }, POS_CHECK_INTERVAL);
 }
 
 // 수동 매도
@@ -1442,8 +1442,10 @@ async function manualSell(idx) {
     }
     if (!p.sellPrice) p.sellPrice = p.currentPrice || p.buyPrice;
     p.status = 'sold';
+    p.sellReason = 'manual';
     p.grossPct = ((p.sellPrice - p.buyPrice) / p.buyPrice) * 100;
     p.netPct = p.grossPct - (FEE_ROUND * 100);
+    cooldownMap[p.symbol] = Date.now();
     savePositions(positions);
     renderPositions();
   } catch (e) {
@@ -1476,8 +1478,8 @@ function renderPositions() {
 
   var html = '<div style="text-align:right;margin-bottom:6px"><button class="trade-save-btn" style="font-size:10px;padding:3px 8px;border-color:var(--down);color:var(--down)" onclick="clearSoldPositions()">완료 제거</button></div>'
     + '<table class="pos-table"><thead><tr>'
-    + '<th>코인</th><th>매수가</th><th>현재가</th><th>수량</th><th>투자금</th>'
-    + '<th>총수익률</th><th>순수익률</th><th>예상순이익</th><th>상태</th><th>동작</th>'
+    + '<th>코인</th><th>매수가</th><th>현재가</th><th>수익률</th><th>투자금</th>'
+    + '<th>경과/남은시간</th><th>상태</th><th>동작</th>'
     + '</tr></thead><tbody>';
 
   positions.forEach(function(p, idx) {
@@ -1492,6 +1494,25 @@ function renderPositions() {
     var netAmount = p.buyAmount * (netPct / 100);
     var isUp = netPct >= 0;
 
+    // 경과/남은시간
+    var timeCol = '';
+    if (p.status === 'hold') {
+      var elapsed = Date.now() - p.buyTime;
+      var limitMs = tradeConfig.stopLossMin * 60 * 1000;
+      var remain = Math.max(0, limitMs - elapsed);
+      var elSec = Math.floor(elapsed / 1000);
+      var rmSec = Math.floor(remain / 1000);
+      var elStr = Math.floor(elSec / 60) + ':' + ('0' + (elSec % 60)).slice(-2);
+      var rmStr = Math.floor(rmSec / 60) + ':' + ('0' + (rmSec % 60)).slice(-2);
+      var urgent = remain < 30000;
+      var timeProg = Math.min((elapsed / limitMs) * 100, 100);
+      var barColor = urgent ? 'var(--down)' : 'var(--accent)';
+      timeCol = '<span style="font-size:10px">' + elStr + '</span>'
+        + '<span style="font-size:10px;color:' + (urgent ? 'var(--down);font-weight:700' : 'var(--muted)') + '"> / ' + rmStr + '</span>'
+        + '<div style="width:60px;height:3px;background:var(--border);border-radius:2px;margin-top:2px">'
+        + '<div style="width:' + timeProg.toFixed(0) + '%;height:100%;background:' + barColor + ';border-radius:2px"></div></div>';
+    }
+
     var statusHtml = '';
     var actionHtml = '';
     if (p.status === 'hold') {
@@ -1501,7 +1522,9 @@ function renderPositions() {
         + '<div style="width:' + progress.toFixed(0) + '%;height:100%;background:var(--accent);border-radius:2px"></div></div>';
       actionHtml = '<button class="trade-save-btn" style="font-size:10px;padding:3px 8px;border-color:var(--down);color:var(--down)" onclick="manualSell(' + idx + ')">매도</button>';
     } else {
-      statusHtml = '<span style="color:var(--muted)">매도완료</span>';
+      var reasonText = p.sellReason === 'timeout' ? '시간초과' : p.sellReason === 'manual' ? '수동매도' : '익절';
+      var reasonColor = p.sellReason === 'timeout' ? 'var(--down)' : p.sellReason === 'manual' ? 'var(--muted)' : 'var(--up)';
+      statusHtml = '<span style="color:' + reasonColor + '">' + reasonText + '</span>';
       actionHtml = '<span style="color:var(--muted);font-size:10px">' + new Date(p.sellTime).toLocaleTimeString('ko-KR') + '</span>';
     }
 
@@ -1512,11 +1535,10 @@ function renderPositions() {
       + '<td><span style="font-weight:700">' + p.symbol + '</span><div style="font-size:9px;color:var(--muted)">' + timeStr + '</div></td>'
       + '<td>' + fmtPrice(p.buyPrice) + '</td>'
       + '<td style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + fmtPrice(curPrice) + '</td>'
-      + '<td>' + (p.volume ? p.volume.toFixed(6) : '-') + '</td>'
+      + '<td><span class="pos-profit" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netPct >= 0 ? '+' : '') + netPct.toFixed(3) + '%</span>'
+      + '<div style="font-size:9px;color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netAmount >= 0 ? '+' : '') + Math.round(netAmount) + '원</div></td>'
       + '<td>' + fmt(p.buyAmount) + '원</td>'
-      + '<td class="pos-profit" style="color:' + (grossPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (grossPct >= 0 ? '+' : '') + grossPct.toFixed(3) + '%</td>'
-      + '<td class="pos-profit" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netPct >= 0 ? '+' : '') + netPct.toFixed(3) + '%</td>'
-      + '<td style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netAmount >= 0 ? '+' : '') + Math.round(netAmount) + '원</td>'
+      + '<td>' + (timeCol || '-') + '</td>'
       + '<td>' + statusHtml + '</td>'
       + '<td>' + actionHtml + '</td>'
       + '</tr>';
@@ -1618,7 +1640,7 @@ function closeLivePopup() {
 // ========================================
 (function init() {
   var tf = getCookie('ct_tf');
-  if (tf && ['1','3','5','10','30','60'].indexOf(tf) >= 0) {
+  if (tf && ['1','3','5'].indexOf(tf) >= 0) {
     selectedTf = tf;
     document.querySelectorAll('.tf-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tf === tf); });
   }
@@ -1632,15 +1654,15 @@ function closeLivePopup() {
     refreshMs = Number(r);
     document.querySelectorAll('.rf-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.rf === r); });
   }
-  var sm = getCookie('ct_sigmode');
-  if (sm && (sm === '1' || sm === '2')) {
-    signalMode = sm;
-    document.querySelectorAll('.sig-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.sig === sm); });
-  }
 
   loadTradeSettings();
   renderAlerts();
   renderPositions();
+
+  // 보유 포지션 있으면 포지션 타이머 시작
+  var existingPos = loadPositions().filter(function(p) { return p.status === 'hold'; });
+  if (existingPos.length > 0) startPosTimer();
+
   fetchData();
 })();
 </script>
