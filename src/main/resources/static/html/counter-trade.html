@@ -110,7 +110,7 @@
   .stat-label { font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 6px; }
   .stat-value { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
 
-  .table-wrapper { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-wrapper { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: auto; height: 325px;}
   table { width: 100%; border-collapse: collapse; }
   thead th {
     background: var(--surface2); padding: 12px 14px; text-align: left;
@@ -202,6 +202,109 @@
   .alert-detail { color: var(--muted); font-size: 11px; }
   .alert-empty { text-align: center; padding: 20px; color: var(--muted); font-size: 11px; }
 
+  tbody tr.clickable { cursor: pointer; }
+  .alert-item.clickable { cursor: pointer; transition: background 0.15s; }
+  .alert-item.clickable:hover { background: rgba(255,255,255,0.03); }
+
+  .live-popup {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    background: var(--surface2); border: 1px solid var(--accent);
+    border-radius: 12px; padding: 24px 30px; z-index: 200;
+    box-shadow: 0 0 40px rgba(0,212,170,0.15); min-width: 320px;
+  }
+  .live-popup-overlay {
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6); z-index: 199;
+  }
+  .live-popup-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  .live-popup-header h2 {
+    font-family: 'IBM Plex Mono', monospace; font-size: 18px; font-weight: 700;
+  }
+  .live-popup-header span { font-size: 12px; color: var(--muted); }
+  .live-popup-close {
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    width: 28px; height: 28px; border-radius: 6px; font-size: 16px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .live-popup-close:hover { border-color: var(--down); color: var(--down); }
+  .live-popup-price {
+    font-family: 'IBM Plex Mono', monospace; font-size: 28px; font-weight: 700;
+    margin-bottom: 12px;
+  }
+  .live-popup-meta {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+  }
+  .live-popup-item {
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+  }
+  .live-popup-item .lbl { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 2px; }
+  .live-popup-loading { text-align: center; padding: 20px; color: var(--muted); font-size: 12px; }
+  .live-popup-ref {
+    margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  }
+
+  /* 매매 설정 & 포지션 */
+  .trade-panel {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 16px 20px; margin-bottom: 16px;
+  }
+  .trade-panel-title {
+    font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+    color: var(--accent2); margin-bottom: 12px; letter-spacing: 0.06em;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .trade-row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-bottom: 8px; }
+  .trade-row:last-child { margin-bottom: 0; }
+  .trade-input {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 140px;
+    font-family: 'IBM Plex Mono', monospace; outline: none;
+  }
+  .trade-input:focus { border-color: var(--accent3); }
+  .trade-input.key-input { width: 220px; }
+  .trade-lbl {
+    font-size: 11px; color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+    min-width: 80px; text-align: right;
+  }
+  .trade-toggle {
+    position: relative; width: 40px; height: 22px; cursor: pointer;
+  }
+  .trade-toggle input { display: none; }
+  .trade-toggle .slider {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--border); border-radius: 11px; transition: 0.3s;
+  }
+  .trade-toggle .slider::before {
+    content: ''; position: absolute; width: 16px; height: 16px;
+    left: 3px; bottom: 3px; background: var(--muted); border-radius: 50%; transition: 0.3s;
+  }
+  .trade-toggle input:checked + .slider { background: var(--accent); }
+  .trade-toggle input:checked + .slider::before { transform: translateX(18px); background: #fff; }
+  .trade-save-btn {
+    background: rgba(79,142,247,0.15); border: 1px solid var(--accent3);
+    color: var(--accent3); padding: 6px 14px; border-radius: 6px;
+    font-size: 11px; cursor: pointer; font-family: 'IBM Plex Mono', monospace;
+  }
+  .trade-save-btn:hover { background: rgba(79,142,247,0.25); }
+
+  .pos-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  .pos-table th {
+    background: var(--surface2); padding: 8px 10px; text-align: left;
+    font-size: 10px; color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: 0.06em; text-transform: uppercase; border-bottom: 1px solid var(--border);
+  }
+  .pos-table td {
+    padding: 8px 10px; font-size: 12px; border-bottom: 1px solid rgba(30,45,71,0.3);
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .pos-empty { text-align: center; padding: 16px; color: var(--muted); font-size: 11px; }
+  .pos-profit { font-weight: 700; }
+
   @media (max-width: 768px) {
     .stats-bar { grid-template-columns: repeat(2, 1fr); }
     header { flex-wrap: wrap; gap: 8px; padding: 12px 14px; }
@@ -238,9 +341,38 @@
 
   <div class="algo-info">
     <strong>변동성 역추세 전략</strong> —
-    <strong>BB(20,2)</strong> 하단 이탈 + <strong>RSI(7)</strong> 20이하 과매도 + <strong>확정신호</strong>(밴드 재진입 or 양봉장악) 동시 충족 시 <strong style="color:var(--accent)">매수</strong> 알림.
-    거래량 급증 시 신뢰도 상승.
+    <strong>BB(20,2)</strong> 하단 이탈 + <strong>RSI(7)</strong> 20이하 과매도 + <strong>확정신호</strong>(밴드 재진입 or RSI↑돌파) + <strong>거래량 급증</strong>(x1.5↑) 동시 충족 시 <strong style="color:var(--accent)">매수</strong> 알림.
     <strong style="color:var(--accent2)">투자 참고용이며 투자 손실에 책임지지 않습니다.</strong>
+  </div>
+
+  <!-- 매매 설정 -->
+  <div class="trade-panel" id="tradePanel">
+    <div class="trade-panel-title">매매 설정 <span style="font-size:10px;color:var(--muted)">(API키는 localStorage 저장)</span></div>
+    <div class="trade-row">
+      <span class="trade-lbl">Access Key</span>
+      <input type="text" class="trade-input key-input" id="inAccessKey" placeholder="Access Key">
+      <span class="trade-lbl">Secret Key</span>
+      <input type="password" class="trade-input key-input" id="inSecretKey" placeholder="Secret Key">
+      <button class="trade-save-btn" onclick="saveKeys()">키 저장</button>
+      <button class="trade-save-btn" style="border-color:var(--down);color:var(--down)" onclick="clearKeys()">키 삭제</button>
+      <button class="trade-save-btn" style="border-color:var(--accent3);color:var(--accent3);margin-left:12px" onclick="fetchAccounts()">자산 조회</button>
+    </div>
+    <div id="accountsArea" style="display:none;margin-top:8px;padding:8px;background:rgba(0,0,0,0.2);border-radius:6px;font-size:11px;max-height:200px;overflow-y:auto"></div>
+    <div class="trade-row">
+      <span class="trade-lbl">자동 매수</span>
+      <label class="trade-toggle"><input type="checkbox" id="chkAutoBuy" onchange="saveTradeSettings()"><span class="slider"></span></label>
+      <span class="trade-lbl">매수 금액</span>
+      <input type="text" class="trade-input" id="inBuyAmount" placeholder="10000" value="10000" onchange="saveTradeSettings()"> <span style="font-size:11px;color:var(--muted)">원 (시장가)</span>
+      <span class="trade-lbl" style="margin-left:16px">매도 수익률</span>
+      <input type="text" class="trade-input" id="inProfitTarget" placeholder="0.5" value="0.5" style="width:70px" onchange="saveTradeSettings()"> <span style="font-size:11px;color:var(--muted)">%</span>
+      <span style="font-size:10px;color:var(--muted);margin-left:8px">(수수료 0.08% 제외 후 순이익 기준)</span>
+    </div>
+  </div>
+
+  <!-- 보유 포지션 -->
+  <div class="trade-panel" id="posPanel">
+    <div class="trade-panel-title">보유 포지션 <span style="font-size:10px;color:var(--muted)" id="posStatus"></span></div>
+    <div id="posBody"><div class="pos-empty">포지션 없음</div></div>
   </div>
 
   <div class="stats-bar">
@@ -276,6 +408,14 @@
 
   <div class="control-row">
     <div class="control-group">
+      <span class="control-label">매수 조건</span>
+      <button class="tf-btn active sig-btn" data-sig="1" onclick="setSignalMode('1',this)">(재진입 OR RSI돌파) + 거래량</button>
+      <button class="tf-btn sig-btn" data-sig="2" onclick="setSignalMode('2',this)">3캔들내 재진입 + RSI돌파 + 거래량</button>
+    </div>
+  </div>
+
+  <div class="control-row">
+    <div class="control-group">
       <span class="control-label">필터</span>
       <button class="filter-btn active" data-f="all" onclick="setFilter('all',this)">전체</button>
       <button class="filter-btn" data-f="buy" onclick="setFilter('buy',this)">매수 신호</button>
@@ -306,7 +446,7 @@
 
   <!-- 매수 알림 히스토리 -->
   <div class="alert-history">
-    <h3>매수 알림 히스토리 (최근 1시간) <button style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;margin-left:8px;" onclick="clearAlerts()">삭제</button></h3>
+    <h3>매수 알림 히스토리 (최근 3일) <button style="background:none;border:1px solid var(--border);color:var(--muted);padding:2px 8px;border-radius:4px;font-size:10px;cursor:pointer;font-family:'IBM Plex Mono',monospace;margin-left:8px;" onclick="clearAlerts()">삭제</button></h3>
     <div class="alert-log" id="alertLog">
       <div class="alert-empty">알림 기록 없음</div>
     </div>
@@ -322,7 +462,7 @@ const BB_LEN = 20, BB_STD = 2;
 const RSI_LEN = 7, RSI_OS = 20, RSI_OB = 80;
 const CANDLE_COUNT = 50; // BB(20) + 여유
 const ALERT_KEY = 'ct_alerts';
-const ALERT_TTL = 3600000;
+const ALERT_TTL = 259200000; // 3일 (ms)
 
 let allCoins = [];
 let selectedTf = '1';
@@ -330,6 +470,8 @@ let currentFilter = 'all';
 let sortKey = 'signal';
 let sortDir = 'desc';
 let isLoading = false;
+let scanAborted = false;
+let signalMode = '1'; // '1'=OR+거래량, '2'=3캔들윈도우AND
 let refreshMs = 30000;
 let refreshTimer = null;
 let countdownTimer = null;
@@ -460,32 +602,75 @@ function detectSignal(candles) {
   // 3-b) RSI 상향 돌파: 이전 RSI <= 20이었고 현재 RSI > 20
   var rsiCrossUp = prevRsi !== null && prevRsi <= RSI_OS && rsi > RSI_OS;
 
-  // 3-c) 양봉 장악형: 직전 음봉을 현재 양봉이 감쌈
-  var bullEngulf = (close1 < open1) && (price > open0) && (price > open1) && (open0 <= close1);
+  var volSpiked = vol.ratio > 1.5;
+
+  // 모드2: 최근 3캔들 윈도우에서 각 조건 발생 여부
+  var winReEntered = reEntered, winRsiCrossUp = rsiCrossUp;
+  if (signalMode === '2' && candles.length >= BB_LEN + 4) {
+    for (var wi = 1; wi <= 2; wi++) {
+      var wc = candles[wi], wc1 = candles[wi + 1];
+      var wbb = calcBB(candles.slice(wi));
+      var wbbPrev = calcBB(candles.slice(wi + 1));
+      var wRsi = calcRSI7(candles.slice(wi));
+      var wPrevRsi = calcRSI7(candles.slice(wi + 1));
+      if (wbb && wbbPrev) {
+        var wBroke = wc1.trade_price < wbbPrev.lower || wc.low_price < wbb.lower;
+        if (wBroke && wc.trade_price >= wbb.lower) winReEntered = true;
+        if (!prevBroke && wBroke) prevBroke = true;
+        if (!wasOversold && wPrevRsi !== null && wPrevRsi <= RSI_OS) wasOversold = true;
+      }
+      if (wPrevRsi !== null && wPrevRsi <= RSI_OS && wRsi !== null && wRsi > RSI_OS) winRsiCrossUp = true;
+    }
+  }
 
   // 과매도 대기 (BB 이탈 + RSI 과매도이지만 확정 신호 없음)
   if (prevBroke && wasOversold) {
     result.badges.push({ text: 'BB 하단', cls: 'badge-down' });
     result.badges.push({ text: 'RSI ' + rsi.toFixed(0), cls: rsi <= RSI_OS ? 'badge-down' : 'badge-info' });
 
-    if (reEntered || rsiCrossUp || bullEngulf) {
-      // ★ 매수 신호 ★
-      result.signal = 'buy';
-      var reasons = [];
-      if (reEntered) reasons.push('밴드재진입');
-      if (rsiCrossUp) reasons.push('RSI↑돌파');
-      if (bullEngulf) reasons.push('양봉장악');
-      result.detail = reasons.join('+');
-      result.badges.push({ text: result.detail, cls: 'badge-up' });
-
-      if (vol.ratio > 1.5) {
-        result.badges.push({ text: 'VOL x' + vol.ratio.toFixed(1), cls: 'badge-warn' });
-        result.detail += ' [거래량↑]';
+    if (signalMode === '1') {
+      // ★ 모드1: (밴드재진입 OR RSI돌파) + 거래량 ★
+      if ((reEntered || rsiCrossUp) && volSpiked) {
+        result.signal = 'buy';
+        var reasons = [];
+        if (reEntered) reasons.push('밴드재진입');
+        if (rsiCrossUp) reasons.push('RSI↑돌파');
+        reasons.push('VOL x' + vol.ratio.toFixed(1));
+        result.detail = reasons.join('+');
+        result.badges.push({ text: result.detail, cls: 'badge-up' });
+      } else if (reEntered || rsiCrossUp) {
+        result.signal = 'wait';
+        var reasons = [];
+        if (reEntered) reasons.push('밴드재진입');
+        if (rsiCrossUp) reasons.push('RSI↑돌파');
+        result.detail = reasons.join('+') + ' (거래량 부족)';
+        result.badges.push({ text: reasons.join('+'), cls: 'badge-warn' });
+        result.badges.push({ text: 'VOL x' + vol.ratio.toFixed(1), cls: 'badge-info' });
+      } else {
+        result.signal = 'wait';
+        result.detail = '확정 대기';
+        result.badges.push({ text: '확정 대기', cls: 'badge-warn' });
       }
     } else {
-      result.signal = 'wait';
-      result.detail = '확정 대기';
-      result.badges.push({ text: '확정 대기', cls: 'badge-warn' });
+      // ★ 모드2: 최근 3캔들내 밴드재진입 + RSI돌파 + 거래량 (AND) ★
+      if (winReEntered && winRsiCrossUp && volSpiked) {
+        result.signal = 'buy';
+        var reasons = [];
+        reasons.push(reEntered ? '밴드재진입' : '밴드재진입(이전캔들)');
+        reasons.push(rsiCrossUp ? 'RSI↑돌파' : 'RSI↑돌파(이전캔들)');
+        reasons.push('VOL x' + vol.ratio.toFixed(1));
+        result.detail = reasons.join('+');
+        result.badges.push({ text: result.detail, cls: 'badge-up' });
+      } else {
+        result.signal = 'wait';
+        var met = [], unmet = [];
+        if (winReEntered) met.push('밴드재진입'); else unmet.push('밴드재진입');
+        if (winRsiCrossUp) met.push('RSI↑돌파'); else unmet.push('RSI↑돌파');
+        if (volSpiked) met.push('VOL'); else unmet.push('거래량');
+        result.detail = (met.length > 0 ? met.join('+') : '') + ' (' + unmet.join('+') + ' 미충족)';
+        if (met.length > 0) result.badges.push({ text: met.join('+'), cls: 'badge-warn' });
+        result.badges.push({ text: unmet.join('+') + ' 미충족', cls: 'badge-info' });
+      }
     }
   } else {
     // BB 상단 과열 체크 (참고용)
@@ -504,12 +689,27 @@ function detectSignal(candles) {
 // 컨트롤
 // ========================================
 function setTf(tf, btn) {
-  if (isLoading) return;
   selectedTf = tf;
   setCookie('ct_tf', tf);
   document.querySelectorAll('.tf-btn').forEach(function(b) { b.classList.remove('active'); });
   btn.classList.add('active');
-  fetchData();
+  if (isLoading) {
+    scanAborted = true;
+  } else {
+    fetchData();
+  }
+}
+
+function setSignalMode(mode, btn) {
+  signalMode = mode;
+  setCookie('ct_sigmode', mode);
+  document.querySelectorAll('.sig-btn').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  if (isLoading) {
+    scanAborted = true;
+  } else {
+    fetchData();
+  }
 }
 
 function setFilter(f, btn) {
@@ -542,10 +742,13 @@ function scheduleRefresh() {
 }
 
 function forceRefresh() {
-  if (isLoading) return;
   if (refreshTimer) clearTimeout(refreshTimer);
   refreshTimer = null; nextRefreshAt = 0; updateCountdown();
-  fetchData();
+  if (isLoading) {
+    scanAborted = true;
+  } else {
+    fetchData();
+  }
 }
 
 function updateCountdown() {
@@ -648,7 +851,7 @@ function renderTable() {
     var volColor = volRatio > 2 ? 'var(--accent)' : volRatio > 1.5 ? 'var(--up)' : 'var(--muted)';
     var volHtml = '<span class="mono" style="font-size:11px;color:' + volColor + '">x' + volRatio.toFixed(1) + '</span>';
 
-    html += '<tr>'
+    html += '<tr class="clickable" onclick="showLivePrice(\'KRW-' + c.symbol + '\',\'' + c.symbol + '\',\'' + c.name + '\')">'
       + '<td class="mono" style="color:var(--muted);font-size:11px">' + (i + 1) + '</td>'
       + '<td><div class="coin-cell">'
       + '<div class="coin-icon" style="background:' + cl[0] + ';color:' + cl[1] + '">' + c.symbol.slice(0, 3) + '</div>'
@@ -785,6 +988,7 @@ async function fetchData() {
       setProgress(pct, symbol + ' (' + done + '/' + targets.length + ')');
 
       if (done % 10 === 0) { allCoins = coins; updateStats(); renderTable(); }
+      if (scanAborted) break;
       if (done % 8 === 0) await sleep(300); else await sleep(100);
     }
 
@@ -793,9 +997,13 @@ async function fetchData() {
     setProgress(100, '완료!');
     renderTable();
 
-    // 매수 알림 저장
-    if (newBuys.length > 0) saveNewAlerts(newBuys);
+    // 매수 알림 저장 + 자동매수
+    if (newBuys.length > 0) {
+      saveNewAlerts(newBuys);
+      if (tradeConfig.autoBuy) executeAutoBuys(newBuys);
+    }
     renderAlerts();
+    checkPositionsForSell();
 
     var now = new Date().toLocaleTimeString('ko-KR');
     var tfLabel = selectedTf === '60' ? '1시간' : selectedTf + '분';
@@ -814,6 +1022,11 @@ async function fetchData() {
   } finally {
     btn.disabled = false; btn.textContent = '새로고침';
     isLoading = false;
+    if (scanAborted) {
+      scanAborted = false;
+      fetchData();
+      return;
+    }
   }
 }
 
@@ -883,12 +1096,14 @@ function renderAlerts() {
   var html = '';
   records.forEach(function(r) {
     var time = new Date(r.ts);
-    var timeStr = ('0' + time.getHours()).slice(-2) + ':' + ('0' + time.getMinutes()).slice(-2) + ':' + ('0' + time.getSeconds()).slice(-2);
-    var diffSec = Math.floor((Date.now() - r.ts) / 1000);
-    var ago = diffSec < 60 ? diffSec + '초전' : Math.floor(diffSec / 60) + '분전';
+    var mm = ('0' + (time.getMonth() + 1)).slice(-2);
+    var dd = ('0' + time.getDate()).slice(-2);
+    var timeStr = mm + '/' + dd + ' ' + ('0' + time.getHours()).slice(-2) + ':' + ('0' + time.getMinutes()).slice(-2);
+    var diffMin = Math.floor((Date.now() - r.ts) / 60000);
+    var ago = diffMin < 1 ? '방금' : diffMin < 60 ? diffMin + '분전' : diffMin < 1440 ? Math.floor(diffMin / 60) + '시간전' : Math.floor(diffMin / 1440) + '일전';
     var tfLabel = r.tf === '60' ? '1시간' : r.tf + '분';
 
-    html += '<div class="alert-item">'
+    html += '<div class="alert-item clickable" onclick="showLivePrice(\'KRW-' + r.symbol + '\',\'' + r.symbol + '\',\'' + (r.name || r.symbol).replace(/'/g, '') + '\',{alertPrice:' + r.price + ',alertTime:\'' + timeStr + '\'})">'
       + '<span class="alert-time">' + timeStr + ' <span style="color:var(--accent3)">(' + ago + ')</span></span>'
       + '<span class="alert-coin">' + r.symbol + '</span>'
       + '<span class="alert-price">' + fmtPrice(r.price) + '</span>'
@@ -899,6 +1114,503 @@ function renderAlerts() {
   });
 
   el.innerHTML = html;
+}
+
+// ========================================
+// 매매 - JWT 인증
+// ========================================
+var tradeConfig = {
+  accessKey: '', secretKey: '',
+  autoBuy: false, buyAmount: 10000, profitTarget: 0.5
+};
+const POS_KEY = 'ct_positions';
+const FEE_RATE = 0.0004; // 0.04% 편도
+const FEE_ROUND = 0.0008; // 0.08% 왕복
+
+function base64url(input) {
+  var str;
+  if (typeof input === 'string') str = btoa(unescape(encodeURIComponent(input)));
+  else str = btoa(String.fromCharCode.apply(null, new Uint8Array(input)));
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+}
+function uuidv4() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+  });
+}
+async function sha512(msg) {
+  var buf = await crypto.subtle.digest('SHA-512', new TextEncoder().encode(msg));
+  return Array.from(new Uint8Array(buf)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+async function generateJWT(qs) {
+  if (!tradeConfig.accessKey || !tradeConfig.secretKey) throw new Error('API Key 미설정');
+  var header = { alg: 'HS256', typ: 'JWT' };
+  var payload = { access_key: tradeConfig.accessKey, nonce: uuidv4(), timestamp: Date.now() };
+  if (qs) { payload.query_hash = await sha512(qs); payload.query_hash_alg = 'SHA512'; }
+  var eh = base64url(JSON.stringify(header));
+  var ep = base64url(JSON.stringify(payload));
+  var si = eh + '.' + ep;
+  var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(tradeConfig.secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  var sig = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(si));
+  return si + '.' + base64url(sig);
+}
+async function apiAuth(method, path, params) {
+  var qs = '', url = API + path;
+  if (params && Object.keys(params).length > 0) {
+    qs = new URLSearchParams(params).toString();
+    if (method === 'GET' || method === 'DELETE') url += '?' + qs;
+  }
+  var token = await generateJWT(qs || undefined);
+  var opts = { method: method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (method === 'POST' && params) opts.body = JSON.stringify(params);
+  var res = await fetch(url, opts);
+  var data = await res.json();
+  if (data.error) throw new Error(data.error.message || data.error.name || 'API 오류');
+  return data;
+}
+
+// ========================================
+// 매매 설정 저장/로드
+// ========================================
+function saveKeys() {
+  tradeConfig.accessKey = document.getElementById('inAccessKey').value.trim();
+  tradeConfig.secretKey = document.getElementById('inSecretKey').value.trim();
+  localStorage.setItem('bit_access_key', tradeConfig.accessKey);
+  localStorage.setItem('bit_secret_key', tradeConfig.secretKey);
+  alert('API 키 저장 완료');
+}
+function clearKeys() {
+  tradeConfig.accessKey = ''; tradeConfig.secretKey = '';
+  localStorage.removeItem('bit_access_key'); localStorage.removeItem('bit_secret_key');
+  document.getElementById('inAccessKey').value = '';
+  document.getElementById('inSecretKey').value = '';
+  alert('API 키 삭제 완료');
+}
+async function fetchAccounts() {
+  var area = document.getElementById('accountsArea');
+  area.style.display = 'block';
+  var ak = tradeConfig.accessKey, sk = tradeConfig.secretKey;
+  var akInfo = ak ? (ak.substring(0, 4) + '...' + ak.substring(ak.length - 4) + ' [' + ak.length + '자]') : '(없음)';
+  var skInfo = sk ? (sk.substring(0, 4) + '...' + sk.substring(sk.length - 4) + ' [' + sk.length + '자]') : '(없음)';
+  area.innerHTML = '<span style="color:var(--muted)">조회 중... AK: ' + akInfo + ' / SK: ' + skInfo + '</span>';
+  try {
+    var data = await apiAuth('GET', '/accounts');
+    if (!Array.isArray(data) || data.length === 0) {
+      area.innerHTML = '<span style="color:var(--muted)">보유 자산 없음</span>';
+      return;
+    }
+    var html = '<table style="width:100%;border-collapse:collapse;font-size:11px">'
+      + '<tr style="color:var(--accent3);border-bottom:1px solid var(--border)">'
+      + '<th style="text-align:left;padding:3px 6px">코인</th>'
+      + '<th style="text-align:right;padding:3px 6px">보유수량</th>'
+      + '<th style="text-align:right;padding:3px 6px">주문잠금</th>'
+      + '<th style="text-align:right;padding:3px 6px">매수평균가</th>'
+      + '<th style="text-align:right;padding:3px 6px">평가금액</th>'
+      + '</tr>';
+    var totalKrw = 0;
+    data.forEach(function(a) {
+      var bal = parseFloat(a.balance) || 0;
+      var locked = parseFloat(a.locked) || 0;
+      var avg = parseFloat(a.avg_buy_price) || 0;
+      var evalAmt = (bal + locked) * avg;
+      if (a.currency === 'KRW') evalAmt = bal + locked;
+      if (bal + locked <= 0) return;
+      totalKrw += evalAmt;
+      html += '<tr style="border-bottom:1px solid rgba(255,255,255,0.05)">'
+        + '<td style="padding:3px 6px;font-weight:700">' + a.currency + '</td>'
+        + '<td style="text-align:right;padding:3px 6px">' + (a.currency === 'KRW' ? Math.floor(bal).toLocaleString() : bal) + '</td>'
+        + '<td style="text-align:right;padding:3px 6px;color:var(--muted)">' + (locked > 0 ? locked : '-') + '</td>'
+        + '<td style="text-align:right;padding:3px 6px">' + (a.currency === 'KRW' ? '-' : fmt(avg)) + '</td>'
+        + '<td style="text-align:right;padding:3px 6px">' + (evalAmt > 0 ? Math.floor(evalAmt).toLocaleString() + '원' : '-') + '</td>'
+        + '</tr>';
+    });
+    html += '<tr style="border-top:2px solid var(--border);font-weight:700">'
+      + '<td style="padding:4px 6px" colspan="4">총 평가금액</td>'
+      + '<td style="text-align:right;padding:4px 6px;color:var(--accent3)">' + Math.floor(totalKrw).toLocaleString() + '원</td>'
+      + '</tr></table>';
+    area.innerHTML = html;
+  } catch (e) {
+    area.innerHTML = '<span style="color:var(--down)">오류: ' + e.message + '</span>';
+  }
+}
+function saveTradeSettings() {
+  tradeConfig.autoBuy = document.getElementById('chkAutoBuy').checked;
+  tradeConfig.buyAmount = parseInt(document.getElementById('inBuyAmount').value) || 10000;
+  tradeConfig.profitTarget = parseFloat(document.getElementById('inProfitTarget').value) || 0.5;
+  setCookie('ct_autobuy', tradeConfig.autoBuy ? '1' : '0');
+  setCookie('ct_buyamt', String(tradeConfig.buyAmount));
+  setCookie('ct_profit', String(tradeConfig.profitTarget));
+}
+function loadTradeSettings() {
+  tradeConfig.accessKey = localStorage.getItem('bit_access_key') || '';
+  tradeConfig.secretKey = localStorage.getItem('bit_secret_key') || '';
+  document.getElementById('inAccessKey').value = tradeConfig.accessKey;
+  document.getElementById('inSecretKey').value = tradeConfig.secretKey;
+
+  var ab = getCookie('ct_autobuy');
+  if (ab !== '') tradeConfig.autoBuy = ab === '1';
+  var ba = getCookie('ct_buyamt');
+  if (ba !== '') tradeConfig.buyAmount = parseInt(ba) || 10000;
+  var pt = getCookie('ct_profit');
+  if (pt !== '') tradeConfig.profitTarget = parseFloat(pt) || 0.5;
+
+  document.getElementById('chkAutoBuy').checked = tradeConfig.autoBuy;
+  document.getElementById('inBuyAmount').value = tradeConfig.buyAmount;
+  document.getElementById('inProfitTarget').value = tradeConfig.profitTarget;
+}
+
+// ========================================
+// 포지션 관리 (localStorage)
+// ========================================
+function loadPositions() {
+  try { return JSON.parse(localStorage.getItem(POS_KEY) || '[]'); } catch (e) { return []; }
+}
+function savePositions(pos) {
+  try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch (e) { }
+}
+
+// 자동 매수 실행
+async function executeAutoBuys(buys) {
+  if (!tradeConfig.accessKey || !tradeConfig.secretKey) return;
+  var amount = tradeConfig.buyAmount;
+  if (amount < 5000) return;
+
+  var positions = loadPositions();
+
+  for (var i = 0; i < buys.length; i++) {
+    var b = buys[i];
+    var market = 'KRW-' + b.symbol;
+
+    // 이미 보유 중이면 스킵
+    var already = positions.some(function(p) { return p.market === market && p.status === 'hold'; });
+    if (already) continue;
+
+    try {
+      var result = await apiAuth('POST', '/orders', {
+        market: market,
+        side: 'bid',
+        ord_type: 'price',
+        price: String(amount)
+      });
+
+      // 체결 대기 (최대 10초, 2초 간격 재시도)
+      var order;
+      for (var retry = 0; retry < 5; retry++) {
+        await sleep(2000);
+        order = await apiAuth('GET', '/order', { uuid: result.uuid });
+        if (order.state === 'done' || order.state === 'cancel') break;
+      }
+
+      var executed = 0, totalCost = 0;
+      if (order && order.trades && order.trades.length > 0) {
+        order.trades.forEach(function(t) {
+          executed += parseFloat(t.volume);
+          totalCost += parseFloat(t.price) * parseFloat(t.volume);
+        });
+      }
+      var avgPrice = executed > 0 ? totalCost / executed : b.price;
+
+      positions.push({
+        market: market,
+        symbol: b.symbol,
+        name: b.name,
+        buyPrice: avgPrice,
+        volume: executed,
+        buyAmount: executed > 0 ? totalCost : amount,
+        buyTime: Date.now(),
+        orderId: result.uuid,
+        status: 'hold',
+        sellOrderId: null,
+        detail: b.detail || ''
+      });
+      savePositions(positions);
+      renderPositions();
+    } catch (e) {
+      console.error('자동매수 실패:', b.symbol, e.message);
+    }
+    await sleep(500);
+  }
+}
+
+// 매도 체크: 목표 수익률 도달 시 시장가 매도
+async function checkPositionsForSell() {
+  if (!tradeConfig.accessKey || !tradeConfig.secretKey) { renderPositions(); return; }
+
+  var positions = loadPositions();
+  var holdPositions = positions.filter(function(p) { return p.status === 'hold'; });
+  if (holdPositions.length === 0) { renderPositions(); return; }
+
+  var targetPct = tradeConfig.profitTarget;
+  // 실제 필요 상승률 = 목표순이익 + 왕복수수료
+  var requiredPct = targetPct + (FEE_ROUND * 100);
+
+  // 현재가 조회
+  var markets = holdPositions.map(function(p) { return p.market; });
+  try {
+    var tickers = await apiFetch('/ticker?markets=' + markets.join(','));
+    var priceMap = {};
+    tickers.forEach(function(t) { priceMap[t.market] = t.trade_price; });
+
+    for (var i = 0; i < positions.length; i++) {
+      var p = positions[i];
+      if (p.status !== 'hold') continue;
+
+      var curPrice = priceMap[p.market];
+      if (!curPrice) continue;
+
+      var grossPct = ((curPrice - p.buyPrice) / p.buyPrice) * 100;
+      var netPct = grossPct - (FEE_ROUND * 100);
+      p.currentPrice = curPrice;
+      p.grossPct = grossPct;
+      p.netPct = netPct;
+
+      // 목표 도달 시 매도
+      if (grossPct >= requiredPct && !p.sellOrderId) {
+        try {
+          var vol = parseFloat(p.volume);
+          var sellResult = await apiAuth('POST', '/orders', {
+            market: p.market,
+            side: 'ask',
+            ord_type: 'market',
+            volume: vol.toFixed(8)
+          });
+          p.sellOrderId = sellResult.uuid;
+          p.sellTime = Date.now();
+          // 체결 확인 (최대 10초)
+          for (var sr = 0; sr < 5; sr++) {
+            await sleep(2000);
+            var sellOrder = await apiAuth('GET', '/order', { uuid: sellResult.uuid });
+            if (sellOrder.state === 'done' || sellOrder.state === 'cancel') {
+              if (sellOrder.trades && sellOrder.trades.length > 0) {
+                var soldVol = 0, soldCost = 0;
+                sellOrder.trades.forEach(function(st) { soldVol += parseFloat(st.volume); soldCost += parseFloat(st.price) * parseFloat(st.volume); });
+                p.sellPrice = soldVol > 0 ? soldCost / soldVol : curPrice;
+              } else {
+                p.sellPrice = curPrice;
+              }
+              break;
+            }
+          }
+          if (!p.sellPrice) p.sellPrice = curPrice;
+          p.status = 'sold';
+          p.grossPct = ((p.sellPrice - p.buyPrice) / p.buyPrice) * 100;
+          p.netPct = p.grossPct - (FEE_ROUND * 100);
+        } catch (e) {
+          console.error('매도 실패:', p.symbol, e.message);
+        }
+        await sleep(500);
+      }
+    }
+
+    savePositions(positions);
+  } catch (e) { }
+
+  renderPositions();
+}
+
+// 수동 매도
+async function manualSell(idx) {
+  var positions = loadPositions();
+  var p = positions[idx];
+  if (!p || p.status !== 'hold') return;
+
+  try {
+    var vol = parseFloat(p.volume);
+    var result = await apiAuth('POST', '/orders', {
+      market: p.market,
+      side: 'ask',
+      ord_type: 'market',
+      volume: vol.toFixed(8)
+    });
+    p.sellOrderId = result.uuid;
+    p.sellTime = Date.now();
+    // 체결 확인 (최대 10초)
+    for (var sr = 0; sr < 5; sr++) {
+      await sleep(2000);
+      var sellOrder = await apiAuth('GET', '/order', { uuid: result.uuid });
+      if (sellOrder.state === 'done' || sellOrder.state === 'cancel') {
+        if (sellOrder.trades && sellOrder.trades.length > 0) {
+          var soldVol = 0, soldCost = 0;
+          sellOrder.trades.forEach(function(st) { soldVol += parseFloat(st.volume); soldCost += parseFloat(st.price) * parseFloat(st.volume); });
+          p.sellPrice = soldVol > 0 ? soldCost / soldVol : (p.currentPrice || p.buyPrice);
+        } else {
+          p.sellPrice = p.currentPrice || p.buyPrice;
+        }
+        break;
+      }
+    }
+    if (!p.sellPrice) p.sellPrice = p.currentPrice || p.buyPrice;
+    p.status = 'sold';
+    p.grossPct = ((p.sellPrice - p.buyPrice) / p.buyPrice) * 100;
+    p.netPct = p.grossPct - (FEE_ROUND * 100);
+    savePositions(positions);
+    renderPositions();
+  } catch (e) {
+    alert('매도 실패: ' + e.message);
+  }
+}
+
+// 포지션 삭제 (완료된 것만)
+function clearSoldPositions() {
+  var positions = loadPositions().filter(function(p) { return p.status === 'hold'; });
+  savePositions(positions);
+  renderPositions();
+}
+
+// 포지션 렌더
+function renderPositions() {
+  var positions = loadPositions();
+  var el = document.getElementById('posBody');
+  var targetPct = tradeConfig.profitTarget;
+  var requiredPct = targetPct + (FEE_ROUND * 100);
+
+  if (positions.length === 0) {
+    el.innerHTML = '<div class="pos-empty">포지션 없음</div>';
+    document.getElementById('posStatus').textContent = '';
+    return;
+  }
+
+  var holdCount = positions.filter(function(p) { return p.status === 'hold'; }).length;
+  document.getElementById('posStatus').textContent = '보유 ' + holdCount + '개 | 목표수익률 ' + targetPct + '% (필요상승 ' + requiredPct.toFixed(2) + '%)';
+
+  var html = '<div style="text-align:right;margin-bottom:6px"><button class="trade-save-btn" style="font-size:10px;padding:3px 8px;border-color:var(--down);color:var(--down)" onclick="clearSoldPositions()">완료 제거</button></div>'
+    + '<table class="pos-table"><thead><tr>'
+    + '<th>코인</th><th>매수가</th><th>현재가</th><th>수량</th><th>투자금</th>'
+    + '<th>총수익률</th><th>순수익률</th><th>예상순이익</th><th>상태</th><th>동작</th>'
+    + '</tr></thead><tbody>';
+
+  positions.forEach(function(p, idx) {
+    var curPrice = p.currentPrice || p.buyPrice;
+    var grossPct = p.grossPct || 0;
+    var netPct = p.netPct || 0;
+    if (p.status === 'sold') {
+      grossPct = p.sellPrice ? ((p.sellPrice - p.buyPrice) / p.buyPrice * 100) : 0;
+      netPct = grossPct - (FEE_ROUND * 100);
+      curPrice = p.sellPrice || p.buyPrice;
+    }
+    var netAmount = p.buyAmount * (netPct / 100);
+    var isUp = netPct >= 0;
+
+    var statusHtml = '';
+    var actionHtml = '';
+    if (p.status === 'hold') {
+      var progress = requiredPct > 0 ? Math.min(Math.max(grossPct / requiredPct * 100, 0), 100) : 0;
+      statusHtml = '<span style="color:var(--accent3)">보유중</span>'
+        + '<div style="width:50px;height:3px;background:var(--border);border-radius:2px;margin-top:3px">'
+        + '<div style="width:' + progress.toFixed(0) + '%;height:100%;background:var(--accent);border-radius:2px"></div></div>';
+      actionHtml = '<button class="trade-save-btn" style="font-size:10px;padding:3px 8px;border-color:var(--down);color:var(--down)" onclick="manualSell(' + idx + ')">매도</button>';
+    } else {
+      statusHtml = '<span style="color:var(--muted)">매도완료</span>';
+      actionHtml = '<span style="color:var(--muted);font-size:10px">' + new Date(p.sellTime).toLocaleTimeString('ko-KR') + '</span>';
+    }
+
+    var time = new Date(p.buyTime);
+    var timeStr = ('0' + (time.getMonth()+1)).slice(-2) + '/' + ('0' + time.getDate()).slice(-2) + ' ' + ('0' + time.getHours()).slice(-2) + ':' + ('0' + time.getMinutes()).slice(-2);
+
+    html += '<tr>'
+      + '<td><span style="font-weight:700">' + p.symbol + '</span><div style="font-size:9px;color:var(--muted)">' + timeStr + '</div></td>'
+      + '<td>' + fmtPrice(p.buyPrice) + '</td>'
+      + '<td style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + fmtPrice(curPrice) + '</td>'
+      + '<td>' + (p.volume ? p.volume.toFixed(6) : '-') + '</td>'
+      + '<td>' + fmt(p.buyAmount) + '원</td>'
+      + '<td class="pos-profit" style="color:' + (grossPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (grossPct >= 0 ? '+' : '') + grossPct.toFixed(3) + '%</td>'
+      + '<td class="pos-profit" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netPct >= 0 ? '+' : '') + netPct.toFixed(3) + '%</td>'
+      + '<td style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">' + (netAmount >= 0 ? '+' : '') + Math.round(netAmount) + '원</td>'
+      + '<td>' + statusHtml + '</td>'
+      + '<td>' + actionHtml + '</td>'
+      + '</tr>';
+  });
+
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ========================================
+// 실시간 가격 팝업
+// ========================================
+var livePopupTimer = null;
+
+function showLivePrice(market, symbol, name, ref) {
+  closeLivePopup();
+
+  // 오버레이 + 팝업 생성
+  var overlay = document.createElement('div');
+  overlay.className = 'live-popup-overlay';
+  overlay.id = 'liveOverlay';
+  overlay.onclick = closeLivePopup;
+
+  var popup = document.createElement('div');
+  popup.className = 'live-popup';
+  popup.id = 'livePopup';
+  popup.innerHTML = '<div class="live-popup-loading">시세 조회 중...</div>';
+  popup.onclick = function(e) { e.stopPropagation(); };
+
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
+
+  // 시세 조회
+  fetchAndRenderPopup(market, symbol, name, ref);
+  livePopupTimer = setInterval(function() {
+    fetchAndRenderPopup(market, symbol, name, ref);
+  }, 3000);
+}
+
+async function fetchAndRenderPopup(market, symbol, name, ref) {
+  var popup = document.getElementById('livePopup');
+  if (!popup) return;
+
+  try {
+    var data = await apiFetch('/ticker?markets=' + market);
+    if (!data || data.length === 0) return;
+    var t = data[0];
+    var price = t.trade_price || 0;
+    var change = (t.signed_change_rate || 0) * 100;
+    var isUp = change >= 0;
+    var high = t.high_price || 0;
+    var low = t.low_price || 0;
+    var vol24 = t.acc_trade_price_24h || 0;
+    var now = new Date().toLocaleTimeString('ko-KR');
+
+    var html = '<div class="live-popup-header">'
+      + '<div><h2>' + symbol + '</h2><span>' + name + '</span></div>'
+      + '<button class="live-popup-close" onclick="closeLivePopup()">X</button></div>'
+      + '<div class="live-popup-price" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">'
+      + fmtPrice(price) + ' <span style="font-size:14px">' + (isUp ? '+' : '') + change.toFixed(2) + '%</span></div>'
+      + '<div class="live-popup-meta">'
+      + '<div class="live-popup-item"><div class="lbl">고가 (24h)</div><div style="color:var(--up)">' + fmtPrice(high) + '</div></div>'
+      + '<div class="live-popup-item"><div class="lbl">저가 (24h)</div><div style="color:var(--down)">' + fmtPrice(low) + '</div></div>'
+      + '<div class="live-popup-item"><div class="lbl">거래대금</div><div>' + fmt(vol24) + '원</div></div>'
+      + '<div class="live-popup-item"><div class="lbl">갱신 시각</div><div style="color:var(--muted)">' + now + '</div></div>'
+      + '</div>';
+
+    // 알림 기록에서 클릭한 경우: 알림 당시 가격과 비교
+    if (ref && ref.alertPrice) {
+      var diff = price - ref.alertPrice;
+      var diffPct = ref.alertPrice > 0 ? (diff / ref.alertPrice * 100) : 0;
+      var diffColor = diff >= 0 ? 'var(--up)' : 'var(--down)';
+      html += '<div class="live-popup-ref">'
+        + '<span class="lbl">알림 당시 (' + ref.alertTime + ')</span> '
+        + fmtPrice(ref.alertPrice)
+        + ' → <span style="color:' + diffColor + ';font-weight:700">'
+        + (diff >= 0 ? '+' : '') + fmtPrice(diff) + ' (' + (diff >= 0 ? '+' : '') + diffPct.toFixed(2) + '%)</span></div>';
+    }
+
+    popup.innerHTML = html;
+  } catch (e) {
+    popup.innerHTML = '<div class="live-popup-header"><div><h2>' + symbol + '</h2></div>'
+      + '<button class="live-popup-close" onclick="closeLivePopup()">X</button></div>'
+      + '<div style="color:var(--down);font-size:12px;padding:16px">시세 조회 실패</div>';
+  }
+}
+
+function closeLivePopup() {
+  if (livePopupTimer) clearInterval(livePopupTimer);
+  livePopupTimer = null;
+  var overlay = document.getElementById('liveOverlay');
+  var popup = document.getElementById('livePopup');
+  if (overlay) overlay.remove();
+  if (popup) popup.remove();
 }
 
 // ========================================
@@ -920,8 +1632,15 @@ function renderAlerts() {
     refreshMs = Number(r);
     document.querySelectorAll('.rf-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.rf === r); });
   }
+  var sm = getCookie('ct_sigmode');
+  if (sm && (sm === '1' || sm === '2')) {
+    signalMode = sm;
+    document.querySelectorAll('.sig-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.sig === sm); });
+  }
 
+  loadTradeSettings();
   renderAlerts();
+  renderPositions();
   fetchData();
 })();
 </script>
