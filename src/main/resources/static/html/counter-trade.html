@@ -340,8 +340,9 @@
 <div class="main">
 
   <div class="algo-info">
-    <strong>거래량 브레이크아웃 스캘핑</strong> —
-    <strong>거래량 급등</strong>(평균 대비 x2.0↑) + <strong>양봉 상승</strong> + <strong>모멘텀↑</strong>(3캔들 우상향 or 상승률 0.1%↑) 동시 충족 시 <strong style="color:var(--accent)">매수</strong>. 시간 초과 시 자동 손절.
+    <strong>EMA 크로스오버 스캘핑</strong> —
+    대상: 거래대금 10억↑ &amp; 변동률 1~8% 상위 100개.
+    <strong>EMA(9)</strong>가 <strong>EMA(21)</strong>을 상향 돌파(골든크로스) + <strong>거래량 급등</strong>(평균 대비 x2.0↑) + <strong>체결강도</strong>(≥100%) 동시 충족 시 <strong style="color:var(--accent)">매수</strong>. 시간 초과 시 자동 손절.
     <strong style="color:var(--accent2)">투자 참고용이며 투자 손실에 책임지지 않습니다.</strong>
   </div>
 
@@ -415,6 +416,10 @@
       <button class="tf-btn active" data-tf="1" onclick="setTf('1',this)">1분</button>
       <button class="tf-btn" data-tf="3" onclick="setTf('3',this)">3분</button>
       <button class="tf-btn" data-tf="5" onclick="setTf('5',this)">5분</button>
+      <button class="tf-btn" data-tf="10" onclick="setTf('10',this)">10분</button>
+      <button class="tf-btn" data-tf="15" onclick="setTf('15',this)">15분</button>
+      <button class="tf-btn" data-tf="30" onclick="setTf('30',this)">30분</button>
+      <button class="tf-btn" data-tf="60" onclick="setTf('60',this)">1시간</button>
     </div>
   </div>
 
@@ -462,7 +467,7 @@
 // Config
 // ========================================
 const API = 'https://api.bithumb.com/v1';
-const CANDLE_COUNT = 20; // 거래량 평균 산출용
+const CANDLE_COUNT = 30; // EMA(21) + 거래량 평균 산출용
 const COOLDOWN_MS = 180000; // 재진입 쿨다운 3분
 const POS_CHECK_INTERVAL = 10000; // 포지션 체크 10초
 const ALERT_KEY = 'ct_alerts';
@@ -523,20 +528,34 @@ function calcVolBreakout(candles) {
   return { breakout: ratio >= tradeConfig.volMult, ratio: ratio };
 }
 
-// 양봉 + 전봉 대비 상승 체크
-function checkBullish(candles) {
-  if (!candles || candles.length < 2) return false;
-  var c0 = candles[0], c1 = candles[1];
-  return c0.trade_price > c0.opening_price && c0.trade_price > c1.trade_price;
+// EMA 계산 (캔들 배열은 최신이 [0])
+function calcEMA(candles, period) {
+  if (!candles || candles.length < period) return [];
+  // 캔들을 오래된 순서로 뒤집어서 계산
+  var prices = [];
+  for (var i = candles.length - 1; i >= 0; i--) prices.push(candles[i].trade_price);
+  var k = 2 / (period + 1);
+  var ema = [prices[0]];
+  for (var i = 1; i < prices.length; i++) {
+    ema.push(prices[i] * k + ema[i - 1] * (1 - k));
+  }
+  // 다시 최신이 [0] 순서로 뒤집어서 반환
+  return ema.reverse();
 }
 
-// 모멘텀 체크: 3캔들 우상향 또는 최신 캔들 상승률 > 0.1%
-function checkMomentum(candles) {
-  if (!candles || candles.length < 3) return false;
-  var c0 = candles[0], c1 = candles[1], c2 = candles[2];
-  if (c0.trade_price > c1.trade_price && c1.trade_price > c2.trade_price) return true;
-  var chgRate = c0.opening_price > 0 ? ((c0.trade_price - c0.opening_price) / c0.opening_price) * 100 : 0;
-  return chgRate > 0.1;
+// EMA 크로스오버 체크: EMA9가 EMA21을 상향 돌파
+function checkEmaCross(candles) {
+  var ema9 = calcEMA(candles, 9);
+  var ema21 = calcEMA(candles, 21);
+  if (ema9.length < 2 || ema21.length < 2) return { cross: false, ema9: 0, ema21: 0, spread: 0 };
+  var curSpread = ema9[0] - ema21[0];
+  var prevSpread = ema9[1] - ema21[1];
+  // 골든크로스: 이전에 EMA9 <= EMA21이었다가 현재 EMA9 > EMA21
+  var golden = prevSpread <= 0 && curSpread > 0;
+  // 정배열: EMA9 > EMA21 (이미 크로스 후 유지 중)
+  var aligned = curSpread > 0;
+  var spreadPct = ema21[0] > 0 ? (curSpread / ema21[0]) * 100 : 0;
+  return { cross: golden, aligned: aligned, ema9: ema9[0], ema21: ema21[0], spread: spreadPct };
 }
 
 // 체결강도 계산: 최근 체결 내역에서 매수금액/매도금액 비율 (%)
@@ -561,11 +580,10 @@ async function calcTradeIntensity(market) {
 // 매수 신호 판정
 // ========================================
 function detectSignal(candles, tradeIntensity) {
-  if (!candles || candles.length < 3) return { signal: 'none', detail: '', badges: [], volRatio: 1, intensity: 0 };
+  if (!candles || candles.length < 21) return { signal: 'none', detail: '', badges: [], volRatio: 1, intensity: 0 };
 
   var vol = calcVolBreakout(candles);
-  var bullish = checkBullish(candles);
-  var momentum = checkMomentum(candles);
+  var ema = checkEmaCross(candles);
   var price = candles[0].trade_price;
   var ti = tradeIntensity || 0;
   var tiOk = ti >= 100;
@@ -579,6 +597,12 @@ function detectSignal(candles, tradeIntensity) {
     badges: []
   };
 
+  // EMA 배지 항상 표시
+  result.badges.push({
+    text: 'EMA ' + (ema.spread >= 0 ? '+' : '') + ema.spread.toFixed(2) + '%',
+    cls: ema.cross ? 'badge-up' : ema.aligned ? 'badge-warn' : 'badge-info'
+  });
+
   // 거래량 배지 항상 표시
   result.badges.push({
     text: 'VOL x' + vol.ratio.toFixed(1),
@@ -591,26 +615,23 @@ function detectSignal(candles, tradeIntensity) {
     cls: tiOk ? 'badge-up' : 'badge-info'
   });
 
-  if (vol.breakout && bullish && momentum && tiOk) {
-    // ★ 매수 신호: 거래량 브레이크아웃 + 양봉상승 + 모멘텀 + 체결강도 ★
+  if (ema.cross && vol.breakout && tiOk) {
+    // ★ 매수: EMA 골든크로스 + 거래량 급등 + 체결강도 ★
     result.signal = 'buy';
-    result.detail = 'VOL x' + vol.ratio.toFixed(1) + '+양봉+모멘텀+체결' + ti.toFixed(0) + '%';
-    result.badges.push({ text: '양봉상승', cls: 'badge-up' });
-    result.badges.push({ text: '모멘텀↑', cls: 'badge-up' });
-  } else if (vol.breakout && bullish && momentum && !tiOk) {
+    result.detail = 'EMA크로스+VOL x' + vol.ratio.toFixed(1) + '+체결' + ti.toFixed(0) + '%';
+    result.badges.push({ text: '골든크로스', cls: 'badge-up' });
+  } else if (ema.cross && vol.breakout && !tiOk) {
     result.signal = 'wait';
-    result.detail = 'VOL+양봉+모멘텀 (체결강도 부족 ' + ti.toFixed(0) + '%)';
-    result.badges.push({ text: '양봉상승', cls: 'badge-warn' });
-    result.badges.push({ text: '모멘텀↑', cls: 'badge-warn' });
-  } else if (vol.breakout && bullish) {
+    result.detail = 'EMA크로스+VOL (체결강도 부족 ' + ti.toFixed(0) + '%)';
+    result.badges.push({ text: '골든크로스', cls: 'badge-warn' });
+  } else if (ema.cross) {
     result.signal = 'wait';
-    result.detail = 'VOL x' + vol.ratio.toFixed(1) + '+양봉 (모멘텀 부족)';
-    result.badges.push({ text: '양봉상승', cls: 'badge-warn' });
-    result.badges.push({ text: '모멘텀 부족', cls: 'badge-info' });
-  } else if (vol.breakout) {
+    result.detail = 'EMA크로스 (거래량 부족 x' + vol.ratio.toFixed(1) + ')';
+    result.badges.push({ text: '골든크로스', cls: 'badge-warn' });
+  } else if (ema.aligned && vol.breakout) {
     result.signal = 'wait';
-    result.detail = 'VOL x' + vol.ratio.toFixed(1) + ' (방향성 미확인)';
-    result.badges.push({ text: '방향성 대기', cls: 'badge-warn' });
+    result.detail = 'EMA정배열+VOL x' + vol.ratio.toFixed(1) + ' (크로스 대기)';
+    result.badges.push({ text: '정배열', cls: 'badge-warn' });
   }
 
   return result;
@@ -834,12 +855,29 @@ async function fetchData() {
       if (i + 100 < codes.length) await sleep(200);
     }
 
-    var sorted = allTickers.slice().sort(function(a, b) {
-      return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0);
-    });
-    var targets = sorted.slice(0, 60);
     var tickerMap = {};
     allTickers.forEach(function(t) { tickerMap[t.market] = t; });
+
+    // 스캘핑 대상 필터: 거래대금 10억↑ + 변동률 1~8% 우선, 부족하면 거래대금순 보충
+    var filtered = allTickers.filter(function(t) {
+      var vol24h = t.acc_trade_price_24h || 0;
+      var changeAbs = Math.abs((t.signed_change_rate || 0) * 100);
+      return vol24h >= 1000000000 && changeAbs >= 1 && changeAbs <= 8;
+    });
+    filtered.sort(function(a, b) {
+      return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0);
+    });
+    // 100개 미만이면 거래대금 상위로 보충
+    if (filtered.length < 100) {
+      var filteredMarkets = {};
+      filtered.forEach(function(t) { filteredMarkets[t.market] = true; });
+      var rest = allTickers.filter(function(t) { return !filteredMarkets[t.market]; });
+      rest.sort(function(a, b) {
+        return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0);
+      });
+      filtered = filtered.concat(rest.slice(0, 100 - filtered.length));
+    }
+    var targets = filtered.slice(0, 100);
 
     // 각 코인 캔들 분석
     setProgress(20, '캔들 분석...');
@@ -869,11 +907,12 @@ async function fetchData() {
       try {
         var candles = await apiFetch('/candles/minutes/' + selectedTf + '?market=' + market + '&count=' + CANDLE_COUNT);
 
-        if (candles && candles.length >= 3) {
-          // 거래량 브레이크아웃 먼저 체크 — 통과한 코인만 체결강도 조회 (API 호출 절약)
+        if (candles && candles.length >= 21) {
+          // EMA 크로스 + 거래량 브레이크아웃 먼저 체크 — 통과한 코인만 체결강도 조회
+          var emaCheck = checkEmaCross(candles);
           var volCheck = calcVolBreakout(candles);
           var ti = 0;
-          if (volCheck.breakout) {
+          if (emaCheck.cross && volCheck.breakout) {
             ti = await calcTradeIntensity(market);
             await sleep(100);
           }
