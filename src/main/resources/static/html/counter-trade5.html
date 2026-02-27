@@ -855,9 +855,9 @@ function btSimulate(stratKey, candles, profitTarget, stopLossMin, startH, endH) 
   var trades = []; var inPos = false; var entry = null;
   var stopMs = stopLossMin * 60000;
   var reqPct = profitTarget + (FEE_ROUND * 100);
-  var stopLossPct = -(profitTarget * 2 + FEE_ROUND * 100); // 손절 = 목표의 2배
-  var trailTrigger = profitTarget * 0.6; // 트레일링 활성화 기준
-  var trailDrop = profitTarget * 0.5;    // peak에서 이만큼 하락시 매도
+  var stopLossPct = -(profitTarget * 1.2 + FEE_ROUND * 100); // 손절 = 목표의 1.2배
+  var trailTrigger = profitTarget;       // 트레일링: 목표 수익률 도달 후 활성화
+  var trailDrop = profitTarget * 0.3;    // peak에서 이만큼 하락시 매도
   var useTimeFilter = (startH !== undefined && endH !== undefined && startH !== endH);
 
   for (var i = 49; i < candles.length; i++) {
@@ -1403,9 +1403,9 @@ async function checkPositionsForSell() {
       if (!p.peakPct || grossPct > p.peakPct) p.peakPct = grossPct;
       var sellReason = null;
       var elapsed = Date.now() - p.buyTime;
-      var stopLossPct = -(targetPct * 2 + FEE_ROUND * 100);
-      var trailTrigger = targetPct * 0.6;
-      var trailDrop = targetPct * 0.5;
+      var stopLossPct = -(targetPct * 1.2 + FEE_ROUND * 100);
+      var trailTrigger = targetPct;
+      var trailDrop = targetPct * 0.3;
       if (grossPct >= requiredPct) sellReason = 'profit';
       if (!sellReason && grossPct <= stopLossPct) sellReason = 'stoploss';
       if (!sellReason && p.peakPct >= trailTrigger && grossPct <= p.peakPct - trailDrop) sellReason = 'trailing';
