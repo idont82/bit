@@ -3,9 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Coin Analyzer</title>
+<title>AI Dip Catcher</title>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
-<script src="https://unpkg.com/lightweight-charts@4.1.3/dist/lightweight-charts.standalone.production.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.17.0/dist/tf.min.js"></script>
 <style>
   :root {
     --bg: #070b12; --surface: #0d1420; --surface2: #131c2e;
@@ -33,7 +33,7 @@
     width: 36px; height: 36px;
     background: linear-gradient(135deg, var(--accent3), var(--accent));
     border-radius: 8px; display: flex; align-items: center; justify-content: center;
-    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 14px; color: #000;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 14px; color: #fff;
   }
   .logo h1 { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; }
   .logo span { font-size: 11px; color: var(--muted); display: block; font-weight: 300; }
@@ -44,20 +44,6 @@
     border: 1px solid var(--border); border-radius: 6px; transition: all 0.2s;
   }
   .nav-links a:hover, .nav-links a.active { color: var(--accent); border-color: var(--accent); }
-  .tab-bar {
-    display: flex; gap: 0; border-bottom: 1px solid var(--border);
-    padding: 0 24px; background: var(--surface);
-  }
-  .tab-btn {
-    background: none; border: none; border-bottom: 2px solid transparent;
-    color: var(--muted); padding: 12px 20px; cursor: pointer;
-    font-family: 'IBM Plex Mono', monospace; font-size: 12px; font-weight: 600;
-    transition: all 0.2s;
-  }
-  .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-  .tab-btn:hover { color: var(--text); }
-  .tab-content { display: none; }
-  .tab-content.active { display: block; }
   .mono { font-family: 'IBM Plex Mono', monospace; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th { background: var(--surface); color: var(--muted); font-weight: 600; text-align: left;
@@ -65,77 +51,50 @@
        letter-spacing: 0.5px; position: sticky; top: 0; }
   td { padding: 8px 12px; border-bottom: 1px solid rgba(30,45,71,0.3); }
   tr:hover { background: rgba(0,212,170,0.03); }
-  .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
-  .loading { text-align: center; padding: 60px 20px; }
-  .loading-spinner {
-    width: 32px; height: 32px; border: 3px solid var(--border);
-    border-top-color: var(--accent); border-radius: 50%;
-    animation: spin 0.8s linear infinite; margin: 0 auto 12px;
-  }
+  .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); max-height: 500px; overflow-y: auto; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Coin Cards */
-  .coin-cards {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-    gap: 12px; padding: 0 24px; max-width: 1000px; margin: 0 auto;
+  .control-bar {
+    padding: 16px 24px; display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border); background: var(--surface);
   }
-  .coin-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; padding: 16px; text-align: center; transition: all 0.2s;
+  .ctrl-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .ctrl-input {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 60px;
+    font-family: 'IBM Plex Mono', monospace;
   }
-  .coin-card.selected { border-color: var(--accent); box-shadow: 0 0 12px var(--buy-glow); }
-  .coin-card .rank { font-size: 11px; color: var(--gold); font-weight: 700; }
-  .coin-card .symbol { font-size: 18px; font-weight: 700; margin: 6px 0; font-family: 'IBM Plex Mono', monospace; }
-  .coin-card .price { font-size: 13px; color: var(--muted); font-family: 'IBM Plex Mono', monospace; }
-  .coin-card .change { font-size: 14px; font-weight: 600; margin-top: 4px; }
-  .coin-card .vol { font-size: 11px; color: var(--muted); margin-top: 4px; }
+  .ctrl-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+  .ctrl-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .ctrl-btn:hover { color: var(--text); border-color: var(--accent); }
   .action-btn {
-    background: var(--surface2); border: 1px solid var(--border);
-    color: var(--text); padding: 10px 28px; border-radius: 8px;
-    font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s;
-  }
-  .action-btn:hover { border-color: var(--accent); color: var(--accent); }
-  .action-btn.accent {
     background: linear-gradient(135deg, var(--accent), var(--accent3));
-    color: #000; border: none; font-weight: 700;
+    color: #000; border: none; padding: 8px 24px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
   }
   .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-btn:hover:not(:disabled) { box-shadow: 0 0 16px var(--buy-glow); }
+  .monitor-btn {
+    background: linear-gradient(135deg, var(--accent2), var(--down));
+    color: #fff; border: none; padding: 8px 24px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .monitor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .monitor-btn.running { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 rgba(255,71,87,0); } 50% { box-shadow: 0 0 20px rgba(255,71,87,0.5); } }
 
-  /* Coin Sub-Tabs */
-  .coin-tabs { display: flex; gap: 4px; padding: 12px 24px; border-bottom: 1px solid var(--border); flex-wrap: wrap; }
-  .coin-tab {
-    padding: 8px 16px; border-radius: 8px 8px 0 0;
+  .stats-bar { display: flex; gap: 12px; padding: 16px 24px; flex-wrap: wrap; }
+  .stat-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-bottom: none; cursor: pointer; font-size: 13px; font-weight: 600;
-    font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+    border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 130px; text-align: center;
   }
-  .coin-tab.active { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
-  .coin-tab:hover { color: var(--text); }
-  .rec-badge {
-    font-size: 9px; background: var(--gold); color: #000;
-    padding: 1px 5px; border-radius: 4px; margin-left: 6px; font-weight: 700;
-  }
+  .stat-card .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .stat-card .stat-value { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
 
-  /* Indicator Dashboard */
-  .indicator-dash {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 10px; padding: 16px 24px;
-  }
-  .ind-card {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; padding: 12px; text-align: center;
-  }
-  .ind-card .ind-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .ind-card .ind-value { font-size: 18px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
-  .ind-card .ind-badge {
-    font-size: 10px; padding: 2px 8px; border-radius: 4px; margin-top: 4px; display: inline-block;
-  }
-  .badge-danger { background: rgba(255,71,87,0.2); color: var(--down); }
-  .badge-success { background: rgba(0,212,170,0.2); color: var(--up); }
-  .badge-warn { background: rgba(255,215,0,0.2); color: var(--gold); }
-  .badge-neutral { background: rgba(90,112,144,0.2); color: var(--muted); }
-
-  /* Rank badges */
   .rank-badge {
     display: inline-block; width: 22px; height: 22px; line-height: 22px;
     text-align: center; border-radius: 50%; font-size: 11px; font-weight: 700;
@@ -145,123 +104,371 @@
   .rank-badge.bronze { background: #cd7f32; color: #fff; }
   .rank-badge.normal { background: var(--surface2); color: var(--muted); }
 
-  /* Settings */
-  .settings-section {
-    max-width: 600px; margin: 24px auto; padding: 0 24px;
+  .progress-bar { height: 4px; background: var(--surface2); border-radius: 2px; margin: 8px 24px; }
+  .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s; }
+
+  .phase-header {
+    padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
   }
-  .settings-section h3 {
-    font-size: 14px; color: var(--accent3); margin-bottom: 16px;
-    font-family: 'IBM Plex Mono', monospace;
+  .phase-badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase;
   }
-  .setting-row {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+  .phase-badge.phase1 { background: var(--accent3); color: #fff; }
+  .phase-badge.phase2 { background: var(--accent2); color: #fff; }
+  .phase-title { font-size: 14px; font-weight: 700; }
+
+  .qualified-grid { display: flex; gap: 10px; padding: 16px 24px; flex-wrap: wrap; }
+  .q-coin-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; min-width: 160px; flex: 1; max-width: 220px;
+    position: relative; overflow: hidden;
   }
-  .trade-lbl {
-    font-size: 12px; color: var(--muted); min-width: 80px; font-weight: 600;
+  .q-coin-card.signal-active {
+    border-color: var(--accent); box-shadow: 0 0 16px var(--buy-glow);
+    animation: signalPulse 2s ease-in-out infinite;
   }
-  .trade-input {
-    background: var(--surface); border: 1px solid var(--border); color: var(--text);
-    padding: 6px 10px; border-radius: 6px; font-size: 12px;
-    font-family: 'IBM Plex Mono', monospace;
+  @keyframes signalPulse {
+    0%,100% { box-shadow: 0 0 8px var(--buy-glow); }
+    50% { box-shadow: 0 0 24px var(--buy-glow); }
   }
-  .trade-input:disabled { opacity: 0.4; }
-  .tf-btn, .period-btn {
-    background: var(--surface); border: 1px solid var(--border); color: var(--muted);
-    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+  .q-coin-card .coin-sym { font-size: 16px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .q-coin-card .coin-name { font-size: 10px; color: var(--muted); }
+  .q-coin-card .coin-wr { font-size: 20px; font-weight: 700; margin: 6px 0; }
+  .q-coin-card .coin-detail { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .signal-badge {
+    position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px;
+  }
+  .signal-badge.buy { background: var(--accent); color: #000; }
+
+  .monitor-log {
+    padding: 12px 24px; max-height: 200px; overflow-y: auto;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  }
+  .monitor-log .log-entry { padding: 3px 0; display: flex; gap: 8px; }
+  .monitor-log .log-time { color: var(--muted); min-width: 50px; }
+  .monitor-log .log-buy { color: var(--up); font-weight: 700; }
+  .monitor-log .log-sell { color: var(--down); font-weight: 700; }
+  .monitor-log .log-info { color: var(--accent3); }
+
+  .pos-section { padding: 0 24px 24px; }
+  .pos-section h3 { font-size: 13px; color: var(--accent2); margin-bottom: 8px; }
+  .sep { color: var(--border); }
+
+  /* Feature weight bars */
+  .fw-bar { display: flex; gap: 8px; padding: 8px 24px; flex-wrap: wrap; }
+  .fw-item {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 6px;
+    padding: 6px 10px; font-size: 10px; min-width: 120px;
+  }
+  .fw-item .fw-name { color: var(--muted); margin-bottom: 2px; }
+  .fw-item .fw-val { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 12px; }
+  .fw-meter { height: 3px; background: var(--surface2); border-radius: 2px; margin-top: 3px; }
+  .fw-meter-fill { height: 100%; border-radius: 2px; }
+
+  /* Position Detail Popup */
+  .popup-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .popup-overlay.show { display: flex; }
+  .popup {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    width: 400px; max-width: 90vw; padding: 0; overflow: hidden;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .popup-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .popup-head .popup-sym { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .popup-head .popup-name { font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .popup-close {
+    background: none; border: none; color: var(--muted); font-size: 20px;
+    cursor: pointer; padding: 4px 8px; line-height: 1;
+  }
+  .popup-close:hover { color: var(--text); }
+  .popup-body { padding: 20px; }
+  .popup-price-row {
+    text-align: center; margin-bottom: 20px;
+  }
+  .popup-cur-price {
+    font-size: 28px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+  }
+  .popup-pnl {
+    font-size: 22px; font-weight: 700; font-family: 'IBM Plex Mono', monospace;
+    margin-top: 4px;
+  }
+  .popup-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
+  }
+  .popup-cell {
+    background: var(--surface2); border-radius: 8px; padding: 10px 12px;
+  }
+  .popup-cell .pc-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 3px; }
+  .popup-cell .pc-val { font-size: 14px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .popup-progress {
+    margin-top: 16px;
+  }
+  .popup-progress .pp-label { font-size: 10px; color: var(--muted); margin-bottom: 4px; display: flex; justify-content: space-between; }
+  .popup-pbar {
+    height: 8px; background: var(--surface2); border-radius: 4px; position: relative; overflow: hidden;
+  }
+  .popup-pbar-fill {
+    height: 100%; border-radius: 4px; transition: width 0.3s;
+  }
+  .popup-pbar-marker {
+    position: absolute; top: -3px; width: 2px; height: 14px; background: var(--text); border-radius: 1px;
+  }
+
+  /* API Key Modal */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 300; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    width: 420px; max-width: 90vw; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-box h3 { font-size: 16px; margin-bottom: 16px; }
+  .modal-box label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 12px; }
+  .modal-box input[type=text], .modal-box input[type=password] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  }
+  .modal-box .btn-row { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+  .modal-box .btn-row button {
+    padding: 8px 20px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border);
+  }
+  .modal-box .btn-save { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .modal-box .btn-cancel { background: var(--surface2); color: var(--muted); }
+  .modal-box .btn-clear { background: var(--down); color: #fff; border-color: var(--down); }
+
+  /* Auto-trade toggle */
+  .auto-trade-bar {
+    padding: 10px 24px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .toggle-switch {
+    position: relative; width: 44px; height: 24px; cursor: pointer;
+  }
+  .toggle-switch input { display: none; }
+  .toggle-slider {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; transition: 0.3s;
+  }
+  .toggle-slider:before {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: 0.3s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff; }
+  .trade-status { font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+  .trade-status.live { color: var(--accent); font-weight: 700; }
+  .trade-status.sim { color: var(--muted); }
+  .balance-display {
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--gold); margin-left: auto;
+  }
+
+  /* Header API button */
+  .api-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
     font-size: 11px; font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
   }
-  .tf-btn.active, .period-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .api-btn:hover { color: var(--text); border-color: var(--accent); }
+  .api-btn.connected { color: var(--accent); border-color: var(--accent); }
+
+  /* Toast */
+  .toast-msg {
+    position: fixed; bottom: 24px; right: 24px; z-index: 400;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 20px; font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); transition: opacity 0.3s;
+  }
+  .toast-msg.error { border-color: var(--down); color: var(--down); }
+  .toast-msg.success { border-color: var(--accent); color: var(--accent); }
 </style>
 </head>
 <body>
 
 <header>
   <div class="logo">
-    <div class="logo-icon">CA</div>
-    <div><h1>Coin Analyzer</h1><span>Top 5 Deep Analysis</span></div>
+    <div class="logo-icon">AI</div>
+    <div><h1>AI Dip Catcher</h1><span>패턴 학습 기반 급락 매수</span></div>
   </div>
-  <div class="nav-links">
-    <a href="counter-trade5.html">Arena</a>
-    <a href="counter-trade6.html" class="active">Analyzer</a>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="api-btn" id="apiKeyBtn" onclick="openApiModal()">API Key</button>
+    <div class="nav-links">
+      <a href="counter-trade5.html">Arena</a>
+      <a href="counter-trade6.html" class="active">AI Dip</a>
+    </div>
   </div>
 </header>
 
-<div class="tab-bar">
-  <button class="tab-btn active" onclick="switchTab('select',this)">코인 선정</button>
-  <button class="tab-btn" onclick="switchTab('analysis',this)">심층 분석</button>
-  <button class="tab-btn" onclick="switchTab('settings',this)">설정</button>
+<!-- Phase 1: Controls -->
+<div class="control-bar">
+  <span class="phase-badge phase1">1</span>
+  <span class="ctrl-label">분봉</span>
+  <button class="ctrl-btn active" data-tf="3" onclick="setTf(this)">3분</button>
+  <button class="ctrl-btn" data-tf="5" onclick="setTf(this)">5분</button>
+  <button class="ctrl-btn" data-tf="10" onclick="setTf(this)">10분</button>
+  <button class="ctrl-btn" data-tf="15" onclick="setTf(this)">15분</button>
+  <span class="sep">|</span>
+  <span class="ctrl-label">기간</span>
+  <button class="ctrl-btn" data-p="1" onclick="setPeriod(this)">1일</button>
+  <button class="ctrl-btn active" data-p="3" onclick="setPeriod(this)">3일</button>
+  <button class="ctrl-btn" data-p="7" onclick="setPeriod(this)">7일</button>
+  <span class="sep">|</span>
+  <span class="ctrl-label">목표</span>
+  <input type="text" id="profitTarget" value="0.5" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">%</span>
+  <span class="ctrl-label">손절</span>
+  <input type="text" id="stopLossMin" value="10" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">분</span>
+  <span class="sep">|</span>
+  <span class="ctrl-label">최소거래대금</span>
+  <input type="text" id="minVol" value="10" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">억</span>
+  <span class="ctrl-label">최소승률</span>
+  <input type="text" id="minWinRate" value="30" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">%</span>
+  <span class="ctrl-label">최소수익</span>
+  <input type="text" id="minProfit" value="5" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">%</span>
+  <span class="ctrl-label">최소매매</span>
+  <input type="text" id="minTrades" value="3" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">건</span>
+  <span class="sep">|</span>
+  <span class="ctrl-label">모델</span>
+  <button class="ctrl-btn active" data-ml="tf" onclick="setModel(this)">TF.js</button>
+  <button class="ctrl-btn" data-ml="linear" onclick="setModel(this)">통계</button>
+  <span style="flex:1"></span>
+  <button onclick="runLearn()" id="learnBtn" class="action-btn">학습 시작</button>
 </div>
 
-<!-- Tab 1: Coin Selection -->
-<div id="tab-select" class="tab-content active">
-  <div style="text-align:center;margin:24px 0">
-    <button onclick="scanCoins()" id="scanBtn" class="action-btn">코인 스캔</button>
-  </div>
-  <div id="scanProgress" style="text-align:center;color:var(--muted);font-size:12px"></div>
-  <div id="coinCards" class="coin-cards"></div>
-  <div id="analyzeArea" style="text-align:center;margin:20px 0;display:none">
-    <button onclick="startAnalysis()" id="analyzeBtn" class="action-btn accent">분석 시작</button>
+<div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+<div id="progressText" style="text-align:center;font-size:11px;color:var(--muted);padding:4px"></div>
+
+<!-- Phase 1: Results -->
+<div id="learnResultArea">
+  <div style="text-align:center;padding:80px 20px;color:var(--muted)">
+    <div style="font-size:32px;margin-bottom:12px">&#x1F9E0;</div>
+    <div style="font-size:14px">Phase 1: AI가 급등 직전 패턴을 학습합니다</div>
+    <div style="font-size:12px;margin-top:8px">100개 코인 × 10개 특징 추출 → 패턴 학습 → 승률 높은 코인 선별</div>
   </div>
 </div>
 
-<!-- Tab 2: Analysis -->
-<div id="tab-analysis" class="tab-content">
-  <div id="coinTabs" class="coin-tabs"></div>
-  <div id="analysisProgress" style="text-align:center;padding:40px;color:var(--muted);font-size:13px">
-    코인 선정 후 [분석 시작]을 클릭하세요
+<!-- Phase 2: Monitor -->
+<div id="phase2Area" style="display:none">
+  <div class="phase-header">
+    <span class="phase-badge phase2">2</span>
+    <span class="phase-title">실시간 모니터링</span>
+    <span style="font-size:11px;color:var(--muted)" id="monitorStatus">대기 중</span>
+    <span style="flex:1"></span>
+    <span style="font-size:11px;color:var(--muted)" id="monitorTimer"></span>
+    <span class="sep">|</span>
+    <span class="ctrl-label">자동재학습</span>
+    <select id="reLearnInterval" class="ctrl-input" style="width:80px" onchange="setCookie('ct6_reLearn',this.value)">
+      <option value="0">끄기</option>
+      <option value="30">30분</option>
+      <option value="60" selected>1시간</option>
+      <option value="120">2시간</option>
+    </select>
+    <span style="font-size:10px;color:var(--muted)" id="reLearnTimer"></span>
+    <button onclick="toggleMonitor()" id="monBtn" class="monitor-btn">모니터링 시작</button>
   </div>
-  <div id="analysisContent" style="display:none">
-    <div id="indicatorDash" class="indicator-dash"></div>
-    <div id="chartContainer" style="height:400px;margin:16px 24px;border-radius:8px;overflow:hidden;border:1px solid var(--border)"></div>
-    <div id="btResultArea" style="padding:0 24px 24px"></div>
+  <!-- Auto-trade controls -->
+  <div class="auto-trade-bar" id="autoTradeBar">
+    <label class="toggle-switch">
+      <input type="checkbox" id="autoTradeToggle" onchange="onAutoTradeToggle()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="trade-status sim" id="tradeStatusText">시뮬레이션</span>
+    <span class="sep">|</span>
+    <span class="ctrl-label">매수방식</span>
+    <button class="ctrl-btn active" data-bm="fixed" onclick="setBuyMode(this)">고정금액</button>
+    <button class="ctrl-btn" data-bm="pct" onclick="setBuyMode(this)">잔고비율</button>
+    <span class="sep">|</span>
+    <span class="ctrl-label" id="buyAmtLabel">매수금액</span>
+    <input type="text" id="buyAmount" value="5000" class="ctrl-input" style="width:70px">
+    <span style="font-size:11px;color:var(--muted)" id="buyAmtUnit">원</span>
+    <span class="balance-display" id="balanceDisplay"></span>
+  </div>
+  <div id="qualifiedCoins" class="qualified-grid"></div>
+  <div id="monitorLog" class="monitor-log"></div>
+  <div id="posSection" class="pos-section" style="display:none">
+    <h3>보유 포지션</h3>
+    <div class="table-wrapper" style="max-height:250px">
+      <table id="posTable"><thead><tr>
+        <th>코인</th><th>매수가</th><th>현재가</th><th>수익률</th><th>점수</th><th>매수시각</th><th>경과</th><th>상태</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div id="tradeSection" class="pos-section" style="display:none">
+    <h3>매매 이력 <span id="tradeSummary" style="font-size:11px;font-weight:400;color:var(--muted)"></span></h3>
+    <div class="table-wrapper" style="max-height:300px">
+      <table id="tradeTable"><thead><tr>
+        <th>코인</th><th>점수</th><th>매수시각</th><th>매수가</th><th>매도시각</th><th>매도가</th><th>수익률</th><th>사유</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
   </div>
 </div>
 
-<!-- Tab 3: Settings -->
-<div id="tab-settings" class="tab-content">
-  <div class="settings-section">
-    <h3>분석 설정</h3>
-    <div class="setting-row">
-      <span class="trade-lbl">분봉</span>
-      <button class="tf-btn active" data-tf="3" onclick="setTf(this)">3분</button>
-      <button class="tf-btn" data-tf="5" onclick="setTf(this)">5분</button>
-      <button class="tf-btn" data-tf="15" onclick="setTf(this)">15분</button>
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal" onclick="if(event.target===this)closeApiModal()">
+  <div class="modal-box">
+    <h3>API Key 설정</h3>
+    <label>Access Key</label>
+    <input type="text" id="inputAccessKey" placeholder="Access Key 입력">
+    <label>Secret Key</label>
+    <input type="password" id="inputSecretKey" placeholder="Secret Key 입력">
+    <div class="btn-row">
+      <button class="btn-clear" onclick="clearApiKey()">초기화</button>
+      <button class="btn-cancel" onclick="closeApiModal()">취소</button>
+      <button class="btn-save" onclick="saveApiKey()">저장</button>
     </div>
-    <div class="setting-row">
-      <span class="trade-lbl">백테스트 기간</span>
-      <button class="period-btn active" data-p="1" onclick="setPeriod(this)">1일</button>
-      <button class="period-btn" data-p="3" onclick="setPeriod(this)">3일</button>
-      <button class="period-btn" data-p="7" onclick="setPeriod(this)">7일</button>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:400"></div>
+
+<!-- Position Detail Popup -->
+<div class="popup-overlay" id="posPopup" onclick="if(event.target===this)closePopup()">
+  <div class="popup">
+    <div class="popup-head">
+      <div><span class="popup-sym" id="ppSym"></span><span class="popup-name" id="ppName"></span></div>
+      <button class="popup-close" onclick="closePopup()">&times;</button>
     </div>
-    <div class="setting-row">
-      <span class="trade-lbl">매매시간</span>
-      <input type="text" id="setStartHour" value="8" class="trade-input" style="width:40px">
-      <span style="font-size:11px;color:var(--muted)">시 ~</span>
-      <input type="text" id="setEndHour" value="16" class="trade-input" style="width:40px">
-      <span style="font-size:11px;color:var(--muted)">시 (KST)</span>
-      <label style="font-size:11px;color:var(--muted);margin-left:12px;cursor:pointer">
-        <input type="checkbox" id="setAllDay" onchange="toggleAllDay()"> 24시간
-      </label>
-    </div>
-    <div class="setting-row">
-      <span class="trade-lbl">목표 수익률</span>
-      <input type="text" id="setProfitTarget" value="0.5" class="trade-input" style="width:60px">
-      <span style="font-size:11px;color:var(--muted)">%</span>
-    </div>
-    <div class="setting-row">
-      <span class="trade-lbl">손절 시간</span>
-      <input type="text" id="setStopLoss" value="10" class="trade-input" style="width:60px">
-      <span style="font-size:11px;color:var(--muted)">분</span>
-    </div>
-    <div class="setting-row">
-      <span class="trade-lbl">최소 거래대금</span>
-      <input type="text" id="setMinVol" value="10" class="trade-input" style="width:60px">
-      <span style="font-size:11px;color:var(--muted)">억원</span>
-    </div>
-    <div class="setting-row">
-      <span class="trade-lbl">선정 코인 수</span>
-      <input type="text" id="setTopN" value="5" class="trade-input" style="width:40px">
-      <span style="font-size:11px;color:var(--muted)">개</span>
+    <div class="popup-body">
+      <div class="popup-price-row">
+        <div class="popup-cur-price" id="ppCurPrice">-</div>
+        <div class="popup-pnl" id="ppPnl">-</div>
+      </div>
+      <div class="popup-grid">
+        <div class="popup-cell"><div class="pc-label">매수가</div><div class="pc-val" id="ppBuyPrice">-</div></div>
+        <div class="popup-cell"><div class="pc-label">AI 점수</div><div class="pc-val" id="ppScore">-</div></div>
+        <div class="popup-cell"><div class="pc-label">익절 목표가</div><div class="pc-val" id="ppTarget" style="color:var(--up)">-</div></div>
+        <div class="popup-cell"><div class="pc-label">손절가</div><div class="pc-val" id="ppStopLoss" style="color:var(--down)">-</div></div>
+        <div class="popup-cell"><div class="pc-label">매수시각</div><div class="pc-val" id="ppBuyTime">-</div></div>
+        <div class="popup-cell"><div class="pc-label">경과시간</div><div class="pc-val" id="ppElapsed">-</div></div>
+      </div>
+      <div class="popup-progress">
+        <div class="pp-label"><span>손절</span><span id="ppPctLabel">0%</span><span>익절</span></div>
+        <div class="popup-pbar">
+          <div class="popup-pbar-fill" id="ppBar" style="width:50%;background:var(--muted)"></div>
+          <div class="popup-pbar-marker" id="ppMarker" style="left:50%"></div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -274,22 +481,53 @@ var API = 'https://api.bithumb.com/v1';
 var FEE_RATE = 0.0004;
 var FEE_ROUND = 0.0008;
 var EXCLUDE_COINS = ['USDT','USDC','DAI','TUSD','BUSD','USDD','XAUT','TRX'];
+var FEATURE_NAMES = [
+  '거래량비율', 'RSI', 'BB위치', 'MACD히스토', '몸통비율',
+  '아래꼬리', '1봉변화', '3봉변화', '5봉변화', '연속음봉'
+];
+var FEATURE_COUNT = FEATURE_NAMES.length;
+var LOOKAHEAD = 5; // 다음 N봉 내 목표 도달 여부로 라벨링
 
-var selectedCoins = [];
-var analysisData = {};
-var currentCoinIdx = 0;
-var chartInstance = null;
+var btTf = '3';
+var btPeriod = 3;
+var btRunning = false;
 
-var analysisTf = '3';
-var analysisPeriod = 1;
+// Phase 2
+var qualifiedList = [];
+var monitorRunning = false;
+var monitorInterval = null;
+var positions = {};
+var tradeHistory = [];
+var candleCache = {};
+var cooldowns = {}; // { symbol: timestamp } 매도 후 재매수 쿨다운
+var COOLDOWN_MS = 30 * 60000; // 30분 쿨다운
+var lastLearnTime = 0; // 마지막 학습 시각
+var reLearnRunning = false;
 
-var STRATEGIES = {
-  volspike: '거래량폭발',
-  bbsqueeze: 'BB스퀴즈',
-  dblbottom: '이중바닥',
-  obvdiv: 'OBV다이버전스',
-  atrchannel: 'ATR채널'
-};
+// Trading
+var mlMode = 'tf'; // 'tf' or 'linear'
+var autoTradeOn = false;
+var buyMode = 'fixed'; // 'fixed' or 'pct'
+var accessKey = '';
+var secretKey = '';
+var krwBalance = 0;
+
+// ========================================
+// Tick Size (빗썸 호가단위)
+// ========================================
+function getTickSize(price) {
+  if (price >= 1000000) return 1000;
+  if (price >= 100000) return 100;
+  if (price >= 10000) return 10;
+  if (price >= 1000) return 1;
+  if (price >= 100) return 1;
+  if (price >= 10) return 0.01;
+  if (price >= 1) return 0.01;
+  return 0.0001;
+}
+function getTickPct(price) {
+  return (getTickSize(price) / price) * 100;
+}
 
 // ========================================
 // Helpers
@@ -308,7 +546,22 @@ async function apiFetch(path) {
   if (!r.ok) throw new Error('API ' + r.status);
   return r.json();
 }
-function sleep(ms) { return new Promise(function(r) { setTimeout(r, ms); }); }
+function sleep(ms) {
+  return new Promise(function(resolve) {
+    if (document.hidden) {
+      // 백그라운드 탭: MessageChannel로 setTimeout 제한 우회
+      var start = performance.now();
+      var ch = new MessageChannel();
+      ch.port1.onmessage = function() {
+        if (performance.now() - start >= ms) resolve();
+        else ch.port2.postMessage('');
+      };
+      ch.port2.postMessage('');
+    } else {
+      setTimeout(resolve, ms);
+    }
+  });
+}
 function fmtPrice(p) {
   p = parseFloat(p);
   if (p >= 1000) return p.toLocaleString('ko-KR') + '원';
@@ -324,309 +577,65 @@ function fmt(n) {
 function fmtDt(d) {
   return ('0'+(d.getMonth()+1)).slice(-2)+'/'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
 }
-function countSignificantDigits(price) {
-  if (price <= 0) return 0;
-  var s = price.toFixed(20);
-  s = s.replace(/^0+\.?0*/, '').replace(/\./, '').replace(/0+$/, '');
-  return s.length;
+function fmtTime(d) {
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2)+':'+('0'+d.getSeconds()).slice(-2);
 }
-function isInTradeHours(timestampMs, startH, endH) {
-  var kst = new Date(timestampMs + 9 * 3600000);
-  var h = kst.getUTCHours();
-  if (startH <= endH) return h >= startH && h < endH;
-  return h >= startH || h < endH;
+function fmtElapsed(ms) {
+  var s = Math.floor(ms / 1000); var m = Math.floor(s / 60); s = s % 60;
+  return m + '분 ' + s + '초';
 }
 
 // ========================================
-// Technical Indicators
+// Controls + Cookie
 // ========================================
-function calcEMA(candles, period) {
-  if (!candles || candles.length < period) return [];
-  var prices = [];
-  for (var i = candles.length - 1; i >= 0; i--) prices.push(candles[i].trade_price);
-  var k = 2 / (period + 1);
-  var ema = [prices[0]];
-  for (var i = 1; i < prices.length; i++) ema.push(prices[i] * k + ema[i - 1] * (1 - k));
-  return ema.reverse();
+function setTf(btn) {
+  document.querySelectorAll('.ctrl-btn[data-tf]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  btTf = btn.dataset.tf;
+  setCookie('ct6_tf', btTf);
+}
+function setPeriod(btn) {
+  document.querySelectorAll('.ctrl-btn[data-p]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  btPeriod = parseInt(btn.dataset.p);
+  setCookie('ct6_period', btPeriod);
+}
+function setModel(btn) {
+  document.querySelectorAll('.ctrl-btn[data-ml]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  mlMode = btn.dataset.ml;
+  setCookie('ct6_mlMode', mlMode);
 }
 
-function calcRSI(candles, period) {
-  if (!candles || candles.length < period + 1) return [];
-  var gains = [], losses = [];
-  for (var i = 0; i < candles.length - 1; i++) {
-    var diff = candles[i].trade_price - candles[i + 1].trade_price;
-    gains.push(diff > 0 ? diff : 0);
-    losses.push(diff < 0 ? -diff : 0);
-  }
-  var result = [];
-  var avgGain = 0, avgLoss = 0;
-  for (var i = 0; i < period; i++) { avgGain += gains[gains.length - 1 - i]; avgLoss += losses[losses.length - 1 - i]; }
-  avgGain /= period; avgLoss /= period;
-  var rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-  result.push(100 - 100 / (1 + rs));
-  for (var i = gains.length - period - 1; i >= 0; i--) {
-    avgGain = (avgGain * (period - 1) + gains[i]) / period;
-    avgLoss = (avgLoss * (period - 1) + losses[i]) / period;
-    rs = avgLoss === 0 ? 100 : avgGain / avgLoss;
-    result.push(100 - 100 / (1 + rs));
-  }
-  return result;
-}
-
-function calcBollingerBands(candles, period, mult) {
-  if (!candles || candles.length < period) return null;
-  var sum = 0;
-  for (var i = 0; i < period; i++) sum += candles[i].trade_price;
-  var middle = sum / period;
-  var sqSum = 0;
-  for (var i = 0; i < period; i++) { var diff = candles[i].trade_price - middle; sqSum += diff * diff; }
-  var stddev = Math.sqrt(sqSum / period);
-  return { upper: middle + mult * stddev, middle: middle, lower: middle - mult * stddev, stddev: stddev };
-}
-
-function calcMACD(candles, fast, slow, signal) {
-  if (!candles || candles.length < slow + signal) return null;
-  var emaFast = calcEMA(candles, fast);
-  var emaSlow = calcEMA(candles, slow);
-  if (emaFast.length === 0 || emaSlow.length === 0) return null;
-  var macdLine = [];
-  var len = Math.min(emaFast.length, emaSlow.length);
-  for (var i = 0; i < len; i++) macdLine.push(emaFast[i] - emaSlow[i]);
-  if (macdLine.length < signal) return null;
-  var sigSum = 0;
-  for (var i = 0; i < signal; i++) sigSum += macdLine[i];
-  var sigLine = sigSum / signal;
-  var prevSigSum = 0;
-  for (var i = 1; i <= signal; i++) prevSigSum += macdLine[i];
-  var prevSigLine = prevSigSum / signal;
-  var histogram = macdLine[0] - sigLine;
-  var prevHistogram = macdLine[1] - prevSigLine;
-  var cross = 'none';
-  if (macdLine[1] <= prevSigLine && macdLine[0] > sigLine) cross = 'golden';
-  if (macdLine[1] >= prevSigLine && macdLine[0] < sigLine) cross = 'dead';
-  return { macd: macdLine[0], signal: sigLine, histogram: histogram, prevHistogram: prevHistogram, cross: cross };
-}
-
-function calcStochRSI(candles, rsiPeriod, stochPeriod, kSmooth, dSmooth) {
-  var rsiArr = calcRSI(candles, rsiPeriod);
-  if (rsiArr.length < stochPeriod) return null;
-  var rawK = [];
-  for (var i = 0; i <= rsiArr.length - stochPeriod; i++) {
-    var slice = rsiArr.slice(i, i + stochPeriod);
-    var hi = Math.max.apply(null, slice);
-    var lo = Math.min.apply(null, slice);
-    rawK.push(hi === lo ? 50 : (rsiArr[i] - lo) / (hi - lo) * 100);
-  }
-  if (rawK.length < kSmooth) return null;
-  var kArr = [];
-  for (var i = 0; i <= rawK.length - kSmooth; i++) {
-    var s = 0; for (var j = 0; j < kSmooth; j++) s += rawK[i + j]; kArr.push(s / kSmooth);
-  }
-  if (kArr.length < dSmooth) return null;
-  var dArr = [];
-  for (var i = 0; i <= kArr.length - dSmooth; i++) {
-    var s = 0; for (var j = 0; j < dSmooth; j++) s += kArr[i + j]; dArr.push(s / dSmooth);
-  }
-  if (kArr.length < 2 || dArr.length < 2) return null;
-  return { k: kArr[0], d: dArr[0], kPrev: kArr[1], dPrev: dArr[1] };
-}
-
-function calcCandleVolatility(candles, count) {
-  var n = Math.min(count || 10, candles.length);
-  if (n < 3) return 0;
-  var totalRange = 0;
-  for (var i = 0; i < n; i++) {
-    var c = candles[i];
-    if (!c.high_price || !c.low_price || c.low_price <= 0) continue;
-    totalRange += (c.high_price - c.low_price) / c.low_price * 100;
-  }
-  return totalRange / n;
-}
-
-// === NEW: OBV ===
-function calcOBV(candles) {
-  if (!candles || candles.length < 2) return [];
-  var obv = [0];
-  for (var i = candles.length - 2; i >= 0; i--) {
-    var prev = obv[obv.length - 1];
-    var vol = candles[i].candle_acc_trade_volume || 0;
-    if (candles[i].trade_price > candles[i + 1].trade_price) obv.push(prev + vol);
-    else if (candles[i].trade_price < candles[i + 1].trade_price) obv.push(prev - vol);
-    else obv.push(prev);
-  }
-  obv.reverse();
-  return obv;
-}
-
-// === NEW: ATR ===
-function calcATR(candles, period) {
-  if (!candles || candles.length < period + 1) return [];
-  var trs = [];
-  for (var i = 0; i < candles.length - 1; i++) {
-    var h = candles[i].high_price || candles[i].trade_price;
-    var l = candles[i].low_price || candles[i].trade_price;
-    var pc = candles[i + 1].trade_price;
-    var tr = Math.max(h - l, Math.abs(h - pc), Math.abs(l - pc));
-    trs.push(tr);
-  }
-  if (trs.length < period) return [];
-  var result = [];
-  var sum = 0;
-  for (var i = trs.length - 1; i >= trs.length - period; i--) sum += trs[i];
-  var atr = sum / period;
-  result.push(atr);
-  for (var i = trs.length - period - 1; i >= 0; i--) {
-    atr = (atr * (period - 1) + trs[i]) / period;
-    result.push(atr);
-  }
-  return result;
-}
+var INPUT_COOKIES = [
+  { id: 'profitTarget', key: 'ct6_profitTarget' },
+  { id: 'stopLossMin', key: 'ct6_stopLossMin' },
+  { id: 'minVol', key: 'ct6_minVol' },
+  { id: 'minWinRate', key: 'ct6_minWinRate' },
+  { id: 'minTrades', key: 'ct6_minTrades' },
+  { id: 'minProfit', key: 'ct6_minProfit' },
+  { id: 'buyAmount', key: 'ct6_buyAmount' }
+];
+INPUT_COOKIES.forEach(function(cfg) {
+  var el = document.getElementById(cfg.id);
+  if (el) el.addEventListener('change', function() { setCookie(cfg.key, el.value); });
+});
+(function loadSettings() {
+  var tfVal = getCookie('ct6_tf');
+  if (tfVal) { btTf = tfVal; document.querySelectorAll('.ctrl-btn[data-tf]').forEach(function(b) { b.classList.toggle('active', b.dataset.tf === tfVal); }); }
+  var period = getCookie('ct6_period');
+  if (period) { btPeriod = parseInt(period); document.querySelectorAll('.ctrl-btn[data-p]').forEach(function(b) { b.classList.toggle('active', b.dataset.p === period); }); }
+  var ml = getCookie('ct6_mlMode');
+  if (ml) { mlMode = ml; document.querySelectorAll('.ctrl-btn[data-ml]').forEach(function(b) { b.classList.toggle('active', b.dataset.ml === ml); }); }
+  var rl = getCookie('ct6_reLearn');
+  if (rl) { var sel = document.getElementById('reLearnInterval'); if (sel) sel.value = rl; }
+  INPUT_COOKIES.forEach(function(cfg) {
+    var v = getCookie(cfg.key); if (v) { var el = document.getElementById(cfg.id); if (el) el.value = v; }
+  });
+})();
 
 // ========================================
-// 5 NEW Strategies
-// ========================================
-
-// 1) Volume Spike + RSI
-function detectVolSpike(candles) {
-  if (candles.length < 15) return { signal: 'none', detail: '' };
-  var recentVol = candles[0].candle_acc_trade_volume || 0;
-  var avgVol = 0;
-  for (var i = 1; i <= 10; i++) avgVol += (candles[i].candle_acc_trade_volume || 0);
-  avgVol /= 10;
-  var volRatio = avgVol > 0 ? recentVol / avgVol : 0;
-  var rsi = calcRSI(candles, 14);
-  var r = rsi.length > 0 ? rsi[0] : 50;
-
-  if (volRatio >= 3 && r <= 40 && candles[0].trade_price > candles[0].opening_price) {
-    return { signal: 'buy', detail: 'Vol' + volRatio.toFixed(1) + 'x RSI' + r.toFixed(0), sellCheck: function(sl) {
-      var rs = calcRSI(sl, 14); return rs.length > 0 && rs[0] >= 65;
-    }};
-  }
-  if (volRatio >= 2 && r <= 40) return { signal: 'wait', detail: 'Vol' + volRatio.toFixed(1) + 'x RSI' + r.toFixed(0) };
-  return { signal: 'none', detail: '' };
-}
-
-// 2) BB Squeeze Breakout
-function detectBBSqueeze(candles) {
-  if (candles.length < 30) return { signal: 'none', detail: '' };
-  var bbNow = calcBollingerBands(candles.slice(0, 20), 20, 2);
-  var bbPrev = calcBollingerBands(candles.slice(10, 30), 20, 2);
-  if (!bbNow || !bbPrev) return { signal: 'none', detail: '' };
-
-  var widthNow = (bbNow.upper - bbNow.lower) / bbNow.middle * 100;
-  var widthPrev = (bbPrev.upper - bbPrev.lower) / bbPrev.middle * 100;
-  var price = candles[0].trade_price;
-  var squeeze = widthNow < widthPrev * 0.7;
-  var breakout = price > bbNow.upper * 0.998;
-
-  if (squeeze && breakout) {
-    return { signal: 'buy', detail: 'BB스퀴즈(' + widthNow.toFixed(1) + '%→돌파)', sellCheck: function(sl) {
-      var b = calcBollingerBands(sl.slice(0, 20), 20, 2);
-      return b && sl[0].trade_price < b.middle;
-    }};
-  }
-  if (squeeze) return { signal: 'wait', detail: 'BB스퀴즈(' + widthNow.toFixed(1) + '%)' };
-  return { signal: 'none', detail: '' };
-}
-
-// 3) Double Bottom
-function detectDoubleBottom(candles) {
-  if (candles.length < 30) return { signal: 'none', detail: '' };
-  var lows = [];
-  for (var i = 2; i < Math.min(28, candles.length - 2); i++) {
-    if (candles[i].low_price <= candles[i-1].low_price &&
-        candles[i].low_price <= candles[i-2].low_price &&
-        candles[i].low_price <= candles[i+1].low_price &&
-        candles[i].low_price <= candles[i+2].low_price) {
-      lows.push({ idx: i, price: candles[i].low_price });
-    }
-  }
-  if (lows.length < 2) return { signal: 'none', detail: '' };
-
-  var bottom2 = lows[0]; // 최근 저점
-  var bottom1 = lows[lows.length - 1]; // 가장 오래된 저점
-  var dist = bottom1.idx - bottom2.idx;
-  var priceDiff = Math.abs(bottom1.price - bottom2.price) / bottom1.price * 100;
-
-  var neckline = 0;
-  for (var i = bottom2.idx; i <= bottom1.idx; i++) {
-    if (candles[i].high_price > neckline) neckline = candles[i].high_price;
-  }
-  var curPrice = candles[0].trade_price;
-
-  if (dist >= 5 && priceDiff < 1.5 && bottom2.idx <= 5 && curPrice > neckline * 0.998) {
-    return { signal: 'buy', detail: 'W바닥(' + priceDiff.toFixed(1) + '%차)', bbMiddle: neckline, sellCheck: function(sl) {
-      return sl[0].trade_price < neckline * 0.99;
-    }};
-  }
-  if (dist >= 5 && priceDiff < 1.5 && bottom2.idx <= 5) {
-    return { signal: 'wait', detail: 'W바닥 넥라인대기' };
-  }
-  return { signal: 'none', detail: '' };
-}
-
-// 4) OBV Divergence
-function detectOBVDivergence(candles) {
-  if (candles.length < 20) return { signal: 'none', detail: '' };
-  var obv = calcOBV(candles);
-  if (obv.length < 15) return { signal: 'none', detail: '' };
-
-  var recentLow = candles[0].low_price, recentOBV = obv[0];
-  for (var i = 0; i < 5; i++) {
-    if (candles[i].low_price < recentLow) { recentLow = candles[i].low_price; recentOBV = obv[i]; }
-  }
-  var prevLow = candles[5].low_price, prevOBV = obv[5];
-  for (var i = 5; i < Math.min(15, candles.length); i++) {
-    if (candles[i].low_price < prevLow) { prevLow = candles[i].low_price; prevOBV = obv[i]; }
-  }
-
-  var priceLower = recentLow < prevLow * 1.005;
-  var obvHigher = recentOBV > prevOBV;
-  var isRising = candles[0].trade_price > candles[1].trade_price;
-
-  if (priceLower && obvHigher && isRising) {
-    return { signal: 'buy', detail: 'OBV다이버전스(가격↓OBV↑)', sellCheck: function(sl) {
-      var o = calcOBV(sl);
-      return o.length > 1 && o[0] < o[1] && sl[0].trade_price < sl[1].trade_price;
-    }};
-  }
-  if (priceLower && obvHigher) return { signal: 'wait', detail: 'OBV다이버전스 반등대기' };
-  return { signal: 'none', detail: '' };
-}
-
-// 5) ATR Channel Bounce
-function detectATRChannel(candles) {
-  if (candles.length < 20) return { signal: 'none', detail: '' };
-  var atr = calcATR(candles, 14);
-  var ema = calcEMA(candles, 20);
-  if (atr.length === 0 || ema.length === 0) return { signal: 'none', detail: '' };
-
-  var mid = ema[0];
-  var lower = mid - atr[0] * 2;
-  var upper = mid + atr[0] * 2;
-  var price = candles[0].trade_price;
-  var isGreen = price > candles[0].opening_price;
-
-  if (price <= lower * 1.005 && isGreen) {
-    return { signal: 'buy', detail: 'ATR하단(' + atr[0].toFixed(1) + ')', bbMiddle: mid, sellCheck: function(sl) {
-      var e = calcEMA(sl, 20); return e.length > 0 && sl[0].trade_price >= e[0];
-    }};
-  }
-  var lowerDist = mid > lower ? (price - lower) / (mid - lower) * 100 : 50;
-  if (lowerDist <= 20) return { signal: 'wait', detail: 'ATR하단근접 ' + lowerDist.toFixed(0) + '%' };
-  return { signal: 'none', detail: '' };
-}
-
-var DETECT_FN = {
-  volspike: detectVolSpike,
-  bbsqueeze: detectBBSqueeze,
-  dblbottom: detectDoubleBottom,
-  obvdiv: detectOBVDivergence,
-  atrchannel: detectATRChannel
-};
-
-// ========================================
-// Backtest Engine (from counter-trade5, high/low precision)
+// Candle Fetch
 // ========================================
 async function fetchHistoricalCandles(market, unit, days) {
   var allCandles = []; var to = ''; var u = parseInt(unit);
@@ -634,7 +643,7 @@ async function fetchHistoricalCandles(market, unit, days) {
   var cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
   var hitCutoff = false;
   while (allCandles.length < needed && !hitCutoff) {
-    var path = u >= 1440 ? '/candles/days?market=' + market + '&count=200' : '/candles/minutes/' + unit + '?market=' + market + '&count=200';
+    var path = '/candles/minutes/' + unit + '?market=' + market + '&count=200';
     if (to) path += '&to=' + to;
     var candles = await apiFetch(path);
     if (!candles || candles.length === 0) break;
@@ -648,154 +657,788 @@ async function fetchHistoricalCandles(market, unit, days) {
     await sleep(150);
     if (candles.length < 200) break;
   }
-  return allCandles;
+  return allCandles; // newest first
 }
 
-function btSimulate(stratKey, candles, profitTarget, stopLossMin, startH, endH) {
-  var detectFn = DETECT_FN[stratKey];
-  var trades = []; var inPos = false; var entry = null;
-  var stopMs = stopLossMin * 60000;
+async function fetchRecentCandles(market, unit, count) {
+  return await apiFetch('/candles/minutes/' + unit + '?market=' + market + '&count=' + count);
+}
+
+// ========================================
+// Technical Indicators
+// ========================================
+function calcRSI(candles, period) {
+  if (!candles || candles.length < period + 1) return [];
+  var gains = [], losses = [];
+  for (var i = 0; i < candles.length - 1; i++) {
+    var diff = candles[i].trade_price - candles[i + 1].trade_price;
+    gains.push(diff > 0 ? diff : 0);
+    losses.push(diff < 0 ? -diff : 0);
+  }
+  if (gains.length < period) return [];
+  var avgG = 0, avgL = 0;
+  for (var i = gains.length - 1; i >= gains.length - period; i--) { avgG += gains[i]; avgL += losses[i]; }
+  avgG /= period; avgL /= period;
+  var result = [];
+  var rs = avgL === 0 ? 100 : avgG / avgL;
+  result.push(100 - 100 / (1 + rs));
+  for (var i = gains.length - period - 1; i >= 0; i--) {
+    avgG = (avgG * (period - 1) + gains[i]) / period;
+    avgL = (avgL * (period - 1) + losses[i]) / period;
+    rs = avgL === 0 ? 100 : avgG / avgL;
+    result.push(100 - 100 / (1 + rs));
+  }
+  return result;
+}
+
+function calcEMA(candles, period) {
+  if (!candles || candles.length < period) return [];
+  var prices = candles.map(function(c) { return c.trade_price; }).reverse();
+  var k = 2 / (period + 1);
+  var ema = [prices[0]];
+  for (var i = 1; i < prices.length; i++) ema.push(prices[i] * k + ema[i - 1] * (1 - k));
+  ema.reverse();
+  return ema;
+}
+
+function calcBollingerBands(candles, period, mult) {
+  if (!candles || candles.length < period) return null;
+  var sum = 0;
+  for (var i = 0; i < period; i++) sum += candles[i].trade_price;
+  var mid = sum / period;
+  var sqSum = 0;
+  for (var i = 0; i < period; i++) sqSum += Math.pow(candles[i].trade_price - mid, 2);
+  var std = Math.sqrt(sqSum / period);
+  return { upper: mid + std * mult, middle: mid, lower: mid - std * mult };
+}
+
+function calcMACD(candles) {
+  var ema12 = calcEMA(candles, 12);
+  var ema26 = calcEMA(candles, 26);
+  if (ema12.length === 0 || ema26.length === 0) return { macd: [], signal: [], hist: [] };
+  var len = Math.min(ema12.length, ema26.length);
+  var macdLine = [];
+  for (var i = 0; i < len; i++) macdLine.push(ema12[i] - ema26[i]);
+  // signal = 9 EMA of macdLine
+  if (macdLine.length < 9) return { macd: macdLine, signal: [], hist: [] };
+  var k = 2 / 10;
+  var rev = macdLine.slice().reverse();
+  var sig = [rev[0]];
+  for (var i = 1; i < rev.length; i++) sig.push(rev[i] * k + sig[i - 1] * (1 - k));
+  sig.reverse();
+  var hist = [];
+  for (var i = 0; i < macdLine.length; i++) hist.push(macdLine[i] - (sig[i] || 0));
+  return { macd: macdLine, signal: sig, hist: hist };
+}
+
+// ========================================
+// Feature Extraction (10 features per candle)
+// ========================================
+function extractFeatures(candles, idx) {
+  // candles: newest first (descending). idx = 캔들 인덱스 (0=최신)
+  // Returns array of 10 normalized features, or null if insufficient data
+  if (idx + 20 >= candles.length || idx < 0) return null;
+  var c = candles[idx];
+  var price = c.trade_price;
+  var open = c.opening_price;
+  var high = c.high_price || price;
+  var low = c.low_price || price;
+
+  // 1) 거래량비율: current vol / avg(10 candles)
+  var vol = c.candle_acc_trade_volume || 0;
+  var avgVol = 0;
+  for (var i = idx + 1; i <= idx + 10; i++) avgVol += (candles[i].candle_acc_trade_volume || 0);
+  avgVol /= 10;
+  var volRatio = avgVol > 0 ? Math.min(vol / avgVol, 10) / 10 : 0; // 0~1 (capped at 10x)
+
+  // 2) RSI (14) normalized 0~1
+  var slice14 = candles.slice(idx, idx + 16);
+  var rsi = calcRSI(slice14, 14);
+  var rsiVal = rsi.length > 0 ? rsi[0] / 100 : 0.5;
+
+  // 3) BB위치: (price - lower) / (upper - lower)
+  var slice20 = candles.slice(idx, idx + 20);
+  var bb = calcBollingerBands(slice20, 20, 2);
+  var bbPos = 0.5;
+  if (bb && bb.upper !== bb.lower) bbPos = Math.max(0, Math.min(1, (price - bb.lower) / (bb.upper - bb.lower)));
+
+  // 4) MACD histogram (normalized by price)
+  var slice30 = candles.slice(idx, Math.min(idx + 35, candles.length));
+  var macd = calcMACD(slice30);
+  var histVal = 0;
+  if (macd.hist.length > 0 && price > 0) histVal = Math.max(-1, Math.min(1, (macd.hist[0] / price) * 1000));
+  var macdNorm = (histVal + 1) / 2; // 0~1
+
+  // 5) 몸통비율: body / range, positive=green, negative=red
+  var range = high - low;
+  var body = price - open;
+  var bodyRatio = range > 0 ? body / range : 0; // -1~1
+  var bodyNorm = (bodyRatio + 1) / 2; // 0~1
+
+  // 6) 아래꼬리 비율: (min(open,close) - low) / range
+  var lowerWick = (Math.min(open, price) - low);
+  var lowerWickRatio = range > 0 ? Math.min(lowerWick / range, 1) : 0; // 0~1
+
+  // 7) 1봉 변화%
+  var prev1 = candles[idx + 1].trade_price;
+  var chg1 = prev1 > 0 ? ((price - prev1) / prev1) * 100 : 0;
+  var chg1Norm = Math.max(0, Math.min(1, (chg1 + 5) / 10)); // -5%~+5% → 0~1
+
+  // 8) 3봉 변화%
+  var prev3 = candles[idx + 3].trade_price;
+  var chg3 = prev3 > 0 ? ((price - prev3) / prev3) * 100 : 0;
+  var chg3Norm = Math.max(0, Math.min(1, (chg3 + 10) / 20)); // -10%~+10% → 0~1
+
+  // 9) 5봉 변화%
+  var prev5 = candles[idx + 5].trade_price;
+  var chg5 = prev5 > 0 ? ((price - prev5) / prev5) * 100 : 0;
+  var chg5Norm = Math.max(0, Math.min(1, (chg5 + 15) / 30)); // -15%~+15% → 0~1
+
+  // 10) 연속 음봉 수 (0~10 → 0~1)
+  var reds = 0;
+  for (var i = idx; i < Math.min(idx + 10, candles.length); i++) {
+    if (candles[i].trade_price < candles[i].opening_price) reds++;
+    else break;
+  }
+  var redsNorm = reds / 10;
+
+  return [volRatio, rsiVal, bbPos, macdNorm, bodyNorm, lowerWickRatio, chg1Norm, chg3Norm, chg5Norm, redsNorm];
+}
+
+// ========================================
+// Linear Statistical Learning (no TF.js)
+// ========================================
+function learnPatternsLinear(candles, profitTarget) {
   var reqPct = profitTarget + (FEE_ROUND * 100);
+  var samples = [];
+
+  for (var i = LOOKAHEAD; i < candles.length - 20; i++) {
+    var feat = extractFeatures(candles, i);
+    if (!feat) continue;
+    var buyPrice = candles[i].trade_price;
+    var targetPrice = buyPrice * (1 + reqPct / 100);
+    var label = 0;
+    for (var j = i - 1; j >= Math.max(0, i - LOOKAHEAD); j--) {
+      var hp = candles[j].high_price || candles[j].trade_price;
+      if (hp >= targetPrice) { label = 1; break; }
+    }
+    samples.push({ f: feat, label: label });
+  }
+
+  if (samples.length < 20) return null;
+  var posCount = samples.filter(function(s) { return s.label === 1; }).length;
+  if (posCount < 3 || posCount === samples.length) return null;
+
+  // Compute correlation-based weights
+  var means = new Array(FEATURE_COUNT).fill(0);
+  var labelMean = 0;
+  samples.forEach(function(s) {
+    for (var f = 0; f < FEATURE_COUNT; f++) means[f] += s.f[f];
+    labelMean += s.label;
+  });
+  for (var f = 0; f < FEATURE_COUNT; f++) means[f] /= samples.length;
+  labelMean /= samples.length;
+
+  var weights = [];
+  for (var f = 0; f < FEATURE_COUNT; f++) {
+    var cov = 0, varF = 0, varL = 0;
+    samples.forEach(function(s) {
+      var df = s.f[f] - means[f];
+      var dl = s.label - labelMean;
+      cov += df * dl;
+      varF += df * df;
+      varL += dl * dl;
+    });
+    var denom = Math.sqrt(varF * varL);
+    weights.push(denom > 0 ? cov / denom : 0);
+  }
+  var wMax = Math.max.apply(null, weights.map(Math.abs));
+  if (wMax > 0) weights = weights.map(function(w) { return w / wMax; });
+
+  // Score each sample: weighted sum
+  function calcScore(feat) {
+    var s = 0;
+    for (var f = 0; f < FEATURE_COUNT; f++) s += feat[f] * weights[f];
+    return s;
+  }
+
+  // Find optimal threshold (0.1 ~ 0.8)
+  var scores = samples.map(function(s) { return { score: calcScore(s.f), label: s.label }; });
+  var bestThresh = 0.3, bestWR = 0, bestCount = 0;
+  for (var th = 0.1; th <= 0.8; th += 0.05) {
+    var above = scores.filter(function(s) { return s.score >= th; });
+    if (above.length < 3) continue;
+    var wins = above.filter(function(s) { return s.label === 1; }).length;
+    var wr = wins / above.length * 100;
+    if (wr > bestWR || (wr === bestWR && above.length > bestCount)) {
+      bestWR = wr; bestThresh = th; bestCount = above.length;
+    }
+  }
+
+  return backtestLinear(candles, weights, bestThresh, profitTarget);
+}
+
+function backtestLinear(candles, weights, threshold, profitTarget) {
+  var reqPct = profitTarget + (FEE_ROUND * 100);
+  var stopLossMin = parseInt(document.getElementById('stopLossMin').value) || 10;
+  var stopMs = stopLossMin * 60000;
   var stopLossPct = -(profitTarget * 1.2 + FEE_ROUND * 100);
   var trailTrigger = profitTarget;
   var trailDrop = profitTarget * 0.3;
-  var useTimeFilter = (startH !== undefined && endH !== undefined && startH !== endH);
 
-  for (var i = 49; i < candles.length; i++) {
-    var slice = candles.slice(Math.max(0, i - 49), i + 1).reverse();
-    var curTime = new Date(candles[i].candle_date_time_utc + 'Z').getTime();
-    var curPrice = candles[i].trade_price;
+  function calcScore(feat) {
+    var s = 0;
+    for (var f = 0; f < FEATURE_COUNT; f++) s += feat[f] * weights[f];
+    return s;
+  }
+
+  var asc = candles.slice().reverse();
+  var trades = [];
+  var inPos = false, entry = null;
+
+  for (var i = 20; i < asc.length; i++) {
+    var curPrice = asc[i].trade_price;
+    var curTime = new Date(asc[i].candle_date_time_utc + 'Z').getTime();
 
     if (inPos && entry) {
-      var highPrice = candles[i].high_price || curPrice;
-      var lowPrice = candles[i].low_price || curPrice;
-      var gpHigh = ((highPrice - entry.price) / entry.price) * 100;
-      var gpLow = ((lowPrice - entry.price) / entry.price) * 100;
+      // 모니터링과 동일하게 closePrice만으로 판단
       var gp = ((curPrice - entry.price) / entry.price) * 100;
       var elapsed = curTime - entry.time;
-      if (gpHigh > entry.peakPct) entry.peakPct = gpHigh;
-      var reason = null;
-      var sellPrice = curPrice;
-      var sellGp = gp;
+      if (gp > entry.peakPct) entry.peakPct = gp;
 
-      if (gpLow <= stopLossPct) {
-        reason = 'stoploss';
-        sellPrice = entry.price * (1 + stopLossPct / 100);
-        sellGp = stopLossPct;
-      }
-      if (!reason && gpHigh >= reqPct) {
-        reason = 'profit';
-        sellPrice = entry.price * (1 + reqPct / 100);
-        sellGp = reqPct;
-      }
-      if (!reason && entry.peakPct >= trailTrigger && gpLow <= entry.peakPct - trailDrop) {
-        reason = 'trailing';
-        sellGp = entry.peakPct - trailDrop;
-        sellPrice = entry.price * (1 + sellGp / 100);
-      }
+      var reason = null;
+      if (gp <= stopLossPct) reason = 'stoploss';
+      if (!reason && gp >= reqPct) reason = 'profit';
+      if (!reason && entry.peakPct >= trailTrigger && gp <= entry.peakPct - trailDrop) reason = 'trailing';
       if (!reason && elapsed >= stopMs && gp <= 0) reason = 'timeout';
       if (!reason && elapsed >= stopMs * 1.5) reason = 'timeout';
-      if (!reason && gp > FEE_ROUND * 100 && entry.sellCheck && entry.sellCheck(slice)) reason = 'technical';
-      if (!reason && entry.bbMiddle && highPrice >= entry.bbMiddle) {
-        reason = 'bb_middle';
-        sellPrice = entry.bbMiddle;
-        sellGp = ((entry.bbMiddle - entry.price) / entry.price) * 100;
-      }
 
       if (reason) {
-        if (reason === 'timeout' || reason === 'technical') { sellPrice = curPrice; sellGp = gp; }
-        trades.push({ buyTime: entry.time, buyPrice: entry.price, sellTime: curTime, sellPrice: sellPrice, grossPct: sellGp, netPct: sellGp - (FEE_ROUND * 100), reason: reason });
+        trades.push({ buyTime: entry.time, buyPrice: entry.price, sellTime: curTime, sellPrice: curPrice, netPct: gp - (FEE_ROUND * 100), reason: reason, score: entry.score });
         inPos = false; entry = null;
       }
       continue;
     }
 
-    if (useTimeFilter && !isInTradeHours(curTime, startH, endH)) continue;
-    if (slice.length >= 50) {
-      var result = detectFn(slice);
-      if (result.signal === 'buy') {
-        inPos = true;
-        entry = { price: curPrice, time: curTime, sellCheck: result.sellCheck || null, bbMiddle: result.bbMiddle || 0, peakPct: 0 };
-      }
+    var descIdx = candles.length - 1 - i;
+    var feat = extractFeatures(candles, descIdx);
+    if (!feat) continue;
+    var score = calcScore(feat);
+
+    if (score >= threshold) {
+      inPos = true;
+      entry = { price: curPrice, time: curTime, peakPct: 0, score: score };
     }
   }
+
   if (inPos && entry) {
-    var lp = candles[candles.length - 1].trade_price;
-    var lt = new Date(candles[candles.length - 1].candle_date_time_utc + 'Z').getTime();
-    var g = ((lp - entry.price) / entry.price) * 100;
-    trades.push({ buyTime: entry.time, buyPrice: entry.price, sellTime: lt, sellPrice: lp, grossPct: g, netPct: g - (FEE_ROUND * 100), reason: 'open' });
+    var last = asc[asc.length - 1];
+    var lp2 = last.trade_price;
+    var lt = new Date(last.candle_date_time_utc + 'Z').getTime();
+    var g = ((lp2 - entry.price) / entry.price) * 100;
+    trades.push({ buyTime: entry.time, buyPrice: entry.price, sellTime: lt, sellPrice: lp2, netPct: g - (FEE_ROUND * 100), reason: 'open', score: entry.score });
   }
-  return trades;
+
+  var wins = trades.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = trades.reduce(function(s, t) { return s + t.netPct; }, 0);
+  var reasons = {};
+  trades.forEach(function(t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+
+  return {
+    weights: weights, threshold: threshold, model: null,
+    trades: trades, count: trades.length, wins: wins,
+    winRate: trades.length > 0 ? wins / trades.length * 100 : 0,
+    totalPct: totalPct, reasons: reasons
+  };
 }
 
 // ========================================
-// Tab / Controls
+// Pattern Learning with TF.js (per coin)
 // ========================================
-function switchTab(tab, btn) {
-  document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
-  document.querySelectorAll('.tab-content').forEach(function(c) { c.classList.remove('active'); });
-  btn.classList.add('active');
-  document.getElementById('tab-' + tab).classList.add('active');
-}
+async function learnPatterns(candles, profitTarget) {
+  // candles: newest first (descending)
+  var reqPct = profitTarget + (FEE_ROUND * 100);
+  var samples = [];
 
-function setTf(btn) {
-  document.querySelectorAll('.tf-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  analysisTf = btn.dataset.tf;
-  saveSettings();
-}
-function setPeriod(btn) {
-  document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.remove('active'); });
-  btn.classList.add('active');
-  analysisPeriod = parseInt(btn.dataset.p);
-  saveSettings();
-}
-function toggleAllDay() {
-  var chk = document.getElementById('setAllDay').checked;
-  document.getElementById('setStartHour').disabled = chk;
-  document.getElementById('setEndHour').disabled = chk;
-  saveSettings();
-}
+  for (var i = LOOKAHEAD; i < candles.length - 20; i++) {
+    var feat = extractFeatures(candles, i);
+    if (!feat) continue;
 
-function saveSettings() {
-  setCookie('ct6_tf', analysisTf);
-  setCookie('ct6_period', String(analysisPeriod));
-  setCookie('ct6_profit', document.getElementById('setProfitTarget').value);
-  setCookie('ct6_sl', document.getElementById('setStopLoss').value);
-  setCookie('ct6_minvol', document.getElementById('setMinVol').value);
-  setCookie('ct6_topn', document.getElementById('setTopN').value);
-  setCookie('ct6_sh', document.getElementById('setStartHour').value);
-  setCookie('ct6_eh', document.getElementById('setEndHour').value);
-  setCookie('ct6_allday', document.getElementById('setAllDay').checked ? '1' : '0');
-}
-function loadSettings() {
-  var tf = getCookie('ct6_tf');
-  if (tf) {
-    analysisTf = tf;
-    document.querySelectorAll('.tf-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.tf === tf); });
+    var buyPrice = candles[i].trade_price;
+    var targetPrice = buyPrice * (1 + reqPct / 100);
+    var label = 0;
+    for (var j = i - 1; j >= Math.max(0, i - LOOKAHEAD); j--) {
+      var hp = candles[j].high_price || candles[j].trade_price;
+      if (hp >= targetPrice) { label = 1; break; }
+    }
+    samples.push({ f: feat, label: label });
   }
-  var p = getCookie('ct6_period');
-  if (p) {
-    analysisPeriod = parseInt(p);
-    document.querySelectorAll('.period-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.p === p); });
+
+  if (samples.length < 20) return null;
+
+  var posCount = samples.filter(function(s) { return s.label === 1; }).length;
+  if (posCount < 3 || posCount === samples.length) return null;
+
+  // Train/Validation split (80/20) - time-based split (앞쪽=최신=validation)
+  var valSize = Math.max(5, Math.floor(samples.length * 0.2));
+  var valSamples = samples.slice(0, valSize);
+  var trainSamples = samples.slice(valSize);
+
+  // Build TensorFlow.js MLP model with L2 regularization
+  var xTrain = trainSamples.map(function(s) { return s.f; });
+  var yTrain = trainSamples.map(function(s) { return s.label; });
+  var xVal = valSamples.map(function(s) { return s.f; });
+  var yVal = valSamples.map(function(s) { return s.label; });
+
+  var xsTr = tf.tensor2d(xTrain);
+  var ysTr = tf.tensor2d(yTrain, [yTrain.length, 1]);
+  var xsVl = tf.tensor2d(xVal);
+  var ysVl = tf.tensor2d(yVal, [yVal.length, 1]);
+
+  var model = tf.sequential();
+  model.add(tf.layers.dense({
+    units: 12, activation: 'relu', inputShape: [FEATURE_COUNT],
+    kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+  }));
+  model.add(tf.layers.dropout({ rate: 0.3 }));
+  model.add(tf.layers.dense({
+    units: 6, activation: 'relu',
+    kernelRegularizer: tf.regularizers.l2({ l2: 0.01 })
+  }));
+  model.add(tf.layers.dense({ units: 1, activation: 'sigmoid' }));
+
+  model.compile({ optimizer: tf.train.adam(0.001), loss: 'binaryCrossentropy', metrics: ['accuracy'] });
+
+  // Early stopping via manual epoch loop
+  var bestValLoss = Infinity;
+  var patience = 10, noImprove = 0;
+  var bestWeightData = null;
+  for (var ep = 0; ep < 80; ep++) {
+    await model.fit(xsTr, ysTr, { epochs: 1, batchSize: 32, shuffle: true, verbose: 0, yieldEvery: 'never' });
+    var valResult = model.evaluate(xsVl, ysVl);
+    var vLoss = (Array.isArray(valResult) ? valResult[0] : valResult).dataSync()[0];
+    if (Array.isArray(valResult)) valResult.forEach(function(t) { t.dispose(); }); else valResult.dispose();
+    if (vLoss < bestValLoss) {
+      bestValLoss = vLoss;
+      noImprove = 0;
+      // Save best weights
+      bestWeightData = model.getWeights().map(function(w) { return w.clone(); });
+    } else {
+      noImprove++;
+      if (noImprove >= patience) break;
+    }
   }
-  var pt = getCookie('ct6_profit'); if (pt) document.getElementById('setProfitTarget').value = pt;
-  var sl = getCookie('ct6_sl'); if (sl) document.getElementById('setStopLoss').value = sl;
-  var mv = getCookie('ct6_minvol'); if (mv) document.getElementById('setMinVol').value = mv;
-  var tn = getCookie('ct6_topn'); if (tn) document.getElementById('setTopN').value = tn;
-  var sh = getCookie('ct6_sh'); if (sh) document.getElementById('setStartHour').value = sh;
-  var eh = getCookie('ct6_eh'); if (eh) document.getElementById('setEndHour').value = eh;
-  var ad = getCookie('ct6_allday'); if (ad === '1') { document.getElementById('setAllDay').checked = true; toggleAllDay(); }
+  // Restore best weights
+  if (bestWeightData) {
+    model.setWeights(bestWeightData);
+    bestWeightData.forEach(function(w) { w.dispose(); });
+  }
+
+  // Use VALIDATION set to find optimal threshold (prevents overfit)
+  var valPreds = model.predict(xsVl);
+  var valPredArr = Array.from(valPreds.dataSync());
+
+  // Also get train preds for combined threshold search
+  var trainPreds = model.predict(xsTr);
+  var trainPredArr = Array.from(trainPreds.dataSync());
+
+  // Find threshold on validation data (0.3 ~ 0.8 range)
+  var bestThresh = 0.4, bestScore = -999;
+  for (var th = 0.3; th <= 0.8; th += 0.05) {
+    // Validation performance
+    var vAbove = [];
+    for (var si = 0; si < valPredArr.length; si++) {
+      if (valPredArr[si] >= th) vAbove.push(valSamples[si]);
+    }
+    if (vAbove.length < 1) continue;
+    var vWins = vAbove.filter(function(s) { return s.label === 1; }).length;
+    var vWR = vWins / vAbove.length * 100;
+
+    // Train performance (for count)
+    var tAbove = [];
+    for (var si = 0; si < trainPredArr.length; si++) {
+      if (trainPredArr[si] >= th) tAbove.push(trainSamples[si]);
+    }
+    var tWins = tAbove.filter(function(s) { return s.label === 1; }).length;
+    var tWR = tAbove.length > 0 ? tWins / tAbove.length * 100 : 0;
+
+    // Combined score: validation WR weight 0.6, train WR weight 0.4, bonus for more signals
+    var combinedWR = vWR * 0.6 + tWR * 0.4;
+    var signalBonus = Math.min(vAbove.length + tAbove.length, 20) * 0.5;
+    var score = combinedWR + signalBonus;
+
+    if (score > bestScore) {
+      bestScore = score;
+      bestThresh = th;
+    }
+  }
+
+  // Compute feature importance via weight magnitude of first layer
+  var w1 = model.layers[0].getWeights()[0];
+  var w1Data = w1.abs().mean(1).dataSync();
+  var weights = Array.from(w1Data);
+  var wMax = Math.max.apply(null, weights);
+  if (wMax > 0) weights = weights.map(function(w) { return w / wMax; });
+
+  // Cleanup tensors
+  xsTr.dispose(); ysTr.dispose(); xsVl.dispose(); ysVl.dispose();
+  valPreds.dispose(); trainPreds.dispose();
+
+  // Backtest with trained model (on ALL data)
+  return backtest(candles, model, bestThresh, profitTarget, weights);
 }
 
 // ========================================
-// Tab 1: Coin Selection
+// Backtest with TF model
 // ========================================
-async function scanCoins() {
-  var btn = document.getElementById('scanBtn');
-  btn.disabled = true; btn.textContent = '스캔 중...';
-  var progEl = document.getElementById('scanProgress');
-  progEl.textContent = '';
+function backtest(candles, model, threshold, profitTarget, weights) {
+  var reqPct = profitTarget + (FEE_ROUND * 100);
+  var stopLossMin = parseInt(document.getElementById('stopLossMin').value) || 10;
+  var stopMs = stopLossMin * 60000;
+  var stopLossPct = -(profitTarget * 1.2 + FEE_ROUND * 100);
+  var trailTrigger = profitTarget;
+  var trailDrop = profitTarget * 0.3;
+
+  var asc = candles.slice().reverse();
+  var trades = [];
+  var inPos = false;
+  var entry = null;
+
+  // Batch predict all features for speed
+  var allFeats = [];
+  var featMap = {};
+  for (var i = 20; i < asc.length; i++) {
+    var descIdx = candles.length - 1 - i;
+    var feat = extractFeatures(candles, descIdx);
+    if (feat) { allFeats.push(feat); featMap[i] = allFeats.length - 1; }
+  }
+
+  var allScores = [];
+  if (allFeats.length > 0) {
+    var xBatch = tf.tensor2d(allFeats);
+    var predBatch = model.predict(xBatch);
+    allScores = Array.from(predBatch.dataSync());
+    xBatch.dispose(); predBatch.dispose();
+  }
+
+  for (var i = 20; i < asc.length; i++) {
+    var curPrice = asc[i].trade_price;
+    var curTime = new Date(asc[i].candle_date_time_utc + 'Z').getTime();
+
+    if (inPos && entry) {
+      // 모니터링과 동일하게 closePrice(현재가)만으로 판단
+      var gp = ((curPrice - entry.price) / entry.price) * 100;
+      var elapsed = curTime - entry.time;
+      if (gp > entry.peakPct) entry.peakPct = gp;
+
+      var reason = null;
+      if (gp <= stopLossPct) reason = 'stoploss';
+      if (!reason && gp >= reqPct) reason = 'profit';
+      if (!reason && entry.peakPct >= trailTrigger && gp <= entry.peakPct - trailDrop) reason = 'trailing';
+      if (!reason && elapsed >= stopMs && gp <= 0) reason = 'timeout';
+      if (!reason && elapsed >= stopMs * 1.5) reason = 'timeout';
+
+      if (reason) {
+        trades.push({
+          buyTime: entry.time, buyPrice: entry.price,
+          sellTime: curTime, sellPrice: curPrice,
+          netPct: gp - (FEE_ROUND * 100), reason: reason, score: entry.score
+        });
+        inPos = false; entry = null;
+      }
+      continue;
+    }
+
+    // Buy signal: neural network prediction
+    if (featMap[i] === undefined) continue;
+    var score = allScores[featMap[i]];
+
+    if (score >= threshold) {
+      inPos = true;
+      entry = { price: curPrice, time: curTime, peakPct: 0, score: score };
+    }
+  }
+
+  if (inPos && entry) {
+    var last = asc[asc.length - 1];
+    var lp2 = last.trade_price;
+    var lt = new Date(last.candle_date_time_utc + 'Z').getTime();
+    var g = ((lp2 - entry.price) / entry.price) * 100;
+    trades.push({ buyTime: entry.time, buyPrice: entry.price, sellTime: lt, sellPrice: lp2, netPct: g - (FEE_ROUND * 100), reason: 'open', score: entry.score });
+  }
+
+  var wins = trades.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = trades.reduce(function(s, t) { return s + t.netPct; }, 0);
+  var reasons = {};
+  trades.forEach(function(t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+
+  return {
+    weights: weights, threshold: threshold, model: model,
+    trades: trades, count: trades.length, wins: wins,
+    winRate: trades.length > 0 ? wins / trades.length * 100 : 0,
+    totalPct: totalPct, reasons: reasons
+  };
+}
+
+// ========================================
+// Phase 1: Learn Runner
+// ========================================
+async function runLearn() {
+  if (btRunning) return;
+  btRunning = true;
+  monitorRunning = false;
+  if (monitorInterval) { clearTimeout(monitorInterval); monitorInterval = null; }
+  qualifiedList = []; positions = {}; tradeHistory = []; candleCache = {}; cooldowns = {};
+  document.getElementById('phase2Area').style.display = 'none';
+
+  // TF.js 모드: CPU 백엔드 사용 (백그라운드 탭에서도 학습 가능)
+  if (mlMode === 'tf' && tf.getBackend() !== 'cpu') {
+    await tf.setBackend('cpu');
+    await tf.ready();
+  }
+
+  var btn = document.getElementById('learnBtn');
+  btn.disabled = true; btn.textContent = '학습 중...';
+  var progFill = document.getElementById('progressFill');
+  var progText = document.getElementById('progressText');
+  var area = document.getElementById('learnResultArea');
+
+  var profitTarget = parseFloat(document.getElementById('profitTarget').value) || 0.5;
+  var minVol = (parseFloat(document.getElementById('minVol').value) || 10) * 1e8;
+  var minWinRate = parseFloat(document.getElementById('minWinRate').value) || 30;
+  var minTrades = parseInt(document.getElementById('minTrades').value) || 3;
+  var minProfit = parseFloat(document.getElementById('minProfit').value) || 5;
+
+  try {
+    progText.textContent = '마켓 조회 중...';
+    var mk = await apiFetch('/market/all?isDetails=true');
+    var markets = mk.filter(function(m) { return m.market.startsWith('KRW-'); });
+    var nameMap = {};
+    markets.forEach(function(m) { nameMap[m.market] = m.korean_name; });
+
+    progText.textContent = '티커 조회 중...';
+    var codes = markets.map(function(m) { return m.market; });
+    var allTickers = [];
+    for (var i = 0; i < codes.length; i += 100) {
+      var batch = codes.slice(i, i + 100);
+      var tickers = await apiFetch('/ticker?markets=' + batch.join(','));
+      allTickers = allTickers.concat(tickers);
+      if (i + 100 < codes.length) await sleep(200);
+    }
+
+    var filtered = allTickers.filter(function(t) {
+      var sym = t.market.replace('KRW-', '');
+      if (EXCLUDE_COINS.indexOf(sym) >= 0) return false;
+      if (minVol > 0 && (t.acc_trade_price_24h || 0) < minVol) return false;
+      return true;
+    });
+    filtered.sort(function(a, b) { return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0); });
+    var targetMarkets = filtered.slice(0, 100).map(function(t) { return t.market; });
+
+    var coinResults = [];
+    var tickFiltered = [];
+
+    for (var ci = 0; ci < targetMarkets.length; ci++) {
+      var market = targetMarkets[ci];
+      var symbol = market.replace('KRW-', '');
+      var pct = ((ci + 1) / targetMarkets.length * 100);
+      progFill.style.width = pct + '%';
+      progText.textContent = symbol + ' 학습 중 (' + (ci + 1) + '/' + targetMarkets.length + ')';
+
+      try {
+        var candles = await fetchHistoricalCandles(market, btTf, btPeriod);
+        if (!candles || candles.length < 50) continue;
+
+        // 호가단위 필터: 목표수익률이 최소 3틱 이상이어야 함
+        var lastPrice = candles[0].trade_price;
+        var tickPct = getTickPct(lastPrice);
+        if (profitTarget < tickPct * 3) {
+          tickFiltered.push({ symbol: symbol, price: lastPrice, tickSize: getTickSize(lastPrice), tickPct: tickPct });
+          continue;
+        }
+
+        var result = mlMode === 'tf'
+          ? await learnPatterns(candles, profitTarget)
+          : learnPatternsLinear(candles, profitTarget);
+        if (result && result.count >= 1) {
+          result.symbol = symbol;
+          result.name = nameMap[market] || symbol;
+          result.market = market;
+          coinResults.push(result);
+        }
+      } catch (e) { console.error('Learn err:', symbol, e.message); }
+    }
+
+    coinResults.sort(function(a, b) { return b.totalPct - a.totalPct; });
+
+    qualifiedList = coinResults.filter(function(c) {
+      return c.winRate >= minWinRate && c.count >= minTrades && c.totalPct >= minProfit;
+    });
+
+    renderLearnResults(coinResults, qualifiedList, minWinRate, minTrades, minProfit, tickFiltered);
+
+    if (qualifiedList.length > 0) {
+      document.getElementById('phase2Area').style.display = '';
+      renderQualifiedCards();
+    }
+
+  } catch (e) {
+    area.innerHTML = '<div style="text-align:center;padding:40px;color:var(--down)">' + e.message + '</div>';
+  } finally {
+    btn.disabled = false; btn.textContent = '학습 시작';
+    progFill.style.width = '100%';
+    progText.textContent = '완료';
+    btRunning = false;
+    lastLearnTime = Date.now();
+  }
+}
+
+// ========================================
+// Render Learn Results
+// ========================================
+function renderLearnResults(coinResults, qualified, minWinRate, minTrades, minProfit, tickFiltered) {
+  var area = document.getElementById('learnResultArea');
+
+  if (coinResults.length === 0) {
+    var msg = '학습 가능한 패턴이 없습니다.';
+    if (tickFiltered && tickFiltered.length > 0) msg += ' (호가단위 필터로 ' + tickFiltered.length + '개 제외)';
+    area.innerHTML = '<div style="text-align:center;padding:60px;color:var(--muted)">' + msg + '</div>';
+    return;
+  }
+
+  var allTrades = [];
+  coinResults.forEach(function(c) { allTrades = allTrades.concat(c.trades); });
+  var wins = allTrades.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = allTrades.reduce(function(s, t) { return s + t.netPct; }, 0);
+  var winRate = allTrades.length > 0 ? wins / allTrades.length * 100 : 0;
+
+  // Aggregate feature weights from qualified coins
+  var avgWeights = new Array(FEATURE_COUNT).fill(0);
+  if (qualified.length > 0) {
+    qualified.forEach(function(c) {
+      for (var f = 0; f < FEATURE_COUNT; f++) avgWeights[f] += Math.abs(c.weights[f]);
+    });
+    for (var f = 0; f < FEATURE_COUNT; f++) avgWeights[f] /= qualified.length;
+  }
+
+  var html = '';
+
+  // Summary
+  var tfCount = tickFiltered ? tickFiltered.length : 0;
+  var qTotal = qualified.reduce(function(s,c){return s+c.totalPct;},0);
+  html += '<div class="stats-bar">'
+    + '<div class="stat-card"><div class="stat-label">분석 코인</div><div class="stat-value">' + coinResults.length + '</div>'
+    + (tfCount > 0 ? '<div style="font-size:10px;color:var(--muted);margin-top:2px">호가필터 ' + tfCount + '개 제외</div>' : '') + '</div>'
+    + '<div class="stat-card"><div class="stat-label">전체 승률</div><div class="stat-value" style="color:' + (winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + winRate.toFixed(1) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">적격 코인</div><div class="stat-value" style="color:var(--gold)">' + qualified.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">적격 총수익</div><div class="stat-value" style="color:' + (qTotal >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (qTotal >= 0 ? '+' : '') + qTotal.toFixed(2) + '%</div></div>'
+    + '</div>';
+
+  // Feature importance (from qualified coins)
+  if (qualified.length > 0) {
+    var maxW = Math.max.apply(null, avgWeights);
+    html += '<div style="padding:4px 24px 8px"><span style="font-size:11px;color:var(--accent3);font-weight:700">학습된 특징 중요도 (적격 코인 평균)</span></div>';
+    html += '<div class="fw-bar">';
+    for (var f = 0; f < FEATURE_COUNT; f++) {
+      var pct = maxW > 0 ? (avgWeights[f] / maxW * 100) : 0;
+      var color = pct >= 60 ? 'var(--accent)' : pct >= 30 ? 'var(--gold)' : 'var(--muted)';
+      html += '<div class="fw-item"><div class="fw-name">' + FEATURE_NAMES[f] + '</div>'
+        + '<div class="fw-val" style="color:' + color + '">' + avgWeights[f].toFixed(3) + '</div>'
+        + '<div class="fw-meter"><div class="fw-meter-fill" style="width:' + pct + '%;background:' + color + '"></div></div></div>';
+    }
+    html += '</div>';
+  }
+
+  // Coin table
+  html += '<div style="padding:0 24px 12px"><h3 style="font-size:13px;color:var(--accent3);margin-bottom:8px">코인별 결과 (승률 ' + minWinRate + '%+ & ' + minTrades + '건+ & 수익률 ' + minProfit + '%+ = 적격)</h3>';
+  html += '<div class="table-wrapper" style="max-height:400px"><table><thead><tr>'
+    + '<th>순위</th><th>코인</th><th>매매</th><th>승률</th><th>총수익률</th><th>Threshold</th><th>적격</th>'
+    + '</tr></thead><tbody>';
+  coinResults.forEach(function(c, idx) {
+    var isQ = c.winRate >= minWinRate && c.count >= minTrades && c.totalPct >= minProfit;
+    var rankCls = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'normal';
+    html += '<tr style="' + (isQ ? 'background:rgba(0,212,170,0.06)' : '') + '">'
+      + '<td><span class="rank-badge ' + rankCls + '">' + (idx + 1) + '</span></td>'
+      + '<td style="font-weight:700">' + c.symbol + ' <span style="font-size:10px;color:var(--muted)">' + c.name + '</span></td>'
+      + '<td>' + c.count + '</td>'
+      + '<td style="color:' + (c.winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + c.winRate.toFixed(1) + '%</td>'
+      + '<td style="font-weight:700;color:' + (c.totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (c.totalPct >= 0 ? '+' : '') + c.totalPct.toFixed(2) + '%</td>'
+      + '<td class="mono" style="font-size:10px">' + c.threshold.toFixed(4) + '</td>'
+      + '<td>' + (isQ ? '<span style="color:var(--gold);font-weight:700">&#x2713;</span>' : '') + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  area.innerHTML = html;
+}
+
+// ========================================
+// Phase 2: Qualified Cards
+// ========================================
+function renderQualifiedCards() {
+  var el = document.getElementById('qualifiedCoins');
+  var html = '';
+  qualifiedList.forEach(function(c) {
+    var held = positions[c.symbol];
+    var cls = held ? 'signal-active' : '';
+    var badge = held ? '<span class="signal-badge buy">보유중</span>' : '';
+    html += '<div class="q-coin-card ' + cls + '" id="qcard-' + c.symbol + '">'
+      + badge
+      + '<div class="coin-sym">' + c.symbol + '</div>'
+      + '<div class="coin-name">' + c.name + '</div>'
+      + '<div class="coin-wr" style="color:var(--up)">' + c.winRate.toFixed(0) + '% <span style="font-size:11px;color:var(--muted)">' + c.count + '건</span></div>'
+      + '<div class="coin-detail">'
+      + '수익 ' + (c.totalPct >= 0 ? '+' : '') + c.totalPct.toFixed(2) + '%<br>'
+      + '<span id="qstatus-' + c.symbol + '" style="color:var(--muted)">대기중</span>'
+      + '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+// ========================================
+// Phase 2: Monitor
+// ========================================
+function toggleMonitor() {
+  if (monitorRunning) stopMonitor(); else startMonitor();
+}
+
+function startMonitor() {
+  if (qualifiedList.length === 0) return;
+  monitorRunning = true;
+  var btn = document.getElementById('monBtn');
+  btn.textContent = '모니터링 중지'; btn.classList.add('running');
+  document.getElementById('monitorStatus').textContent = '실행 중';
+  addLog('info', '모니터링 시작 - ' + qualifiedList.length + '개 코인 감시');
+  // 정각 0초, 30초에 실행
+  function scheduleNext() {
+    var now = Date.now();
+    var sec = new Date(now).getSeconds();
+    var ms = new Date(now).getMilliseconds();
+    var nextSec = sec < 30 ? 30 : 60;
+    var delay = (nextSec - sec) * 1000 - ms;
+    if (delay <= 0) delay += 30000;
+    monitorInterval = setTimeout(function() {
+      if (!monitorRunning) return;
+      monitorCycle();
+      scheduleNext();
+    }, delay);
+  }
+  monitorCycle();
+  scheduleNext();
+}
+
+async function runReLearn() {
+  // 보유 포지션/매매이력은 유지하고 모델만 갱신
+  var profitTarget = parseFloat(document.getElementById('profitTarget').value) || 0.5;
+  var minWinRate = parseFloat(document.getElementById('minWinRate').value) || 30;
+  var minTrades = parseInt(document.getElementById('minTrades').value) || 3;
+  var minProfit = parseFloat(document.getElementById('minProfit').value) || 5;
+  var minVol = (parseFloat(document.getElementById('minVol').value) || 10) * 1e8;
+
+  if (mlMode === 'tf' && tf.getBackend() !== 'cpu') {
+    await tf.setBackend('cpu');
+    await tf.ready();
+  }
 
   try {
     var mk = await apiFetch('/market/all?isDetails=true');
@@ -806,456 +1449,617 @@ async function scanCoins() {
     var codes = markets.map(function(m) { return m.market; });
     var allTickers = [];
     for (var i = 0; i < codes.length; i += 100) {
-      progEl.textContent = '티커 조회 중... (' + Math.min(i + 100, codes.length) + '/' + codes.length + ')';
       var batch = codes.slice(i, i + 100);
       var tickers = await apiFetch('/ticker?markets=' + batch.join(','));
       allTickers = allTickers.concat(tickers);
       if (i + 100 < codes.length) await sleep(200);
     }
 
-    var minVol = (parseFloat(document.getElementById('setMinVol').value) || 10) * 1e8;
-    var topN = parseInt(document.getElementById('setTopN').value) || 5;
-
     var filtered = allTickers.filter(function(t) {
       var sym = t.market.replace('KRW-', '');
       if (EXCLUDE_COINS.indexOf(sym) >= 0) return false;
       if (minVol > 0 && (t.acc_trade_price_24h || 0) < minVol) return false;
-      var price = t.trade_price || 0;
-      if (countSignificantDigits(price) < 4) return false;
       return true;
     });
+    filtered.sort(function(a, b) { return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0); });
+    var targetMarkets = filtered.slice(0, 100).map(function(t) { return t.market; });
 
-    filtered.forEach(function(t) {
-      t._score = (t.acc_trade_price_24h || 0) * Math.abs(t.signed_change_rate || 0);
+    var coinResults = [];
+    for (var ci = 0; ci < targetMarkets.length; ci++) {
+      if (!monitorRunning) break;
+      var market = targetMarkets[ci];
+      var symbol = market.replace('KRW-', '');
+      try {
+        var candles = await fetchHistoricalCandles(market, btTf, btPeriod);
+        if (!candles || candles.length < 50) continue;
+        var lastPrice = candles[0].trade_price;
+        var tickPct = getTickPct(lastPrice);
+        if (profitTarget < tickPct * 3) continue;
+        var result = mlMode === 'tf'
+          ? await learnPatterns(candles, profitTarget)
+          : learnPatternsLinear(candles, profitTarget);
+        if (result && result.count >= 1) {
+          result.symbol = symbol;
+          result.name = nameMap[market] || symbol;
+          result.market = market;
+          coinResults.push(result);
+        }
+      } catch (e) { console.error('ReLearn err:', symbol, e.message); }
+    }
+
+    coinResults.sort(function(a, b) { return b.totalPct - a.totalPct; });
+    var newQualified = coinResults.filter(function(c) {
+      return c.winRate >= minWinRate && c.count >= minTrades && c.totalPct >= minProfit;
     });
-    filtered.sort(function(a, b) { return b._score - a._score; });
 
-    selectedCoins = filtered.slice(0, topN).map(function(t) {
-      return {
-        market: t.market,
-        symbol: t.market.replace('KRW-', ''),
-        name: nameMap[t.market] || t.market.replace('KRW-', ''),
-        price: t.trade_price,
-        changeRate: (t.signed_change_rate || 0) * 100,
-        volume: t.acc_trade_price_24h || 0
-      };
+    // 보유중인 코인은 유지, 새 적격 목록으로 교체
+    var holdingSyms = Object.keys(positions);
+    qualifiedList = newQualified;
+    // 보유중인데 새 적격에 없는 코인도 모니터링 대상에 유지
+    holdingSyms.forEach(function(sym) {
+      var exists = qualifiedList.some(function(c) { return c.symbol === sym; });
+      if (!exists) {
+        var old = coinResults.find(function(c) { return c.symbol === sym; });
+        if (old) qualifiedList.push(old);
+      }
     });
 
-    renderCoinCards();
-    document.getElementById('analyzeArea').style.display = 'block';
-    progEl.textContent = filtered.length + '개 중 상위 ' + selectedCoins.length + '개 선정';
-
+    renderQualifiedCards();
+    renderLearnResults(coinResults, qualifiedList, minWinRate, minTrades, minProfit, []);
+    addLog('info', '재학습 완료 - 적격 ' + newQualified.length + '개');
+    lastLearnTime = Date.now();
   } catch (e) {
-    progEl.textContent = '오류: ' + e.message;
-  } finally {
-    btn.disabled = false; btn.textContent = '코인 스캔';
+    addLog('sell', '재학습 실패: ' + e.message);
   }
 }
 
-function renderCoinCards() {
-  var html = '';
-  selectedCoins.forEach(function(c, i) {
-    var isUp = c.changeRate >= 0;
-    html += '<div class="coin-card selected">'
-      + '<div class="rank">#' + (i + 1) + '</div>'
-      + '<div class="symbol">' + c.symbol + '</div>'
-      + '<div style="font-size:11px;color:var(--muted)">' + c.name + '</div>'
-      + '<div class="price">' + fmtPrice(c.price) + '</div>'
-      + '<div class="change" style="color:' + (isUp ? 'var(--up)' : 'var(--down)') + '">'
-      + (isUp ? '+' : '') + c.changeRate.toFixed(2) + '%</div>'
-      + '<div class="vol">거래대금 ' + fmt(c.volume) + '</div>'
-      + '</div>';
-  });
-  document.getElementById('coinCards').innerHTML = html;
+function stopMonitor() {
+  monitorRunning = false;
+  if (monitorInterval) { clearTimeout(monitorInterval); monitorInterval = null; }
+  var btn = document.getElementById('monBtn');
+  btn.textContent = '모니터링 시작'; btn.classList.remove('running');
+  document.getElementById('monitorStatus').textContent = '중지됨';
+  addLog('info', '모니터링 중지');
 }
 
-// ========================================
-// Tab 2: Deep Analysis
-// ========================================
-async function startAnalysis() {
-  if (selectedCoins.length === 0) { alert('먼저 코인을 스캔하세요'); return; }
-  var btn = document.getElementById('analyzeBtn');
-  btn.disabled = true; btn.textContent = '분석 중...';
-  var progEl = document.getElementById('analysisProgress');
-  var content = document.getElementById('analysisContent');
-  content.style.display = 'none';
-  progEl.style.display = 'block';
+async function monitorCycle() {
+  if (!monitorRunning) return;
 
-  var profitTarget = parseFloat(document.getElementById('setProfitTarget').value) || 0.5;
-  var stopLossMin = parseInt(document.getElementById('setStopLoss').value) || 10;
-  var allDay = document.getElementById('setAllDay').checked;
-  var startH = allDay ? 0 : (parseInt(document.getElementById('setStartHour').value) || 0);
-  var endH = allDay ? 0 : (parseInt(document.getElementById('setEndHour').value) || 0);
+  // 자동 재학습 체크
+  var reLearnMin = parseInt(document.getElementById('reLearnInterval').value) || 0;
+  if (reLearnMin > 0 && !reLearnRunning && !btRunning) {
+    var elapsed = Date.now() - lastLearnTime;
+    var reLearnMs = reLearnMin * 60000;
+    var remaining = reLearnMs - elapsed;
+    var timerEl = document.getElementById('reLearnTimer');
+    if (remaining <= 0) {
+      reLearnRunning = true;
+      addLog('info', '자동 재학습 시작...');
+      if (timerEl) timerEl.textContent = '재학습중...';
+      await runReLearn();
+      reLearnRunning = false;
+      if (timerEl) timerEl.textContent = '';
+    } else if (timerEl) {
+      var rm = Math.ceil(remaining / 60000);
+      timerEl.textContent = '재학습 ' + rm + '분후';
+    }
+  }
 
-  analysisData = {};
+  var profitTarget = parseFloat(document.getElementById('profitTarget').value) || 0.5;
+  var stopLossMin = parseInt(document.getElementById('stopLossMin').value) || 10;
+  var reqPct = profitTarget + (FEE_ROUND * 100);
+  var stopLossPct = -(profitTarget * 1.2 + FEE_ROUND * 100);
+  var trailTrigger = profitTarget;
+  var trailDrop = profitTarget * 0.3;
+  var stopMs = stopLossMin * 60000;
 
-  for (var i = 0; i < selectedCoins.length; i++) {
-    var coin = selectedCoins[i];
-    progEl.innerHTML = '<div class="loading"><div class="loading-spinner"></div><div>'
-      + coin.symbol + ' 분석 중 (' + (i+1) + '/' + selectedCoins.length + ')</div></div>';
+  document.getElementById('monitorTimer').textContent = fmtTime(new Date());
+
+  for (var qi = 0; qi < qualifiedList.length; qi++) {
+    if (!monitorRunning) break;
+    var coin = qualifiedList[qi];
+    var sym = coin.symbol;
+    var statusEl = document.getElementById('qstatus-' + sym);
+    var cardEl = document.getElementById('qcard-' + sym);
 
     try {
-      var candles = await fetchHistoricalCandles(coin.market, analysisTf, analysisPeriod);
-      if (!candles || candles.length < 50) {
-        analysisData[coin.symbol] = { error: '데이터 부족 (' + (candles ? candles.length : 0) + '봉)' };
+      var candles = await fetchRecentCandles(coin.market, btTf, 30);
+      if (!candles || candles.length < 21) continue;
+      candleCache[sym] = candles;
+
+      var curPrice = candles[0].trade_price;
+
+      // Sell check (실시간: 현재가 curPrice 기준으로만 판단)
+      if (positions[sym]) {
+        var pos = positions[sym];
+        var gp = ((curPrice - pos.price) / pos.price) * 100;
+        var elapsed = Date.now() - pos.time;
+        if (gp > pos.peakPct) pos.peakPct = gp;
+
+        var reason = null;
+        if (gp <= stopLossPct) reason = 'stoploss';
+        if (!reason && gp >= reqPct) reason = 'profit';
+        if (!reason && pos.peakPct >= trailTrigger && gp <= pos.peakPct - trailDrop) reason = 'trailing';
+        if (!reason && elapsed >= stopMs && gp <= 0) reason = 'timeout';
+        if (!reason && elapsed >= stopMs * 1.5) reason = 'timeout';
+
+        if (reason) {
+          var sellPrice = curPrice;
+          if (pos.live && pos.volume > 0) {
+            // 실제 매도
+            var sellResult = await executeSell(coin.market, sym, pos.volume);
+            if (sellResult && sellResult.price > 0) sellPrice = sellResult.price;
+            await loadBalance();
+          }
+          var realGp = ((sellPrice - pos.price) / pos.price) * 100;
+          var netPct = realGp - (FEE_ROUND * 100);
+          tradeHistory.push({ symbol: sym, name: coin.name, buyTime: pos.time, buyPrice: pos.price, sellTime: Date.now(), sellPrice: sellPrice, netPct: netPct, reason: reason, score: pos.score, live: pos.live || false });
+          addLog(netPct >= 0 ? 'buy' : 'sell', (pos.live ? '[실매매] ' : '') + sym + ' 매도(' + reason + ') ' + (netPct >= 0 ? '+' : '') + netPct.toFixed(2) + '% @ ' + fmtPrice(sellPrice));
+          delete positions[sym];
+          cooldowns[sym] = Date.now(); // 재매수 쿨다운 시작
+          cardEl.classList.remove('signal-active');
+          var badge = cardEl.querySelector('.signal-badge');
+          if (badge) badge.remove();
+          renderPositions(); renderTradeHistory();
+        } else {
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--up)">보유 ' + (gp >= 0 ? '+' : '') + gp.toFixed(2) + '%</span>';
+        }
         continue;
       }
-      var candlesAsc = candles.slice().reverse();
-      var indicators = calcAllIndicators(candles);
 
-      var stratKeys = Object.keys(STRATEGIES);
-      var btResults = {};
-      stratKeys.forEach(function(sk) {
-        var trades = btSimulate(sk, candlesAsc, profitTarget, stopLossMin, startH, endH);
-        trades.forEach(function(t) { t.symbol = coin.symbol; });
-        var wins = trades.filter(function(t) { return t.netPct > 0; }).length;
-        var totalPct = trades.reduce(function(s, t) { return s + t.netPct; }, 0);
-        var reasons = {};
-        trades.forEach(function(t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
-        btResults[sk] = {
-          trades: trades, count: trades.length,
-          wins: wins, winRate: trades.length > 0 ? wins / trades.length * 100 : 0,
-          totalPct: totalPct, avgPct: trades.length > 0 ? totalPct / trades.length : 0,
-          reasons: reasons
-        };
-      });
+      // 쿨다운 체크: 매도 후 일정시간 재매수 방지
+      if (cooldowns[sym] && (Date.now() - cooldowns[sym]) < COOLDOWN_MS) {
+        var cdLeft = Math.ceil((COOLDOWN_MS - (Date.now() - cooldowns[sym])) / 60000);
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">쿨다운 ' + cdLeft + '분</span>';
+        continue;
+      }
+      if (cooldowns[sym]) delete cooldowns[sym];
 
-      var bestKey = stratKeys[0];
-      stratKeys.forEach(function(sk) {
-        if (btResults[sk].totalPct > btResults[bestKey].totalPct) bestKey = sk;
-      });
+      // Buy signal: model prediction
+      var feat = extractFeatures(candles, 0);
+      if (!feat) continue;
+      var score = 0;
+      if (coin.model) {
+        // TF.js mode
+        var xTensor = tf.tensor2d([feat]);
+        var pred = coin.model.predict(xTensor);
+        score = pred.dataSync()[0];
+        xTensor.dispose(); pred.dispose();
+      } else if (coin.weights) {
+        // Linear mode: weighted sum
+        for (var fi = 0; fi < FEATURE_COUNT; fi++) score += feat[fi] * coin.weights[fi];
+      } else {
+        continue;
+      }
 
-      analysisData[coin.symbol] = {
-        candles: candles, candlesAsc: candlesAsc,
-        indicators: indicators, btResults: btResults, bestStrategy: bestKey
-      };
+      if (score >= coin.threshold) {
+        var buyPrice = curPrice;
+        var buyVolume = 0;
+        if (autoTradeOn) {
+          // 실제 매수
+          var buyResult = await executeBuy(coin.market, sym);
+          if (!buyResult || buyResult.price <= 0) continue; // 매수 실패 시 skip
+          buyPrice = buyResult.price;
+          buyVolume = buyResult.volume;
+          await loadBalance();
+        }
+        positions[sym] = { price: buyPrice, time: Date.now(), peakPct: 0, score: score, market: coin.market, volume: buyVolume, live: autoTradeOn };
+        addLog('buy', (autoTradeOn ? '[실매매] ' : '') + sym + ' 매수! score=' + score.toFixed(4) + ' @ ' + fmtPrice(buyPrice));
+        cardEl.classList.add('signal-active');
+        var eb = cardEl.querySelector('.signal-badge');
+        if (eb) eb.remove();
+        cardEl.insertAdjacentHTML('afterbegin', '<span class="signal-badge buy">보유중</span>');
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--up)">매수 @ ' + fmtPrice(buyPrice) + '</span>';
+        renderPositions();
+      } else {
+        var pctOfThresh = coin.threshold !== 0 ? (score / coin.threshold * 100).toFixed(0) : '0';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">score ' + score.toFixed(4) + ' (' + pctOfThresh + '%)</span>';
+      }
+
     } catch (e) {
-      analysisData[coin.symbol] = { error: e.message };
+      console.error('Mon err:', sym, e.message);
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--down)">에러</span>';
     }
+    await sleep(200);
   }
-
-  switchTab('analysis', document.querySelectorAll('.tab-btn')[1]);
-  progEl.style.display = 'none';
-  content.style.display = 'block';
-  renderCoinTabs();
-  showCoinAnalysis(0);
-  saveSettings();
-  btn.disabled = false; btn.textContent = '분석 시작';
 }
 
-function calcAllIndicators(candles) {
-  var rsi = calcRSI(candles, 14);
-  var bb = calcBollingerBands(candles, 20, 2);
-  var macd = calcMACD(candles, 12, 26, 9);
-  var sr = calcStochRSI(candles, 14, 14, 3, 3);
-  var ema10 = calcEMA(candles, 10);
-  var ema20 = calcEMA(candles, 20);
-  var ema60 = calcEMA(candles, 60);
-  var ema100 = calcEMA(candles, 100);
-  var obv = calcOBV(candles);
-  var atr = calcATR(candles, 14);
-  var candleVol = calcCandleVolatility(candles, 10);
-
-  var volRecent = 0, volAll = 0;
-  var volCount = Math.min(10, candles.length);
-  for (var i = 0; i < volCount; i++) {
-    var v = candles[i].candle_acc_trade_volume || 0;
-    volAll += v;
-    if (i < 5) volRecent += v;
-  }
-  var volRatio = volCount >= 10 && volAll > 0 ? (volRecent / 5) / (volAll / 10) : 1;
-
-  var emaAlign = 'none';
-  if (ema10.length > 0 && ema20.length > 0 && ema60.length > 0 && ema100.length > 0) {
-    if (ema10[0] > ema20[0] && ema20[0] > ema60[0] && ema60[0] > ema100[0]) emaAlign = 'bullish';
-    else if (ema10[0] < ema20[0] && ema20[0] < ema60[0] && ema60[0] < ema100[0]) emaAlign = 'bearish';
-    else emaAlign = 'mixed';
-  }
-
-  var bbPosition = 50;
-  if (bb) bbPosition = (candles[0].trade_price - bb.lower) / (bb.upper - bb.lower) * 100;
-
-  return {
-    rsi: rsi.length > 0 ? rsi[0] : null,
-    bb: bb, bbPosition: bbPosition,
-    macd: macd,
-    stochRsi: sr,
-    ema10: ema10.length > 0 ? ema10[0] : null,
-    ema20: ema20.length > 0 ? ema20[0] : null,
-    ema60: ema60.length > 0 ? ema60[0] : null,
-    ema100: ema100.length > 0 ? ema100[0] : null,
-    ema10Arr: ema10, ema20Arr: ema20, ema60Arr: ema60, ema100Arr: ema100,
-    emaAlign: emaAlign,
-    obv: obv, atr: atr,
-    volRatio: volRatio,
-    candleVol: candleVol
-  };
-}
-
-function renderCoinTabs() {
+// ========================================
+// Positions & Trade History
+// ========================================
+function renderPositions() {
+  var keys = Object.keys(positions);
+  var section = document.getElementById('posSection');
+  if (keys.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
   var html = '';
-  selectedCoins.forEach(function(c, i) {
-    var data = analysisData[c.symbol];
-    var best = data && data.bestStrategy ? STRATEGIES[data.bestStrategy] : '';
-    html += '<div class="coin-tab' + (i === 0 ? ' active' : '') + '" onclick="showCoinAnalysis(' + i + ')">'
-      + c.symbol
-      + (best ? '<span class="rec-badge">' + best + '</span>' : '')
-      + '</div>';
+  keys.forEach(function(sym) {
+    var pos = positions[sym];
+    var cached = candleCache[sym];
+    var curPrice = cached && cached.length > 0 ? cached[0].trade_price : pos.price;
+    var gp = ((curPrice - pos.price) / pos.price) * 100;
+    html += '<tr onclick="openPosPopup(\'' + sym + '\')" style="cursor:pointer">'
+      + '<td style="font-weight:700">' + sym + '</td>'
+      + '<td class="mono">' + fmtPrice(pos.price) + '</td>'
+      + '<td class="mono">' + fmtPrice(curPrice) + '</td>'
+      + '<td style="color:' + (gp >= 0 ? 'var(--up)' : 'var(--down)') + ';font-weight:700">' + (gp >= 0 ? '+' : '') + gp.toFixed(2) + '%</td>'
+      + '<td class="mono">' + pos.score.toFixed(4) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(pos.time)) + '</td>'
+      + '<td class="mono">' + fmtElapsed(Date.now() - pos.time) + '</td>'
+      + '<td style="color:var(--gold)">보유중</td></tr>';
   });
-  document.getElementById('coinTabs').innerHTML = html;
+  document.querySelector('#posTable tbody').innerHTML = html;
 }
 
-function showCoinAnalysis(idx) {
-  currentCoinIdx = idx;
-  document.querySelectorAll('.coin-tab').forEach(function(t, i) { t.classList.toggle('active', i === idx); });
-  var coin = selectedCoins[idx];
-  var data = analysisData[coin.symbol];
-  if (!data || data.error) {
-    document.getElementById('indicatorDash').innerHTML = '<div style="text-align:center;padding:40px;color:var(--down)">' + (data ? data.error : '데이터 없음') + '</div>';
-    document.getElementById('chartContainer').innerHTML = '';
-    document.getElementById('btResultArea').innerHTML = '';
+function renderTradeHistory() {
+  var section = document.getElementById('tradeSection');
+  if (tradeHistory.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  var wins = tradeHistory.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = tradeHistory.reduce(function(s, t) { return s + t.netPct; }, 0);
+  document.getElementById('tradeSummary').textContent =
+    tradeHistory.length + '건 | 승률 ' + (wins / tradeHistory.length * 100).toFixed(0) + '% | 총수익 ' + (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '%';
+  var reasonMap = { profit: '익절', stoploss: '손절', trailing: '트레일', timeout: '시간초과' };
+  var html = '';
+  tradeHistory.slice().reverse().forEach(function(t) {
+    html += '<tr>'
+      + '<td style="font-weight:700">' + t.symbol + '</td>'
+      + '<td class="mono">' + t.score.toFixed(4) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.buyTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.buyPrice) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.sellTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.sellPrice) + '</td>'
+      + '<td style="color:' + (t.netPct >= 0 ? 'var(--up)' : 'var(--down)') + ';font-weight:700">' + (t.netPct >= 0 ? '+' : '') + t.netPct.toFixed(2) + '%</td>'
+      + '<td class="mono" style="font-size:10px;color:var(--muted)">' + (reasonMap[t.reason] || t.reason) + (t.live ? ' <span style="color:var(--accent)">LIVE</span>' : '') + '</td></tr>';
+  });
+  document.querySelector('#tradeTable tbody').innerHTML = html;
+}
+
+// ========================================
+// Position Detail Popup
+// ========================================
+var popupSym = null;
+var popupInterval = null;
+
+function openPosPopup(sym) {
+  var pos = positions[sym];
+  if (!pos) return;
+  popupSym = sym;
+
+  // Find coin name from qualifiedList
+  var coinName = sym;
+  for (var i = 0; i < qualifiedList.length; i++) {
+    if (qualifiedList[i].symbol === sym) { coinName = qualifiedList[i].name; break; }
+  }
+
+  document.getElementById('ppSym').textContent = sym;
+  document.getElementById('ppName').textContent = coinName;
+  document.getElementById('ppBuyPrice').textContent = fmtPrice(pos.price);
+  document.getElementById('ppScore').textContent = pos.score.toFixed(4);
+  document.getElementById('ppBuyTime').textContent = fmtDt(new Date(pos.time));
+
+  updatePopupPrices();
+  document.getElementById('posPopup').classList.add('show');
+
+  // Auto refresh every 2 seconds
+  if (popupInterval) clearInterval(popupInterval);
+  popupInterval = setInterval(updatePopupPrices, 2000);
+}
+
+function closePopup() {
+  document.getElementById('posPopup').classList.remove('show');
+  popupSym = null;
+  if (popupInterval) { clearInterval(popupInterval); popupInterval = null; }
+}
+
+function updatePopupPrices() {
+  if (!popupSym || !positions[popupSym]) { closePopup(); return; }
+  var pos = positions[popupSym];
+  var cached = candleCache[popupSym];
+  var curPrice = cached && cached.length > 0 ? cached[0].trade_price : pos.price;
+
+  var profitTarget = parseFloat(document.getElementById('profitTarget').value) || 0.5;
+  var reqPct = profitTarget + (FEE_ROUND * 100);
+  var stopLossPct = profitTarget * 1.2 + FEE_ROUND * 100;
+  var targetPrice = pos.price * (1 + reqPct / 100);
+  var stopPrice = pos.price * (1 - stopLossPct / 100);
+  var gp = ((curPrice - pos.price) / pos.price) * 100;
+  var elapsed = Date.now() - pos.time;
+
+  document.getElementById('ppCurPrice').textContent = fmtPrice(curPrice);
+
+  var pnlEl = document.getElementById('ppPnl');
+  pnlEl.textContent = (gp >= 0 ? '+' : '') + gp.toFixed(3) + '%';
+  pnlEl.style.color = gp >= 0 ? 'var(--up)' : 'var(--down)';
+
+  document.getElementById('ppTarget').textContent = fmtPrice(targetPrice);
+  document.getElementById('ppStopLoss').textContent = fmtPrice(stopPrice);
+  document.getElementById('ppElapsed').textContent = fmtElapsed(elapsed);
+
+  // Progress bar: stopLoss(0%) ~ buyPrice(center) ~ target(100%)
+  var range = reqPct + stopLossPct; // total range
+  var progress = ((gp + stopLossPct) / range) * 100;
+  progress = Math.max(0, Math.min(100, progress));
+  var barEl = document.getElementById('ppBar');
+  var markerEl = document.getElementById('ppMarker');
+  barEl.style.width = progress + '%';
+  barEl.style.background = gp >= 0 ? 'var(--up)' : 'var(--down)';
+  markerEl.style.left = progress + '%';
+
+  // Center line (buy price position)
+  var centerPct = (stopLossPct / range) * 100;
+  document.getElementById('ppPctLabel').textContent = (gp >= 0 ? '+' : '') + gp.toFixed(3) + '%';
+}
+
+// ESC key to close popup
+document.addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closePopup();
+});
+
+// ========================================
+// Log
+// ========================================
+function addLog(type, msg) {
+  var el = document.getElementById('monitorLog');
+  var cls = type === 'buy' ? 'log-buy' : type === 'sell' ? 'log-sell' : 'log-info';
+  el.insertAdjacentHTML('afterbegin', '<div class="log-entry"><span class="log-time">' + fmtTime(new Date()) + '</span><span class="' + cls + '">' + msg + '</span></div>');
+  while (el.children.length > 100) el.removeChild(el.lastChild);
+}
+
+// ========================================
+// JWT Auth (from trade.html)
+// ========================================
+function base64url(source) {
+  var str = '';
+  if (typeof source === 'string') {
+    str = btoa(source);
+  } else {
+    var bytes = new Uint8Array(source);
+    for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]);
+    str = btoa(str);
+  }
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function uuidv4() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
+
+async function sha512(message) {
+  var data = new TextEncoder().encode(message);
+  var hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  var hashArray = Array.from(new Uint8Array(hashBuffer));
+  return hashArray.map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+
+async function generateJWT(queryString) {
+  if (!accessKey || !secretKey) throw new Error('API Key 미설정');
+  var header = { alg: 'HS256', typ: 'JWT' };
+  var payload = { access_key: accessKey, nonce: uuidv4(), timestamp: Date.now() };
+  if (queryString) {
+    payload.query_hash = await sha512(queryString);
+    payload.query_hash_alg = 'SHA512';
+  }
+  var encodedHeader = base64url(JSON.stringify(header));
+  var encodedPayload = base64url(JSON.stringify(payload));
+  var signingInput = encodedHeader + '.' + encodedPayload;
+  var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  var signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+  return signingInput + '.' + base64url(signature);
+}
+
+async function apiAuth(method, url, params) {
+  var queryString = '';
+  var fetchUrl = url;
+  if (params && Object.keys(params).length > 0) {
+    queryString = new URLSearchParams(params).toString();
+    if (method === 'GET' || method === 'DELETE') fetchUrl = url + '?' + queryString;
+  }
+  var token = await generateJWT(queryString || undefined);
+  var options = {
+    method: method,
+    headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' }
+  };
+  if (method === 'POST' && params) options.body = JSON.stringify(params);
+  var response = await fetch(fetchUrl, options);
+  var data = await response.json();
+  if (data.error) throw new Error(data.error.message || data.error.name || 'API 오류');
+  return data;
+}
+
+// ========================================
+// API Key Management
+// ========================================
+function openApiModal() {
+  document.getElementById('inputAccessKey').value = accessKey;
+  document.getElementById('inputSecretKey').value = secretKey;
+  document.getElementById('apiModal').classList.add('show');
+}
+function closeApiModal() {
+  document.getElementById('apiModal').classList.remove('show');
+}
+function saveApiKey() {
+  accessKey = document.getElementById('inputAccessKey').value.trim();
+  secretKey = document.getElementById('inputSecretKey').value.trim();
+  localStorage.setItem('bit_access_key', accessKey);
+  localStorage.setItem('bit_secret_key', secretKey);
+  closeApiModal();
+  updateApiStatus();
+  showToast('API Key 저장 완료', 'success');
+  if (accessKey && secretKey) loadBalance();
+}
+function clearApiKey() {
+  accessKey = ''; secretKey = '';
+  localStorage.removeItem('bit_access_key');
+  localStorage.removeItem('bit_secret_key');
+  document.getElementById('inputAccessKey').value = '';
+  document.getElementById('inputSecretKey').value = '';
+  closeApiModal();
+  updateApiStatus();
+  showToast('API Key 초기화', 'success');
+}
+function updateApiStatus() {
+  var btn = document.getElementById('apiKeyBtn');
+  if (accessKey && secretKey) {
+    btn.classList.add('connected');
+    btn.textContent = 'API ✓';
+  } else {
+    btn.classList.remove('connected');
+    btn.textContent = 'API Key';
+  }
+}
+
+// ========================================
+// Balance
+// ========================================
+async function loadBalance() {
+  try {
+    var accounts = await apiAuth('GET', API + '/accounts', {});
+    var krwAcc = accounts.find(function(a) { return a.currency === 'KRW'; });
+    krwBalance = krwAcc ? parseFloat(krwAcc.balance) : 0;
+    document.getElementById('balanceDisplay').textContent = 'KRW ' + Math.floor(krwBalance).toLocaleString('ko-KR') + '원';
+  } catch (e) {
+    console.error('잔고 조회 실패:', e.message);
+    document.getElementById('balanceDisplay').textContent = '';
+  }
+}
+
+// ========================================
+// Auto-trade Toggle
+// ========================================
+function onAutoTradeToggle() {
+  var checked = document.getElementById('autoTradeToggle').checked;
+  if (checked && (!accessKey || !secretKey)) {
+    document.getElementById('autoTradeToggle').checked = false;
+    showToast('API Key를 먼저 설정하세요', 'error');
     return;
   }
-  renderIndicatorDash(data.indicators);
-  renderChart(data.candles, data.indicators);
-  renderBtResults(data.btResults, data.bestStrategy);
+  autoTradeOn = checked;
+  var statusEl = document.getElementById('tradeStatusText');
+  if (autoTradeOn) {
+    statusEl.textContent = 'LIVE 자동매매';
+    statusEl.className = 'trade-status live';
+    addLog('info', '*** 자동매매 ON - 실제 주문이 실행됩니다 ***');
+    loadBalance();
+  } else {
+    statusEl.textContent = '시뮬레이션';
+    statusEl.className = 'trade-status sim';
+    addLog('info', '자동매매 OFF - 시뮬레이션 모드');
+  }
 }
 
-function renderIndicatorDash(ind) {
-  var html = '';
-
-  // RSI
-  var rsiBadge = !ind.rsi ? '' : ind.rsi <= 30 ? '<div class="ind-badge badge-danger">과매도</div>'
-    : ind.rsi >= 70 ? '<div class="ind-badge badge-danger">과매수</div>'
-    : ind.rsi <= 40 ? '<div class="ind-badge badge-warn">매수접근</div>'
-    : '<div class="ind-badge badge-neutral">중립</div>';
-  html += '<div class="ind-card"><div class="ind-label">RSI (14)</div>'
-    + '<div class="ind-value" style="color:' + (ind.rsi <= 30 ? 'var(--down)' : ind.rsi >= 70 ? 'var(--up)' : 'var(--text)') + '">' + (ind.rsi ? ind.rsi.toFixed(1) : '-') + '</div>' + rsiBadge + '</div>';
-
-  // BB
-  var bbBadge = ind.bbPosition <= 10 ? '<div class="ind-badge badge-success">하단터치</div>'
-    : ind.bbPosition <= 25 ? '<div class="ind-badge badge-warn">하단근접</div>'
-    : ind.bbPosition >= 90 ? '<div class="ind-badge badge-danger">상단터치</div>'
-    : '<div class="ind-badge badge-neutral">중립</div>';
-  html += '<div class="ind-card"><div class="ind-label">BB 위치</div>'
-    + '<div class="ind-value">' + ind.bbPosition.toFixed(0) + '%</div>' + bbBadge + '</div>';
-
-  // MACD
-  var macdBadge = ind.macd ? (ind.macd.cross === 'golden' ? '<div class="ind-badge badge-success">골든크로스</div>'
-    : ind.macd.cross === 'dead' ? '<div class="ind-badge badge-danger">데드크로스</div>'
-    : ind.macd.histogram > 0 ? '<div class="ind-badge badge-success">양(+)</div>'
-    : '<div class="ind-badge badge-danger">음(-)</div>') : '';
-  html += '<div class="ind-card"><div class="ind-label">MACD</div>'
-    + '<div class="ind-value">' + (ind.macd ? ind.macd.histogram.toFixed(1) : '-') + '</div>' + macdBadge + '</div>';
-
-  // StochRSI
-  var srBadge = ind.stochRsi ? (ind.stochRsi.k < 20 ? '<div class="ind-badge badge-success">과매도</div>'
-    : ind.stochRsi.k > 80 ? '<div class="ind-badge badge-danger">과매수</div>'
-    : '<div class="ind-badge badge-neutral">중립</div>') : '';
-  html += '<div class="ind-card"><div class="ind-label">Stoch RSI</div>'
-    + '<div class="ind-value">K=' + (ind.stochRsi ? ind.stochRsi.k.toFixed(0) : '-') + '</div>' + srBadge + '</div>';
-
-  // EMA
-  var emaLabel = ind.emaAlign === 'bullish' ? '정배열' : ind.emaAlign === 'bearish' ? '역배열' : '혼합';
-  var emaBadge = ind.emaAlign === 'bullish' ? '<div class="ind-badge badge-success">상승추세</div>'
-    : ind.emaAlign === 'bearish' ? '<div class="ind-badge badge-danger">하락추세</div>'
-    : '<div class="ind-badge badge-warn">비추세</div>';
-  html += '<div class="ind-card"><div class="ind-label">EMA 10/20/60/100</div>'
-    + '<div class="ind-value" style="font-size:14px">' + emaLabel + '</div>' + emaBadge + '</div>';
-
-  // Volume
-  var volBadge = ind.volRatio >= 2.0 ? '<div class="ind-badge badge-success">급증</div>'
-    : ind.volRatio >= 1.3 ? '<div class="ind-badge badge-warn">증가</div>'
-    : '<div class="ind-badge badge-neutral">보통</div>';
-  html += '<div class="ind-card"><div class="ind-label">거래량 추세</div>'
-    + '<div class="ind-value">' + ind.volRatio.toFixed(1) + 'x</div>' + volBadge + '</div>';
-
-  // OBV
-  var obvTrend = ind.obv.length > 5 ? (ind.obv[0] > ind.obv[4] ? '상승' : '하락') : '-';
-  var obvBadge = obvTrend === '상승' ? '<div class="ind-badge badge-success">매집</div>'
-    : obvTrend === '하락' ? '<div class="ind-badge badge-danger">분산</div>'
-    : '<div class="ind-badge badge-neutral">-</div>';
-  html += '<div class="ind-card"><div class="ind-label">OBV 추세</div>'
-    + '<div class="ind-value" style="font-size:14px">' + obvTrend + '</div>' + obvBadge + '</div>';
-
-  // ATR
-  var atrVal = ind.atr.length > 0 ? ind.atr[0] : 0;
-  html += '<div class="ind-card"><div class="ind-label">ATR (14)</div>'
-    + '<div class="ind-value">' + (atrVal > 10 ? atrVal.toFixed(0) : atrVal.toFixed(2)) + '</div>'
-    + '<div class="ind-badge badge-neutral">변동폭</div></div>';
-
-  // Candle Vol
-  html += '<div class="ind-card"><div class="ind-label">캔들 변동성</div>'
-    + '<div class="ind-value">' + ind.candleVol.toFixed(2) + '%</div>'
-    + '<div class="ind-badge badge-neutral">평균 레인지</div></div>';
-
-  document.getElementById('indicatorDash').innerHTML = html;
+function setBuyMode(btn) {
+  document.querySelectorAll('.ctrl-btn[data-bm]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active');
+  buyMode = btn.dataset.bm;
+  var label = document.getElementById('buyAmtLabel');
+  var unit = document.getElementById('buyAmtUnit');
+  var input = document.getElementById('buyAmount');
+  if (buyMode === 'fixed') {
+    label.textContent = '매수금액';
+    unit.textContent = '원';
+    input.value = '5000';
+  } else {
+    label.textContent = '잔고비율';
+    unit.textContent = '%';
+    input.value = '5';
+  }
 }
 
-function renderBtResults(btResults, bestKey) {
-  var stratKeys = Object.keys(STRATEGIES);
-  var ranking = stratKeys.map(function(k) {
-    var r = btResults[k];
-    return { key: k, name: STRATEGIES[k], count: r.count, wins: r.wins, winRate: r.winRate, avgPct: r.avgPct, totalPct: r.totalPct, reasons: r.reasons };
-  });
-  ranking.sort(function(a, b) { return b.totalPct - a.totalPct; });
-
-  var best = btResults[bestKey];
-  var html = '<h3 style="font-size:14px;color:var(--accent3);margin-bottom:12px">'
-    + '추천 전략: <span style="color:var(--gold);font-size:16px">' + STRATEGIES[bestKey] + '</span>'
-    + ' <span style="font-size:12px;color:var(--muted)">(' + (best.totalPct >= 0 ? '+' : '') + best.totalPct.toFixed(2) + '%, '
-    + best.winRate.toFixed(1) + '% 승률, ' + best.count + '건)</span></h3>';
-
-  var reasonMap = { profit: '익절', stoploss: '손절', trailing: '트레일', timeout: '시간초과', technical: '기술매도', bb_middle: 'BB중앙', open: '미청산' };
-
-  html += '<div class="table-wrapper"><table><thead><tr>'
-    + '<th>순위</th><th>전략</th><th>매매</th><th>승률</th><th>평균</th><th>총수익률</th><th>익절</th><th>손절</th><th>트레일</th><th>시간초과</th>'
-    + '</tr></thead><tbody>';
-
-  ranking.forEach(function(r, idx) {
-    var isBest = r.key === bestKey;
-    var rs = r.reasons;
-    html += '<tr style="' + (isBest ? 'background:rgba(255,215,0,0.08)' : '') + '">'
-      + '<td><span class="rank-badge ' + (idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'normal') + '">' + (idx + 1) + '</span></td>'
-      + '<td style="font-weight:700">' + r.name + (isBest ? ' ★' : '') + '</td>'
-      + '<td>' + r.count + '</td>'
-      + '<td style="color:' + (r.winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + r.winRate.toFixed(1) + '%</td>'
-      + '<td style="color:' + (r.avgPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (r.avgPct >= 0 ? '+' : '') + r.avgPct.toFixed(2) + '%</td>'
-      + '<td style="font-weight:700;color:' + (r.totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (r.totalPct >= 0 ? '+' : '') + r.totalPct.toFixed(2) + '%</td>'
-      + '<td style="color:var(--up)">' + (rs.profit || 0) + '</td>'
-      + '<td style="color:var(--down)">' + (rs.stoploss || 0) + '</td>'
-      + '<td style="color:var(--gold)">' + (rs.trailing || 0) + '</td>'
-      + '<td style="color:var(--muted)">' + (rs.timeout || 0) + '</td>'
-      + '</tr>';
-  });
-  html += '</tbody></table></div>';
-
-  document.getElementById('btResultArea').innerHTML = html;
+function getBuyAmount() {
+  var val = parseFloat(document.getElementById('buyAmount').value) || 0;
+  if (buyMode === 'fixed') return val;
+  return Math.floor(krwBalance * val / 100);
 }
 
 // ========================================
-// Chart (Lightweight Charts)
+// Real Order Execution
 // ========================================
-function renderChart(candles, indicators) {
-  var container = document.getElementById('chartContainer');
-  container.innerHTML = '';
-  if (chartInstance) { chartInstance.remove(); chartInstance = null; }
-
-  chartInstance = LightweightCharts.createChart(container, {
-    width: container.clientWidth,
-    height: 400,
-    layout: { background: { color: '#0d1420' }, textColor: '#5a7090' },
-    grid: { vertLines: { color: '#1e2d47' }, horzLines: { color: '#1e2d47' } },
-    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
-    timeScale: { timeVisible: true, secondsVisible: false }
-  });
-
-  // Candle series
-  var candleSeries = chartInstance.addCandlestickSeries({
-    upColor: '#00d4aa', downColor: '#ff4757',
-    borderUpColor: '#00d4aa', borderDownColor: '#ff4757',
-    wickUpColor: '#00d4aa', wickDownColor: '#ff4757'
-  });
-
-  var chartData = [];
-  for (var i = candles.length - 1; i >= 0; i--) {
-    var c = candles[i];
-    var t = Math.floor(new Date(c.candle_date_time_utc + 'Z').getTime() / 1000);
-    chartData.push({ time: t, open: c.opening_price, high: c.high_price, low: c.low_price, close: c.trade_price });
+async function executeBuy(market, sym) {
+  var amount = getBuyAmount();
+  if (amount < 5000) {
+    addLog('sell', sym + ' 매수 실패: 최소 주문금액 5,000원 (현재: ' + amount + '원)');
+    return null;
   }
-  candleSeries.setData(chartData);
-
-  // BB overlay
-  if (indicators.bb) {
-    var bbUp = chartInstance.addLineSeries({ color: 'rgba(79,142,247,0.4)', lineWidth: 1, lineStyle: 2 });
-    var bbMid = chartInstance.addLineSeries({ color: 'rgba(79,142,247,0.6)', lineWidth: 1 });
-    var bbLow = chartInstance.addLineSeries({ color: 'rgba(79,142,247,0.4)', lineWidth: 1, lineStyle: 2 });
-    var bbU = [], bbM = [], bbL = [];
-    for (var i = candles.length - 1; i >= 19; i--) {
-      var slice = candles.slice(i - 19, i + 1);
-      var bb = calcBollingerBands(slice, 20, 2);
-      if (bb) {
-        var t = Math.floor(new Date(candles[i].candle_date_time_utc + 'Z').getTime() / 1000);
-        bbU.push({ time: t, value: bb.upper });
-        bbM.push({ time: t, value: bb.middle });
-        bbL.push({ time: t, value: bb.lower });
-      }
+  try {
+    var params = { market: market, side: 'bid', ord_type: 'price', price: String(amount) };
+    var result = await apiAuth('POST', API + '/orders', params);
+    addLog('buy', '[실매매] ' + sym + ' 시장가 매수 ' + amount.toLocaleString() + '원 (uuid:' + result.uuid + ')');
+    showToast(sym + ' 매수 주문 체결', 'success');
+    // Wait for settlement, then get actual fill price
+    await sleep(2000);
+    var orderDetail = await apiAuth('GET', API + '/order', { uuid: result.uuid });
+    var avgPrice = 0;
+    var totalVolume = 0;
+    if (orderDetail.trades && orderDetail.trades.length > 0) {
+      var totalCost = 0;
+      orderDetail.trades.forEach(function(t) {
+        var p = parseFloat(t.price);
+        var v = parseFloat(t.volume);
+        totalCost += p * v;
+        totalVolume += v;
+      });
+      avgPrice = totalCost / totalVolume;
     }
-    bbUp.setData(bbU); bbMid.setData(bbM); bbLow.setData(bbL);
+    return { price: avgPrice, volume: totalVolume, uuid: result.uuid };
+  } catch (e) {
+    addLog('sell', '[실매매] ' + sym + ' 매수 실패: ' + e.message);
+    showToast(sym + ' 매수 실패: ' + e.message, 'error');
+    return null;
   }
+}
 
-  // EMA overlays
-  var emaConfigs = [
-    { arr: indicators.ema10Arr, color: '#ffd700' },
-    { arr: indicators.ema20Arr, color: '#ff6b35' },
-    { arr: indicators.ema60Arr, color: '#00d4aa' },
-    { arr: indicators.ema100Arr, color: '#4f8ef7' }
-  ];
-  emaConfigs.forEach(function(cfg) {
-    if (!cfg.arr || cfg.arr.length === 0) return;
-    var series = chartInstance.addLineSeries({ color: cfg.color, lineWidth: 1 });
-    var emaData = [];
-    var offset = candles.length - cfg.arr.length;
-    for (var i = 0; i < cfg.arr.length; i++) {
-      var cIdx = candles.length - 1 - (offset + i);
-      if (cIdx < 0 || cIdx >= candles.length) continue;
-      var t = Math.floor(new Date(candles[cIdx].candle_date_time_utc + 'Z').getTime() / 1000);
-      emaData.push({ time: t, value: cfg.arr[i] });
+async function executeSell(market, sym, volume) {
+  try {
+    var params = { market: market, side: 'ask', ord_type: 'market', volume: String(volume) };
+    var result = await apiAuth('POST', API + '/orders', params);
+    addLog('sell', '[실매매] ' + sym + ' 시장가 매도 ' + volume + ' (uuid:' + result.uuid + ')');
+    showToast(sym + ' 매도 주문 체결', 'success');
+    await sleep(2000);
+    var orderDetail = await apiAuth('GET', API + '/order', { uuid: result.uuid });
+    var avgPrice = 0;
+    if (orderDetail.trades && orderDetail.trades.length > 0) {
+      var totalCost = 0; var totalVol = 0;
+      orderDetail.trades.forEach(function(t) {
+        totalCost += parseFloat(t.price) * parseFloat(t.volume);
+        totalVol += parseFloat(t.volume);
+      });
+      avgPrice = totalCost / totalVol;
     }
-    emaData.sort(function(a, b) { return a.time - b.time; });
-    series.setData(emaData);
-  });
-
-  // ATR Channel overlay
-  if (indicators.atr.length > 0 && indicators.ema20Arr.length > 0) {
-    var atrUp = chartInstance.addLineSeries({ color: 'rgba(255,107,53,0.3)', lineWidth: 1, lineStyle: 3 });
-    var atrLow = chartInstance.addLineSeries({ color: 'rgba(255,107,53,0.3)', lineWidth: 1, lineStyle: 3 });
-    var atrUData = [], atrLData = [];
-    var aLen = Math.min(indicators.atr.length, indicators.ema20Arr.length);
-    var aOffset = candles.length - indicators.ema20Arr.length;
-    for (var i = 0; i < aLen; i++) {
-      var cIdx = candles.length - 1 - (aOffset + i);
-      if (cIdx < 0 || cIdx >= candles.length) continue;
-      var t = Math.floor(new Date(candles[cIdx].candle_date_time_utc + 'Z').getTime() / 1000);
-      var atrIdx = i < indicators.atr.length ? i : indicators.atr.length - 1;
-      atrUData.push({ time: t, value: indicators.ema20Arr[i] + indicators.atr[atrIdx] * 2 });
-      atrLData.push({ time: t, value: indicators.ema20Arr[i] - indicators.atr[atrIdx] * 2 });
-    }
-    atrUData.sort(function(a, b) { return a.time - b.time; });
-    atrLData.sort(function(a, b) { return a.time - b.time; });
-    atrUp.setData(atrUData); atrLow.setData(atrLData);
+    return { price: avgPrice, uuid: result.uuid };
+  } catch (e) {
+    addLog('sell', '[실매매] ' + sym + ' 매도 실패: ' + e.message);
+    showToast(sym + ' 매도 실패: ' + e.message, 'error');
+    return null;
   }
+}
 
-  // Volume histogram
-  var volSeries = chartInstance.addHistogramSeries({
-    priceFormat: { type: 'volume' },
-    priceScaleId: 'vol'
-  });
-  chartInstance.priceScale('vol').applyOptions({ scaleMargins: { top: 0.8, bottom: 0 } });
-  var volData = [];
-  for (var i = candles.length - 1; i >= 0; i--) {
-    var c = candles[i];
-    var t = Math.floor(new Date(c.candle_date_time_utc + 'Z').getTime() / 1000);
-    volData.push({
-      time: t, value: c.candle_acc_trade_volume || 0,
-      color: c.trade_price >= c.opening_price ? 'rgba(0,212,170,0.3)' : 'rgba(255,71,87,0.3)'
-    });
-  }
-  volSeries.setData(volData);
-
-  chartInstance.timeScale().fitContent();
-
-  var resizeHandler = function() { if (chartInstance) chartInstance.resize(container.clientWidth, 400); };
-  window.removeEventListener('resize', resizeHandler);
-  window.addEventListener('resize', resizeHandler);
+// ========================================
+// Toast
+// ========================================
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  var el = document.createElement('div');
+  el.className = 'toast-msg ' + (type || '');
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { el.remove(); }, 300); }, 3000);
 }
 
 // ========================================
 // Init
 // ========================================
-window.onload = function() {
-  loadSettings();
-};
+(function initTrading() {
+  accessKey = localStorage.getItem('bit_access_key') || '';
+  secretKey = localStorage.getItem('bit_secret_key') || '';
+  updateApiStatus();
+  if (accessKey && secretKey) loadBalance();
+})();
+
 </script>
 </body>
 </html>
