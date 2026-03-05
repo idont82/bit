@@ -40,3 +40,6 @@ build/
 !**/src/main/resources/static/_wpack_/**/*
 /WebSquare Docs/
 /bin/
+
+### API Keys ###
+**/key.json
