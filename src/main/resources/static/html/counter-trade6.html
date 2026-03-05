@@ -1551,7 +1551,7 @@ function stopMonitor() {
 async function monitorCycle() {
   if (!monitorRunning) return;
 
-  // 자동 재학습 체크
+  // 자동 재학습 체크 (비동기 분리 - 매매 블로킹 없음)
   var reLearnMin = parseInt(document.getElementById('reLearnInterval').value) || 0;
   if (reLearnMin > 0 && !reLearnRunning && !btRunning) {
     var elapsed = Date.now() - lastLearnTime;
@@ -1562,9 +1562,11 @@ async function monitorCycle() {
       reLearnRunning = true;
       addLog('info', '자동 재학습 시작...');
       if (timerEl) timerEl.textContent = '재학습중...';
-      await runReLearn();
-      reLearnRunning = false;
-      if (timerEl) timerEl.textContent = '';
+      // 재학습은 별도 실행, 매매 체크는 바로 진행
+      runReLearn().then(function() {
+        reLearnRunning = false;
+        if (timerEl) timerEl.textContent = '';
+      });
     } else if (timerEl) {
       var rm = Math.ceil(remaining / 60000);
       timerEl.textContent = '재학습 ' + rm + '분후';
