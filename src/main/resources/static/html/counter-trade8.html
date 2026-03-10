@@ -1,0 +1,2562 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BB+RSI Scalper</title>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600;700&family=Noto+Sans+KR:wght@300;400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #070b12; --surface: #0d1420; --surface2: #131c2e;
+    --border: #1e2d47; --accent: #00d4aa; --accent2: #ff6b35;
+    --accent3: #4f8ef7; --text: #e8f0fe; --muted: #5a7090;
+    --up: #00d4aa; --down: #ff4757; --gold: #ffd700;
+    --purple: #a855f7;
+  }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Noto Sans KR', sans-serif; min-height: 100vh;
+    background-image:
+      radial-gradient(ellipse at 20% 0%, rgba(168,85,247,0.07) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 100%, rgba(79,142,247,0.07) 0%, transparent 50%);
+  }
+  header {
+    border-bottom: 1px solid var(--border); padding: 16px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+    background: rgba(13,20,32,0.85); backdrop-filter: blur(10px);
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo { display: flex; align-items: center; gap: 12px; }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--purple), var(--accent3));
+    border-radius: 8px; display: flex; align-items: center; justify-content: center;
+    font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 14px; color: #fff;
+  }
+  .logo h1 { font-family: 'IBM Plex Mono', monospace; font-size: 15px; font-weight: 600; }
+  .logo span { font-size: 11px; color: var(--muted); display: block; font-weight: 300; }
+  .nav-links { display: flex; gap: 6px; }
+  .nav-links a {
+    color: var(--muted); text-decoration: none; font-size: 11px;
+    font-family: 'IBM Plex Mono', monospace; padding: 5px 10px;
+    border: 1px solid var(--border); border-radius: 6px; transition: all 0.2s;
+  }
+  .nav-links a:hover, .nav-links a.active { color: var(--purple); border-color: var(--purple); }
+  .mono { font-family: 'IBM Plex Mono', monospace; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { background: var(--surface); color: var(--muted); font-weight: 600; text-align: left;
+       padding: 8px 12px; font-size: 10px; text-transform: uppercase;
+       letter-spacing: 0.5px; position: sticky; top: 0; }
+  td { padding: 8px 12px; border-bottom: 1px solid rgba(30,45,71,0.3); }
+  tr:hover { background: rgba(168,85,247,0.04); }
+  .table-wrapper { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); max-height: 500px; overflow-y: auto; }
+
+  .control-bar {
+    padding: 14px 24px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .ctrl-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .ctrl-input {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; width: 50px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .ctrl-select {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 6px 10px; border-radius: 6px; font-size: 12px;
+    font-family: 'IBM Plex Mono', monospace;
+  }
+  .ctrl-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    padding: 6px 14px; border-radius: 6px; cursor: pointer;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+  .ctrl-btn.active { background: var(--purple); color: #fff; border-color: var(--purple); font-weight: 700; }
+  .ctrl-btn:hover { color: var(--text); border-color: var(--purple); }
+  .action-btn {
+    background: linear-gradient(135deg, var(--purple), var(--accent3));
+    color: #fff; border: none; padding: 8px 24px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .action-btn:hover:not(:disabled) { box-shadow: 0 0 16px rgba(168,85,247,0.4); }
+  .sep { color: var(--border); }
+
+  .stats-bar { display: flex; gap: 12px; padding: 16px 24px; flex-wrap: wrap; }
+  .stat-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 16px; flex: 1; min-width: 120px; text-align: center;
+  }
+  .stat-card .stat-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 4px; }
+  .stat-card .stat-value { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+
+  .rank-badge {
+    display: inline-block; width: 22px; height: 22px; line-height: 22px;
+    text-align: center; border-radius: 50%; font-size: 11px; font-weight: 700;
+  }
+  .rank-badge.gold { background: var(--gold); color: #000; }
+  .rank-badge.silver { background: #c0c0c0; color: #000; }
+  .rank-badge.bronze { background: #cd7f32; color: #fff; }
+  .rank-badge.normal { background: var(--surface2); color: var(--muted); }
+
+  .progress-bar { height: 4px; background: var(--surface2); border-radius: 2px; margin: 8px 24px; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--accent3)); border-radius: 2px; transition: width 0.3s; }
+
+  /* Backtest tabs */
+  .bt-tabs { display: flex; gap: 0; padding: 0 24px; border-bottom: 1px solid var(--border); }
+  .bt-tab {
+    padding: 10px 20px; font-size: 12px; font-weight: 600; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; color: var(--muted);
+    border-bottom: 2px solid transparent; transition: all 0.2s;
+  }
+  .bt-tab:hover { color: var(--text); }
+  .bt-tab.active { color: var(--purple); border-bottom-color: var(--purple); }
+  .bt-panel { display: none; }
+  .bt-panel.active { display: block; }
+
+  /* Signal indicators */
+  .signal-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 9px; font-weight: 700; padding: 2px 8px; border-radius: 10px;
+  }
+  .signal-tag.buy { background: rgba(0,212,170,0.2); color: var(--up); }
+  .signal-tag.sell { background: rgba(255,71,87,0.2); color: var(--down); }
+  .signal-tag.vol { background: rgba(168,85,247,0.2); color: var(--purple); }
+
+  .rsi-bar {
+    display: inline-block; width: 50px; height: 6px; background: var(--surface2);
+    border-radius: 3px; position: relative; vertical-align: middle;
+  }
+  .rsi-bar-fill { height: 100%; border-radius: 3px; position: absolute; left: 0; top: 0; }
+
+  .bb-visual {
+    display: inline-block; width: 60px; height: 20px; position: relative; vertical-align: middle;
+  }
+  .bb-upper, .bb-lower, .bb-mid {
+    position: absolute; left: 0; right: 0; height: 1px;
+  }
+  .bb-upper { top: 2px; background: var(--muted); }
+  .bb-mid { top: 10px; background: var(--accent3); opacity: 0.5; }
+  .bb-lower { bottom: 2px; background: var(--muted); }
+  .bb-dot {
+    position: absolute; width: 4px; height: 4px; border-radius: 50%;
+    background: var(--purple); transform: translate(-50%, -50%);
+  }
+
+  /* Trade detail popup */
+  .popup-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 200; align-items: center; justify-content: center;
+  }
+  .popup-overlay.show { display: flex; }
+  .popup {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    width: 600px; max-width: 95vw; max-height: 80vh; overflow-y: auto;
+    padding: 0; box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .popup-head {
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; background: var(--surface); z-index: 1;
+  }
+  .popup-head .popup-sym { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .popup-head .popup-name { font-size: 11px; color: var(--muted); margin-left: 8px; }
+  .popup-close {
+    background: none; border: none; color: var(--muted); font-size: 20px;
+    cursor: pointer; padding: 4px 8px; line-height: 1;
+  }
+  .popup-close:hover { color: var(--text); }
+  .popup-body { padding: 20px; }
+
+  /* Toast */
+  .toast-msg {
+    position: fixed; bottom: 24px; right: 24px; z-index: 400;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 8px;
+    padding: 12px 20px; font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4); transition: opacity 0.3s;
+  }
+  .toast-msg.error { border-color: var(--down); color: var(--down); }
+  .toast-msg.success { border-color: var(--accent); color: var(--accent); }
+
+  /* Strategy info */
+  .strategy-info {
+    padding: 12px 24px; background: var(--surface); border-bottom: 1px solid var(--border);
+    display: flex; gap: 20px; flex-wrap: wrap; align-items: center;
+  }
+  .strategy-chip {
+    font-size: 10px; font-family: 'IBM Plex Mono', monospace; padding: 4px 10px;
+    border-radius: 12px; font-weight: 600;
+  }
+  .strategy-chip.buy-rule { background: rgba(0,212,170,0.15); color: var(--up); }
+  .strategy-chip.sell-rule { background: rgba(255,71,87,0.15); color: var(--down); }
+  .strategy-chip.vol-rule { background: rgba(168,85,247,0.15); color: var(--purple); }
+
+  /* Equity curve */
+  .equity-canvas { width: 100%; height: 120px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); }
+
+  /* Monitor / Trade */
+  .phase-header {
+    padding: 12px 24px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .phase-badge {
+    font-family: 'IBM Plex Mono', monospace; font-size: 10px; font-weight: 700;
+    padding: 3px 10px; border-radius: 12px; text-transform: uppercase;
+  }
+  .phase-badge.live { background: var(--purple); color: #fff; }
+  .phase-title { font-size: 14px; font-weight: 700; }
+  .monitor-btn {
+    background: linear-gradient(135deg, var(--purple), var(--accent3));
+    color: #fff; border: none; padding: 8px 24px; border-radius: 8px;
+    font-size: 13px; font-weight: 700; cursor: pointer; transition: all 0.2s;
+  }
+  .monitor-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .monitor-btn.running { animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { box-shadow: 0 0 0 rgba(168,85,247,0); } 50% { box-shadow: 0 0 20px rgba(168,85,247,0.5); } }
+
+  .auto-trade-bar {
+    padding: 10px 24px; display: flex; align-items: center; gap: 12px;
+    border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .toggle-switch { position: relative; width: 44px; height: 24px; cursor: pointer; }
+  .toggle-switch input { display: none; }
+  .toggle-slider {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 12px; transition: 0.3s;
+  }
+  .toggle-slider:before {
+    content: ''; position: absolute; width: 18px; height: 18px;
+    left: 2px; top: 2px; background: var(--muted); border-radius: 50%; transition: 0.3s;
+  }
+  .toggle-switch input:checked + .toggle-slider { background: var(--accent); border-color: var(--accent); }
+  .toggle-switch input:checked + .toggle-slider:before { transform: translateX(20px); background: #fff; }
+  .trade-status { font-size: 11px; font-family: 'IBM Plex Mono', monospace; }
+  .trade-status.live { color: var(--accent); font-weight: 700; }
+  .trade-status.sim { color: var(--muted); }
+  .balance-display {
+    font-size: 12px; font-family: 'IBM Plex Mono', monospace;
+    color: var(--gold); margin-left: auto;
+  }
+
+  .qualified-grid { display: flex; gap: 10px; padding: 16px 24px; flex-wrap: wrap; }
+  .q-coin-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+    padding: 14px; min-width: 160px; flex: 1; max-width: 220px;
+    position: relative; overflow: hidden;
+  }
+  .q-coin-card.signal-active {
+    border-color: var(--purple); box-shadow: 0 0 16px rgba(168,85,247,0.4);
+    animation: signalPulse 2s ease-in-out infinite;
+  }
+  @keyframes signalPulse {
+    0%,100% { box-shadow: 0 0 8px rgba(168,85,247,0.3); }
+    50% { box-shadow: 0 0 24px rgba(168,85,247,0.5); }
+  }
+  .q-coin-card .coin-sym { font-size: 16px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+  .q-coin-card .coin-name { font-size: 10px; color: var(--muted); }
+  .q-coin-card .coin-wr { font-size: 20px; font-weight: 700; margin: 6px 0; }
+  .q-coin-card .coin-detail { font-size: 10px; color: var(--muted); line-height: 1.6; }
+  .signal-badge-live {
+    position: absolute; top: 8px; right: 8px; font-size: 9px; font-weight: 700;
+    padding: 2px 8px; border-radius: 10px; background: var(--purple); color: #fff;
+  }
+
+  .monitor-log {
+    padding: 12px 24px; max-height: 200px; overflow-y: auto;
+    font-family: 'IBM Plex Mono', monospace; font-size: 11px;
+  }
+  .monitor-log .log-entry { padding: 3px 0; display: flex; gap: 8px; }
+  .monitor-log .log-time { color: var(--muted); min-width: 50px; }
+  .monitor-log .log-buy { color: var(--up); font-weight: 700; }
+  .monitor-log .log-sell { color: var(--down); font-weight: 700; }
+  .monitor-log .log-info { color: var(--accent3); }
+
+  .pos-section { padding: 0 24px 24px; }
+  .pos-section h3 { font-size: 13px; color: var(--purple); margin-bottom: 8px; }
+
+  /* API button */
+  .api-btn {
+    background: var(--surface2); border: 1px solid var(--border); color: var(--muted);
+    padding: 5px 10px; border-radius: 6px; cursor: pointer;
+    font-size: 11px; font-family: 'IBM Plex Mono', monospace; transition: all 0.2s;
+  }
+  .api-btn:hover { color: var(--text); border-color: var(--accent); }
+  .api-btn.connected { color: var(--accent); border-color: var(--accent); }
+
+  /* Modal */
+  .modal-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+    z-index: 300; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    width: 420px; max-width: 90vw; padding: 24px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+  }
+  .modal-box h3 { font-size: 16px; margin-bottom: 16px; }
+  .modal-box label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; margin-top: 12px; }
+  .modal-box input[type=text], .modal-box input[type=password] {
+    width: 100%; background: var(--surface2); border: 1px solid var(--border); color: var(--text);
+    padding: 8px 12px; border-radius: 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px;
+  }
+  .modal-box .btn-row { display: flex; gap: 8px; margin-top: 20px; justify-content: flex-end; }
+  .modal-box .btn-row button {
+    padding: 8px 20px; border-radius: 6px; font-size: 12px; cursor: pointer;
+    font-family: 'IBM Plex Mono', monospace; border: 1px solid var(--border);
+  }
+  .modal-box .btn-save { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+  .modal-box .btn-cancel { background: var(--surface2); color: var(--muted); }
+  .modal-box .btn-clear { background: var(--down); color: #fff; border-color: var(--down); }
+
+  /* Lock */
+  .lock-overlay {
+    display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(7,11,18,0.95); backdrop-filter: blur(20px);
+    z-index: 500; align-items: center; justify-content: center;
+    cursor: default; user-select: none;
+  }
+  .lock-overlay.show { display: flex; }
+  .lock-content { text-align: center; }
+  .lock-icon { font-size: 64px; margin-bottom: 16px; }
+  .lock-time { font-size: 48px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; color: var(--text); margin-bottom: 8px; }
+  .lock-hint { font-size: 12px; color: var(--muted); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">BS</div>
+    <div><h1>BB+RSI Scalper</h1><span>볼린저밴드 + RSI 복합 스캘핑 백테스트</span></div>
+  </div>
+  <div style="display:flex;align-items:center;gap:8px">
+    <button class="api-btn" onclick="lockScreen()">Lock</button>
+    <button class="api-btn" id="apiKeyBtn" onclick="openApiModal()">API Key</button>
+    <div class="nav-links">
+      <a href="counter-trade5.html">Arena</a>
+      <a href="counter-trade6.html">AI Dip</a>
+      <a href="counter-trade7.html">RSI Crash</a>
+      <a href="counter-trade8.html" class="active">BB+RSI</a>
+    </div>
+  </div>
+</header>
+
+<!-- Strategy summary -->
+<div class="strategy-info">
+  <span class="strategy-chip buy-rule">BUY: RSI&le;35 + BB하단 근접/이탈 후 복귀</span>
+  <span class="strategy-chip sell-rule">SELL: RSI&ge;50 or BB중심선 or 목표/손절/시간</span>
+  <span class="strategy-chip vol-rule">VOL: 반등시 거래량 &ge;1.5배 (선택)</span>
+  <span style="font-size:10px;color:var(--muted);font-family:'IBM Plex Mono',monospace">BB근접 0.3% | 되돌림 5봉</span>
+</div>
+
+<!-- Controls Row 1: Timeframe & Period -->
+<div class="control-bar">
+  <span class="ctrl-label">분봉</span>
+  <button class="ctrl-btn active" data-tf="1" onclick="setTf(this)">1분</button>
+  <button class="ctrl-btn" data-tf="3" onclick="setTf(this)">3분</button>
+  <button class="ctrl-btn" data-tf="5" onclick="setTf(this)">5분</button>
+  <button class="ctrl-btn" data-tf="10" onclick="setTf(this)">10분</button>
+  <button class="ctrl-btn" data-tf="15" onclick="setTf(this)">15분</button>
+  <span class="sep">|</span>
+  <span class="ctrl-label">백테스트 기간</span>
+  <button class="ctrl-btn active" data-day="1" onclick="setDay(this)">1일</button>
+  <button class="ctrl-btn" data-day="3" onclick="setDay(this)">3일</button>
+  <button class="ctrl-btn" data-day="7" onclick="setDay(this)">7일</button>
+  <button class="ctrl-btn" data-day="14" onclick="setDay(this)">14일</button>
+  <span class="sep">|</span>
+  <span class="ctrl-label">거래시간</span>
+  <select id="hourStart" class="ctrl-select" style="width:60px">
+    <option value="0">0시</option><option value="1">1시</option><option value="2">2시</option>
+    <option value="3">3시</option><option value="4">4시</option><option value="5">5시</option>
+    <option value="6">6시</option><option value="7">7시</option><option value="8">8시</option>
+    <option value="9" selected>9시</option><option value="10">10시</option><option value="11">11시</option>
+    <option value="12">12시</option><option value="13">13시</option><option value="14">14시</option>
+    <option value="15">15시</option><option value="16">16시</option><option value="17">17시</option>
+    <option value="18">18시</option><option value="19">19시</option><option value="20">20시</option>
+    <option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+  </select>
+  <span style="font-size:11px;color:var(--muted)">~</span>
+  <select id="hourEnd" class="ctrl-select" style="width:60px">
+    <option value="1">1시</option><option value="2">2시</option><option value="3">3시</option>
+    <option value="4">4시</option><option value="5">5시</option><option value="6">6시</option>
+    <option value="7">7시</option><option value="8">8시</option><option value="9">9시</option>
+    <option value="10">10시</option><option value="11">11시</option><option value="12">12시</option>
+    <option value="13">13시</option><option value="14">14시</option><option value="15">15시</option>
+    <option value="16">16시</option><option value="17">17시</option><option value="18">18시</option>
+    <option value="19">19시</option><option value="20">20시</option><option value="21">21시</option>
+    <option value="22">22시</option><option value="23">23시</option><option value="0" selected>24시</option>
+  </select>
+</div>
+
+<!-- Controls Row 2: Strategy params -->
+<div class="control-bar">
+  <span class="ctrl-label">RSI기간</span>
+  <input type="text" id="rsiPeriod" value="14" class="ctrl-input" style="width:40px">
+  <span class="ctrl-label">RSI매수</span>
+  <input type="text" id="rsiBuy" value="35" class="ctrl-input" style="width:40px" title="RSI 이하에서 매수">
+  <span class="ctrl-label">RSI매도</span>
+  <input type="text" id="rsiSell" value="50" class="ctrl-input" style="width:40px" title="RSI 이상에서 매도">
+  <span class="sep">|</span>
+  <span class="ctrl-label">BB기간</span>
+  <input type="text" id="bbPeriod" value="20" class="ctrl-input" style="width:40px">
+  <span class="ctrl-label">BB배수</span>
+  <input type="text" id="bbMult" value="2.0" class="ctrl-input" style="width:40px">
+  <span class="ctrl-label">BB근접%</span>
+  <input type="text" id="bbProx" value="0.3" class="ctrl-input" style="width:45px" title="BB하단 이 범위 내 접근도 신호 인정">
+  <span class="ctrl-label">되돌림봉</span>
+  <input type="text" id="lookback" value="5" class="ctrl-input" style="width:35px" title="과거 N봉 이내 BB하단 터치 확인">
+  <span class="sep">|</span>
+  <span class="ctrl-label">수익목표</span>
+  <input type="text" id="profitTarget" value="0.7" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">%</span>
+  <span class="ctrl-label">손절</span>
+  <input type="text" id="stopLoss" value="0.5" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">%</span>
+  <span class="ctrl-label">시간제한</span>
+  <input type="text" id="timeLimit" value="20" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">분</span>
+  <span class="sep">|</span>
+  <span class="ctrl-label">최소거래대금</span>
+  <input type="text" id="minVol" value="10" class="ctrl-input" style="width:45px">
+  <span style="font-size:11px;color:var(--muted)">억</span>
+  <label style="display:flex;align-items:center;gap:4px;font-size:11px;color:var(--muted);cursor:pointer;margin-left:8px">
+    <input type="checkbox" id="volFilter" checked> 거래량확인
+  </label>
+  <span style="flex:1"></span>
+  <button onclick="fetchData()" id="fetchBtn" class="action-btn" style="background:linear-gradient(135deg,var(--accent3),var(--purple))">데이터 수집</button>
+  <button onclick="runStrategy()" id="runBtn" class="action-btn" disabled>전략 실행</button>
+  <button onclick="runOptimize()" id="optBtn" class="action-btn" style="background:linear-gradient(135deg,var(--gold),var(--accent2))" disabled>자동 최적화</button>
+  <button onclick="clearCache()" class="ctrl-btn" title="캐시 삭제" style="font-size:10px">캐시삭제</button>
+</div>
+
+<!-- Cache status bar -->
+<div id="cacheBar" style="padding:6px 24px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;font-size:11px;font-family:'IBM Plex Mono',monospace">
+  <span style="color:var(--muted)">캐시:</span>
+  <span id="cacheStatus" style="color:var(--muted)">없음</span>
+  <span style="flex:1"></span>
+  <span id="cacheDetail" style="color:var(--muted);font-size:10px"></span>
+</div>
+
+<div class="progress-bar"><div id="progressFill" class="progress-fill" style="width:0%"></div></div>
+<div id="progressText" style="text-align:center;font-size:11px;color:var(--muted);padding:4px"></div>
+
+<!-- Result Tabs -->
+<div id="resultArea" style="display:none">
+  <div class="bt-tabs">
+    <div class="bt-tab active" data-tab="ranking" onclick="switchTab(this)">코인 랭킹</div>
+    <div class="bt-tab" data-tab="trades" onclick="switchTab(this)">전체 매매내역</div>
+    <div class="bt-tab" data-tab="equity" onclick="switchTab(this)">수익 곡선</div>
+    <div class="bt-tab" data-tab="hourly" onclick="switchTab(this)">시간대 분석</div>
+    <div class="bt-tab" data-tab="optimize" onclick="switchTab(this)">최적화 결과</div>
+  </div>
+  <div id="panel-ranking" class="bt-panel active"></div>
+  <div id="panel-trades" class="bt-panel"></div>
+  <div id="panel-equity" class="bt-panel"></div>
+  <div id="panel-hourly" class="bt-panel"></div>
+  <div id="panel-optimize" class="bt-panel"></div>
+</div>
+
+<!-- Placeholder -->
+<div id="placeholder">
+  <div style="text-align:center;padding:80px 20px;color:var(--muted)">
+    <div style="font-size:40px;margin-bottom:12px">&#x1F4CA;</div>
+    <div style="font-size:14px;font-weight:700">BB+RSI Scalper Backtest</div>
+    <div style="font-size:12px;margin-top:8px">볼린저밴드 하단 이탈 후 복귀 + RSI 과매도 V자 반등 복합 신호</div>
+    <div style="font-size:11px;margin-top:12px;line-height:1.8">
+      <span class="strategy-chip buy-rule">매수</span> RSI &le; 35 &amp; BB하단 근접(0.3%)/이탈 후 복귀 (5봉내)<br>
+      <span class="strategy-chip sell-rule">매도</span> RSI &ge; 50 or BB중심선 도달 or 목표/손절/시간<br>
+      <span class="strategy-chip vol-rule">확인</span> 반등 거래량 &ge; 평균 &times; 1.5
+    </div>
+  </div>
+</div>
+
+<!-- Phase 2: Live Monitor -->
+<div id="liveArea" style="display:none">
+  <div class="phase-header">
+    <span class="phase-badge live">LIVE</span>
+    <span class="phase-title">실시간 BB+RSI 모니터링</span>
+    <span style="font-size:11px;color:var(--muted)" id="monitorStatus">대기 중</span>
+    <span style="flex:1"></span>
+    <span style="font-size:11px;color:var(--muted)" id="monitorTimer"></span>
+    <button onclick="toggleMonitor()" id="monBtn" class="monitor-btn">모니터링 시작</button>
+  </div>
+  <div class="auto-trade-bar">
+    <label class="toggle-switch">
+      <input type="checkbox" id="autoTradeToggle" onchange="onAutoTradeToggle()">
+      <span class="toggle-slider"></span>
+    </label>
+    <span class="trade-status sim" id="tradeStatusText">시뮬레이션</span>
+    <span class="sep">|</span>
+    <span class="ctrl-label">매수방식</span>
+    <button class="ctrl-btn active" data-bm="fixed" onclick="setBuyMode(this)">고정금액</button>
+    <button class="ctrl-btn" data-bm="pct" onclick="setBuyMode(this)">잔고비율</button>
+    <span class="sep">|</span>
+    <span class="ctrl-label" id="buyAmtLabel">매수금액</span>
+    <input type="text" id="buyAmount" value="5000" class="ctrl-input" style="width:70px">
+    <span style="font-size:11px;color:var(--muted)" id="buyAmtUnit">원</span>
+    <span class="sep">|</span>
+    <span class="ctrl-label">매수시간</span>
+    <select id="liveHourStart" class="ctrl-select" style="width:60px">
+      <option value="0">0시</option><option value="1">1시</option><option value="2">2시</option>
+      <option value="3">3시</option><option value="4">4시</option><option value="5">5시</option>
+      <option value="6">6시</option><option value="7">7시</option><option value="8">8시</option>
+      <option value="9" selected>9시</option><option value="10">10시</option><option value="11">11시</option>
+      <option value="12">12시</option><option value="13">13시</option><option value="14">14시</option>
+      <option value="15">15시</option><option value="16">16시</option><option value="17">17시</option>
+      <option value="18">18시</option><option value="19">19시</option><option value="20">20시</option>
+      <option value="21">21시</option><option value="22">22시</option><option value="23">23시</option>
+    </select>
+    <span style="font-size:11px;color:var(--muted)">~</span>
+    <select id="liveHourEnd" class="ctrl-select" style="width:60px">
+      <option value="1">1시</option><option value="2">2시</option><option value="3">3시</option>
+      <option value="4">4시</option><option value="5">5시</option><option value="6">6시</option>
+      <option value="7">7시</option><option value="8">8시</option><option value="9">9시</option>
+      <option value="10">10시</option><option value="11">11시</option><option value="12">12시</option>
+      <option value="13">13시</option><option value="14">14시</option><option value="15">15시</option>
+      <option value="16">16시</option><option value="17">17시</option><option value="18">18시</option>
+      <option value="19">19시</option><option value="20">20시</option><option value="21">21시</option>
+      <option value="22">22시</option><option value="23">23시</option><option value="0" selected>24시</option>
+    </select>
+    <span class="balance-display" id="balanceDisplay"></span>
+  </div>
+  <div id="qualifiedCoins" class="qualified-grid"></div>
+  <div id="monitorLog" class="monitor-log"></div>
+  <div id="posSection" class="pos-section" style="display:none">
+    <h3>보유 포지션</h3>
+    <div class="table-wrapper" style="max-height:250px">
+      <table id="posTable"><thead><tr>
+        <th>코인</th><th>RSI</th><th>매수가</th><th>현재가</th><th>수익률</th><th>매수시각</th><th>경과</th><th>상태</th><th>액션</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+  <div id="liveTradeSection" class="pos-section" style="display:none">
+    <h3>매매 이력 <span id="liveTradeSummary" style="font-size:11px;font-weight:400;color:var(--muted)"></span></h3>
+    <div class="table-wrapper" style="max-height:300px">
+      <table id="liveTradeTable"><thead><tr>
+        <th>코인</th><th>RSI</th><th>매수시각</th><th>매수가</th><th>매도시각</th><th>매도가</th><th>수익률</th><th>사유</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+</div>
+
+<!-- API Key Modal -->
+<div class="modal-overlay" id="apiModal" onclick="if(event.target===this)closeApiModal()">
+  <div class="modal-box">
+    <h3>API Key 설정</h3>
+    <label>Access Key</label>
+    <input type="text" id="inputAccessKey" placeholder="Access Key 입력">
+    <label>Secret Key</label>
+    <input type="password" id="inputSecretKey" placeholder="Secret Key 입력">
+    <div class="btn-row">
+      <button class="btn-clear" onclick="clearApiKey()">초기화</button>
+      <button class="btn-cancel" onclick="closeApiModal()">취소</button>
+      <button class="btn-save" onclick="saveApiKey()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- Screen Lock -->
+<div id="lockOverlay" class="lock-overlay" onclick="onLockClick(event)">
+  <div class="lock-content">
+    <div class="lock-icon">&#x1F512;</div>
+    <div class="lock-time" id="lockTime"></div>
+    <div class="lock-hint">더블클릭으로 잠금 해제</div>
+  </div>
+</div>
+
+<!-- Trade Detail Popup -->
+<div class="popup-overlay" id="tradePopup" onclick="if(event.target===this)closeTradePopup()">
+  <div class="popup">
+    <div class="popup-head">
+      <div><span class="popup-sym" id="tpSym"></span><span class="popup-name" id="tpName"></span></div>
+      <button class="popup-close" onclick="closeTradePopup()">&times;</button>
+    </div>
+    <div class="popup-body" id="tpBody"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toastContainer" style="position:fixed;bottom:24px;right:24px;z-index:400"></div>
+
+<script>
+// ========================================
+// Config
+// ========================================
+var API = 'https://api.bithumb.com/v1';
+var FEE_RATE = 0.0004;
+var FEE_ROUND = 0.0008;
+var EXCLUDE_COINS = ['USDT','USDC','DAI','TUSD','BUSD','USDD','XAUT','TRX'];
+
+var btTf = '1';
+var btDays = 1;
+var scanning = false;
+var allResults = [];
+var allTrades = [];
+
+// Live monitor
+var monitorRunning = false;
+var monitorInterval = null;
+var livePositions = {};
+var liveTradeHistory = [];
+
+function savePositions() {
+  try { localStorage.setItem('ct8_positions', JSON.stringify(livePositions)); } catch(e) {}
+}
+function loadPositions() {
+  try { var d = localStorage.getItem('ct8_positions'); if (d) livePositions = JSON.parse(d); } catch(e) { livePositions = {}; }
+}
+function saveTradeHistory() {
+  try { localStorage.setItem('ct8_tradeHistory', JSON.stringify(liveTradeHistory)); } catch(e) {}
+}
+function loadTradeHistory() {
+  try { var d = localStorage.getItem('ct8_tradeHistory'); if (d) liveTradeHistory = JSON.parse(d); } catch(e) { liveTradeHistory = []; }
+}
+var liveCandleCache = {};
+var cooldowns = {};
+var COOLDOWN_MS = 5 * 60000; // 5분 쿨다운 (스캘핑은 짧게)
+var monitorCoins = []; // 모니터링 대상 코인 목록
+
+// Trading
+var autoTradeOn = false;
+var buyMode = 'fixed';
+var accessKey = '';
+var secretKey = '';
+var krwBalance = 0;
+
+// ========================================
+// Tick Size
+// ========================================
+function getTickSize(price) {
+  if (price >= 1000000) return 1000;
+  if (price >= 100000) return 100;
+  if (price >= 10000) return 10;
+  if (price >= 1000) return 1;
+  if (price >= 100) return 1;
+  if (price >= 10) return 0.01;
+  if (price >= 1) return 0.01;
+  return 0.0001;
+}
+function getTickPct(price) { return (getTickSize(price) / price) * 100; }
+
+// ========================================
+// Helpers
+// ========================================
+function setCookie(n, v) {
+  var d = new Date(); d.setDate(d.getDate() + 30);
+  document.cookie = n + '=' + encodeURIComponent(v) + ';expires=' + d.toUTCString() + ';path=/';
+}
+function getCookie(n) {
+  var c = document.cookie.split('; ');
+  for (var i = 0; i < c.length; i++) { var p = c[i].split('='); if (p[0] === n) return decodeURIComponent(p[1]); }
+  return '';
+}
+async function apiFetch(path) {
+  var r = await fetch(API + path, { headers: { accept: 'application/json' } });
+  if (!r.ok) throw new Error('API ' + r.status);
+  return r.json();
+}
+function sleep(ms) {
+  return new Promise(function(resolve) {
+    if (document.hidden) {
+      var start = performance.now();
+      var ch = new MessageChannel();
+      ch.port1.onmessage = function() {
+        if (performance.now() - start >= ms) resolve();
+        else ch.port2.postMessage('');
+      };
+      ch.port2.postMessage('');
+    } else {
+      setTimeout(resolve, ms);
+    }
+  });
+}
+function fmtPrice(p) {
+  p = parseFloat(p);
+  if (p >= 1000) return p.toLocaleString('ko-KR') + '원';
+  if (p >= 1) return p.toFixed(2) + '원';
+  return p.toFixed(6) + '원';
+}
+function fmt(n) {
+  if (n >= 1e12) return (n / 1e12).toFixed(1) + '조';
+  if (n >= 1e8) return (n / 1e8).toFixed(1) + '억';
+  if (n >= 1e4) return (n / 1e4).toFixed(0) + '만';
+  return n.toFixed(0);
+}
+function fmtDt(d) {
+  return ('0'+(d.getMonth()+1)).slice(-2)+'/'+('0'+d.getDate()).slice(-2)+' '+('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function fmtTime(d) {
+  return ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+}
+function fmtElapsed(ms) {
+  var s = Math.floor(ms / 1000); var m = Math.floor(s / 60); s = s % 60;
+  return m + '분' + s + '초';
+}
+
+// ========================================
+// Controls + Cookie
+// ========================================
+function setTf(btn) {
+  document.querySelectorAll('.ctrl-btn[data-tf]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active'); btTf = btn.dataset.tf;
+  setCookie('ct8_tf', btTf);
+}
+function setDay(btn) {
+  document.querySelectorAll('.ctrl-btn[data-day]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active'); btDays = parseInt(btn.dataset.day);
+  setCookie('ct8_days', String(btDays));
+}
+
+var INPUT_COOKIES = [
+  { id: 'rsiPeriod', key: 'ct8_rsiPeriod' },
+  { id: 'rsiBuy', key: 'ct8_rsiBuy' },
+  { id: 'rsiSell', key: 'ct8_rsiSell' },
+  { id: 'bbPeriod', key: 'ct8_bbPeriod' },
+  { id: 'bbMult', key: 'ct8_bbMult' },
+  { id: 'bbProx', key: 'ct8_bbProx' },
+  { id: 'lookback', key: 'ct8_lookback' },
+  { id: 'profitTarget', key: 'ct8_profitTarget' },
+  { id: 'stopLoss', key: 'ct8_stopLoss' },
+  { id: 'timeLimit', key: 'ct8_timeLimit' },
+  { id: 'minVol', key: 'ct8_minVol' },
+  { id: 'hourStart', key: 'ct8_hourStart' },
+  { id: 'hourEnd', key: 'ct8_hourEnd' },
+  { id: 'buyAmount', key: 'ct8_buyAmount' },
+  { id: 'liveHourStart', key: 'ct8_liveHourStart' },
+  { id: 'liveHourEnd', key: 'ct8_liveHourEnd' }
+];
+INPUT_COOKIES.forEach(function(cfg) {
+  var el = document.getElementById(cfg.id);
+  if (el) el.addEventListener('change', function() { setCookie(cfg.key, el.value); });
+});
+(function loadSettings() {
+  var tfVal = getCookie('ct8_tf');
+  if (tfVal) { btTf = tfVal; document.querySelectorAll('.ctrl-btn[data-tf]').forEach(function(b) { b.classList.toggle('active', b.dataset.tf === tfVal); }); }
+  var dayVal = getCookie('ct8_days');
+  if (dayVal) { btDays = parseInt(dayVal); document.querySelectorAll('.ctrl-btn[data-day]').forEach(function(b) { b.classList.toggle('active', b.dataset.day === dayVal); }); }
+  INPUT_COOKIES.forEach(function(cfg) {
+    var v = getCookie(cfg.key); if (v) { var el = document.getElementById(cfg.id); if (el) el.value = v; }
+  });
+})();
+
+// ========================================
+// Candle Fetch
+// ========================================
+async function fetchHistoricalCandles(market, unit, days) {
+  var allCandles = []; var to = ''; var u = parseInt(unit);
+  var needed = u >= 1440 ? days : days * 24 * 60 / u;
+  var cutoffMs = Date.now() - days * 24 * 60 * 60 * 1000;
+  var hitCutoff = false;
+  while (allCandles.length < needed && !hitCutoff) {
+    var path = '/candles/minutes/' + unit + '?market=' + market + '&count=200';
+    if (to) path += '&to=' + to;
+    var candles = await apiFetch(path);
+    if (!candles || candles.length === 0) break;
+    for (var ci = 0; ci < candles.length; ci++) {
+      var ct = new Date(candles[ci].candle_date_time_utc + 'Z').getTime();
+      if (ct < cutoffMs) { hitCutoff = true; break; }
+      allCandles.push(candles[ci]);
+    }
+    var last = candles[candles.length - 1];
+    to = last.candle_date_time_utc.replace('T', ' ');
+    await sleep(150);
+    if (candles.length < 200) break;
+  }
+  return allCandles; // newest first
+}
+
+// ========================================
+// RSI Calculation
+// ========================================
+function calcRSI(closes, period) {
+  // closes: oldest first
+  if (closes.length < period + 1) return [];
+  var rsi = [];
+  var gains = [], losses = [];
+  for (var i = 1; i < closes.length; i++) {
+    var diff = closes[i] - closes[i - 1];
+    gains.push(diff > 0 ? diff : 0);
+    losses.push(diff < 0 ? -diff : 0);
+  }
+  var avgG = 0, avgL = 0;
+  for (var i = 0; i < period; i++) { avgG += gains[i]; avgL += losses[i]; }
+  avgG /= period; avgL /= period;
+  var rs = avgL === 0 ? 100 : avgG / avgL;
+  // First RSI at index period (of closes)
+  rsi.push(100 - 100 / (1 + rs));
+  for (var i = period; i < gains.length; i++) {
+    avgG = (avgG * (period - 1) + gains[i]) / period;
+    avgL = (avgL * (period - 1) + losses[i]) / period;
+    rs = avgL === 0 ? 100 : avgG / avgL;
+    rsi.push(100 - 100 / (1 + rs));
+  }
+  return rsi; // length = closes.length - period
+}
+
+// ========================================
+// Bollinger Band Calculation
+// ========================================
+function calcBB(closes, period, mult) {
+  // closes: oldest first. Returns { mid, upper, lower } arrays aligned from index (period-1)
+  if (closes.length < period) return { mid: [], upper: [], lower: [] };
+  var mid = [], upper = [], lower = [];
+  for (var i = period - 1; i < closes.length; i++) {
+    var sum = 0;
+    for (var j = i - period + 1; j <= i; j++) sum += closes[j];
+    var sma = sum / period;
+    var sqSum = 0;
+    for (var j = i - period + 1; j <= i; j++) sqSum += (closes[j] - sma) * (closes[j] - sma);
+    var std = Math.sqrt(sqSum / period);
+    mid.push(sma);
+    upper.push(sma + mult * std);
+    lower.push(sma - mult * std);
+  }
+  return { mid: mid, upper: upper, lower: lower };
+}
+
+// ========================================
+// Backtest Core
+// ========================================
+function backtestCoin(candles, params) {
+  // candles: newest first from API -> reverse to oldest first
+  var asc = candles.slice().reverse();
+  if (asc.length < Math.max(params.rsiPeriod, params.bbPeriod) + 10) return null;
+
+  var closes = asc.map(function(c) { return c.trade_price; });
+  var highs = asc.map(function(c) { return c.high_price; });
+  var lows = asc.map(function(c) { return c.low_price; });
+  var opens = asc.map(function(c) { return c.opening_price; });
+  var volumes = asc.map(function(c) { return c.candle_acc_trade_volume; });
+  var times = asc.map(function(c) { return new Date(c.candle_date_time_kst || c.candle_date_time_utc + 'Z'); });
+
+  var rsiArr = calcRSI(closes, params.rsiPeriod);
+  var bb = calcBB(closes, params.bbPeriod, params.bbMult);
+
+  // Align indices: RSI starts at closes index params.rsiPeriod
+  // BB starts at closes index params.bbPeriod - 1
+  var startIdx = Math.max(params.rsiPeriod, params.bbPeriod - 1) + 1; // need previous candle too
+
+  var reqPct = params.profitTarget + (FEE_ROUND * 100);
+  var stopPct = -(params.stopLoss + FEE_ROUND * 100);
+  var stopMs = params.timeLimit * 60000;
+  var hourStart = params.hourStart;
+  var hourEnd = params.hourEnd;
+  var useVolFilter = params.volFilter;
+  var bbProxPct = params.bbProx / 100; // BB proximity as ratio
+  var lookbackN = params.lookback || 5;
+
+  // Average volume (rolling 20)
+  var volAvg = [];
+  for (var i = 0; i < volumes.length; i++) {
+    if (i < 20) { volAvg.push(0); continue; }
+    var s = 0; for (var j = i - 20; j < i; j++) s += volumes[j];
+    volAvg.push(s / 20);
+  }
+
+  var trades = [];
+  var inPos = false;
+  var entry = null;
+
+  for (var i = startIdx; i < closes.length; i++) {
+    var rsiIdx = i - params.rsiPeriod;
+    var bbIdx = i - (params.bbPeriod - 1);
+    if (rsiIdx < 0 || rsiIdx >= rsiArr.length) continue;
+    if (bbIdx < 0 || bbIdx >= bb.mid.length) continue;
+
+    var curRsi = rsiArr[rsiIdx];
+    var curClose = closes[i];
+    var curOpen = opens[i];
+    var curLow = lows[i];
+    var curHigh = highs[i];
+    var curBBLower = bb.lower[bbIdx];
+    var curBBMid = bb.mid[bbIdx];
+    var curTime = times[i];
+    var curTimeMs = curTime.getTime();
+    var curHour = curTime.getHours();
+
+    // Position management
+    if (inPos && entry) {
+      var gp = ((curClose - entry.price) / entry.price) * 100;
+      var gpHigh = ((curHigh - entry.price) / entry.price) * 100;
+      var gpLow = ((curLow - entry.price) / entry.price) * 100;
+      var elapsed = curTimeMs - entry.time;
+      if (gpHigh > entry.peakPct) entry.peakPct = gpHigh;
+
+      var reason = null;
+      var sellPrice = curClose;
+      // Stop loss (check low price)
+      if (gpLow <= stopPct) { reason = 'stoploss'; sellPrice = entry.price * (1 + stopPct / 100); }
+      // Profit target (check high price)
+      if (!reason && gpHigh >= reqPct) { reason = 'profit'; sellPrice = entry.price * (1 + reqPct / 100); }
+      // RSI sell signal: RSI >= rsiSell
+      if (!reason && curRsi >= params.rsiSell) { reason = 'rsi_exit'; sellPrice = curClose; }
+      // BB middle touch
+      if (!reason && curHigh >= curBBMid) { reason = 'bb_mid'; sellPrice = Math.min(curClose, curBBMid); if (curOpen < curBBMid) sellPrice = curBBMid; }
+      // Timeout
+      if (!reason && elapsed >= stopMs) { reason = 'timeout'; sellPrice = curClose; }
+
+      if (reason) {
+        var netPct = ((sellPrice - entry.price) / entry.price) * 100 - (FEE_ROUND * 100);
+        trades.push({
+          buyTime: entry.time, buyPrice: entry.price, buyRsi: entry.rsi,
+          buyBBLower: entry.bbLower, buyBBMid: entry.bbMid,
+          sellTime: curTimeMs, sellPrice: sellPrice, sellRsi: curRsi,
+          netPct: netPct, reason: reason, elapsed: elapsed,
+          volSurge: entry.volSurge
+        });
+        inPos = false; entry = null;
+      }
+      continue;
+    }
+
+    // Hour filter
+    if (hourStart <= hourEnd) {
+      if (curHour < hourStart || curHour >= hourEnd) continue;
+    } else {
+      if (curHour < hourStart && curHour >= hourEnd) continue;
+    }
+
+    // ===== Buy signal detection (완화된 조건) =====
+
+    // 1. RSI <= rsiBuy (oversold)
+    if (curRsi > params.rsiBuy) continue;
+
+    // 2. BB하단 접근/이탈 확인: 과거 lookbackN봉 이내에 BB하단 근처(bbProx%) 또는 이하 터치
+    var touchedBBLower = false;
+    for (var lb = 0; lb <= lookbackN && (i - lb) >= 0; lb++) {
+      var checkIdx = i - lb;
+      var checkBBIdx = checkIdx - (params.bbPeriod - 1);
+      if (checkBBIdx < 0 || checkBBIdx >= bb.lower.length) continue;
+      var checkBBLow = bb.lower[checkBBIdx];
+      var proxThreshold = checkBBLow * (1 + bbProxPct); // BB하단 + 허용범위
+      // low가 BB하단 근처 이하이면 터치로 인정
+      if (lows[checkIdx] <= proxThreshold) { touchedBBLower = true; break; }
+    }
+    if (!touchedBBLower) continue;
+
+    // 3. 현재 종가가 BB하단 이상 (복귀 확인) - 양봉 필수 아님
+    if (curClose < curBBLower) continue;
+
+    // 4. Volume confirmation (optional)
+    var volSurge = false;
+    if (i >= 20 && volAvg[i] > 0) {
+      volSurge = volumes[i] >= volAvg[i] * 1.5;
+    }
+    if (useVolFilter && !volSurge) continue;
+
+    // ENTRY
+    inPos = true;
+    entry = {
+      price: curClose, time: curTimeMs, peakPct: 0,
+      rsi: curRsi, bbLower: curBBLower, bbMid: curBBMid,
+      volSurge: volSurge
+    };
+  }
+
+  // Close open position
+  if (inPos && entry) {
+    var last = asc[asc.length - 1];
+    var lp = last.trade_price;
+    var lt = times[times.length - 1].getTime();
+    var g = ((lp - entry.price) / entry.price) * 100 - (FEE_ROUND * 100);
+    trades.push({
+      buyTime: entry.time, buyPrice: entry.price, buyRsi: entry.rsi,
+      buyBBLower: entry.bbLower, buyBBMid: entry.bbMid,
+      sellTime: lt, sellPrice: lp, sellRsi: 0,
+      netPct: g, reason: 'open', elapsed: lt - entry.time,
+      volSurge: entry.volSurge
+    });
+  }
+
+  if (trades.length === 0) return null;
+
+  var wins = trades.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = trades.reduce(function(s, t) { return s + t.netPct; }, 0);
+  var reasons = {};
+  trades.forEach(function(t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+  var avgElapsed = trades.reduce(function(s, t) { return s + t.elapsed; }, 0) / trades.length;
+
+  return {
+    trades: trades, count: trades.length, wins: wins,
+    winRate: trades.length > 0 ? wins / trades.length * 100 : 0,
+    totalPct: totalPct, reasons: reasons, avgElapsed: avgElapsed
+  };
+}
+
+// ========================================
+// Cache Key & Storage
+// ========================================
+var cachedData = null; // { key, coins: [{symbol, name, market, candles}], fetchedAt }
+
+function getCacheKey() {
+  return 'ct8_' + btTf + 'm_' + btDays + 'd_vol' + (document.getElementById('minVol').value || '10');
+}
+
+function saveCacheToStorage(data) {
+  try {
+    // Compress: only save essential candle fields
+    var compact = {
+      key: data.key, fetchedAt: data.fetchedAt,
+      tf: btTf, days: btDays,
+      coins: data.coins.map(function(c) {
+        return {
+          s: c.symbol, n: c.name, m: c.market,
+          d: c.candles.map(function(k) {
+            return [k.trade_price, k.opening_price, k.high_price, k.low_price,
+                    k.candle_acc_trade_volume, k.candle_date_time_kst || k.candle_date_time_utc];
+          })
+        };
+      })
+    };
+    localStorage.setItem('ct8_cache', JSON.stringify(compact));
+  } catch (e) {
+    console.warn('Cache save failed (storage full?):', e.message);
+    showToast('캐시 저장 실패 (용량 초과)', 'error');
+  }
+}
+
+function loadCacheFromStorage() {
+  try {
+    var raw = localStorage.getItem('ct8_cache');
+    if (!raw) return null;
+    var compact = JSON.parse(raw);
+    return {
+      key: compact.key, fetchedAt: compact.fetchedAt,
+      tf: compact.tf, days: compact.days,
+      coins: compact.coins.map(function(c) {
+        return {
+          symbol: c.s, name: c.n, market: c.m,
+          candles: c.d.map(function(a) {
+            return {
+              trade_price: a[0], opening_price: a[1], high_price: a[2], low_price: a[3],
+              candle_acc_trade_volume: a[4], candle_date_time_kst: a[5]
+            };
+          })
+        };
+      })
+    };
+  } catch (e) { return null; }
+}
+
+function clearCache() {
+  localStorage.removeItem('ct8_cache');
+  cachedData = null;
+  updateCacheStatus();
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('optBtn').disabled = true;
+  showToast('캐시 삭제 완료', 'success');
+}
+
+function updateCacheStatus() {
+  var statusEl = document.getElementById('cacheStatus');
+  var detailEl = document.getElementById('cacheDetail');
+  if (!cachedData) {
+    statusEl.textContent = '없음';
+    statusEl.style.color = 'var(--muted)';
+    detailEl.textContent = '';
+    return;
+  }
+  var age = Date.now() - cachedData.fetchedAt;
+  var ageMin = Math.floor(age / 60000);
+  var ageStr = ageMin < 60 ? ageMin + '분 전' : Math.floor(ageMin / 60) + '시간 ' + (ageMin % 60) + '분 전';
+  statusEl.innerHTML = '<span style="color:var(--up)">' + cachedData.coins.length + '개 코인</span> | '
+    + cachedData.tf + '분봉 ' + cachedData.days + '일';
+  statusEl.style.color = 'var(--up)';
+  var totalCandles = cachedData.coins.reduce(function(s, c) { return s + c.candles.length; }, 0);
+  detailEl.textContent = '총 ' + totalCandles.toLocaleString() + '봉 | ' + ageStr + ' | '
+    + (JSON.stringify(localStorage.getItem('ct8_cache') || '').length / 1024 / 1024).toFixed(1) + 'MB';
+}
+
+// ========================================
+// Phase 1: Data Fetch (API -> Cache)
+// ========================================
+async function fetchData() {
+  if (scanning) return;
+  scanning = true;
+
+  var btn = document.getElementById('fetchBtn');
+  btn.disabled = true; btn.textContent = '수집 중...';
+  document.getElementById('runBtn').disabled = true;
+  var progFill = document.getElementById('progressFill');
+  var progText = document.getElementById('progressText');
+  progFill.style.width = '0%';
+
+  try {
+    progText.textContent = '마켓 조회 중...';
+    var mk = await apiFetch('/market/all?isDetails=true');
+    var markets = mk.filter(function(m) { return m.market.startsWith('KRW-'); });
+    var nameMap = {};
+    markets.forEach(function(m) { nameMap[m.market] = m.korean_name; });
+
+    progText.textContent = '티커 조회 중...';
+    var codes = markets.map(function(m) { return m.market; });
+    var minVol = (parseFloat(document.getElementById('minVol').value) || 10) * 1e8;
+    var allTickers = [];
+    for (var i = 0; i < codes.length; i += 100) {
+      var batch = codes.slice(i, i + 100);
+      var tickers = await apiFetch('/ticker?markets=' + batch.join(','));
+      allTickers = allTickers.concat(tickers);
+      if (i + 100 < codes.length) await sleep(200);
+    }
+
+    var filtered = allTickers.filter(function(t) {
+      var sym = t.market.replace('KRW-', '');
+      if (EXCLUDE_COINS.indexOf(sym) >= 0) return false;
+      if (minVol > 0 && (t.acc_trade_price_24h || 0) < minVol) return false;
+      return true;
+    });
+    filtered.sort(function(a, b) { return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0); });
+    var targetMarkets = filtered.slice(0, 80);
+
+    var coinDataList = [];
+    for (var ci = 0; ci < targetMarkets.length; ci++) {
+      var t = targetMarkets[ci];
+      var market = t.market;
+      var symbol = market.replace('KRW-', '');
+      var pct = ((ci + 1) / targetMarkets.length * 100);
+      progFill.style.width = pct + '%';
+      progText.textContent = symbol + ' 수집 중 (' + (ci + 1) + '/' + targetMarkets.length + ')';
+
+      try {
+        var candles = await fetchHistoricalCandles(market, btTf, btDays);
+        if (!candles || candles.length < 50) continue;
+        coinDataList.push({
+          symbol: symbol,
+          name: nameMap[market] || symbol,
+          market: market,
+          candles: candles
+        });
+      } catch (e) { console.error('Fetch err:', symbol, e.message); }
+    }
+
+    cachedData = {
+      key: getCacheKey(),
+      fetchedAt: Date.now(),
+      tf: btTf,
+      days: btDays,
+      coins: coinDataList
+    };
+
+    saveCacheToStorage(cachedData);
+    updateCacheStatus();
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('optBtn').disabled = false;
+    progFill.style.width = '100%';
+    progText.textContent = coinDataList.length + '개 코인 데이터 수집 완료 - "전략 실행" 또는 "자동 최적화" 클릭';
+    showToast(coinDataList.length + '개 코인 캐시 완료', 'success');
+
+  } catch (e) {
+    progText.textContent = '오류: ' + e.message;
+    showToast('오류: ' + e.message, 'error');
+  } finally {
+    btn.disabled = false; btn.textContent = '데이터 수집';
+    scanning = false;
+  }
+}
+
+// ========================================
+// Phase 2: Strategy Run (Cache -> Backtest)
+// ========================================
+function runStrategy() {
+  if (!cachedData || cachedData.coins.length === 0) {
+    showToast('먼저 데이터를 수집하세요', 'error');
+    return;
+  }
+
+  var startTime = performance.now();
+  allResults = []; allTrades = [];
+  document.getElementById('resultArea').style.display = 'none';
+  document.getElementById('placeholder').style.display = 'none';
+
+  var progFill = document.getElementById('progressFill');
+  var progText = document.getElementById('progressText');
+  progFill.style.width = '0%';
+
+  var params = {
+    rsiPeriod: parseInt(document.getElementById('rsiPeriod').value) || 14,
+    rsiBuy: parseFloat(document.getElementById('rsiBuy').value) || 35,
+    rsiSell: parseFloat(document.getElementById('rsiSell').value) || 50,
+    bbPeriod: parseInt(document.getElementById('bbPeriod').value) || 20,
+    bbMult: parseFloat(document.getElementById('bbMult').value) || 2.0,
+    bbProx: parseFloat(document.getElementById('bbProx').value) || 0.3,
+    lookback: parseInt(document.getElementById('lookback').value) || 5,
+    profitTarget: parseFloat(document.getElementById('profitTarget').value) || 0.7,
+    stopLoss: parseFloat(document.getElementById('stopLoss').value) || 0.5,
+    timeLimit: parseInt(document.getElementById('timeLimit').value) || 20,
+    hourStart: parseInt(document.getElementById('hourStart').value),
+    hourEnd: parseInt(document.getElementById('hourEnd').value),
+    volFilter: document.getElementById('volFilter').checked
+  };
+  if (params.hourEnd === 0) params.hourEnd = 24;
+
+  var coins = cachedData.coins;
+  for (var ci = 0; ci < coins.length; ci++) {
+    var coin = coins[ci];
+    var pct = ((ci + 1) / coins.length * 100);
+    progFill.style.width = pct + '%';
+
+    var lastPrice = coin.candles[0].trade_price;
+    var tickPct = getTickPct(lastPrice);
+    if (params.profitTarget < tickPct * 2) continue;
+
+    var result = backtestCoin(coin.candles, params);
+    if (result && result.count >= 1) {
+      result.symbol = coin.symbol;
+      result.name = coin.name;
+      result.market = coin.market;
+      result.trades.forEach(function(t) { t.symbol = coin.symbol; t.name = coin.name; });
+      allResults.push(result);
+      allTrades = allTrades.concat(result.trades);
+    }
+  }
+
+  allResults.sort(function(a, b) { return b.totalPct - a.totalPct; });
+  allTrades.sort(function(a, b) { return a.buyTime - b.buyTime; });
+
+  var elapsed = ((performance.now() - startTime) / 1000).toFixed(2);
+  progFill.style.width = '100%';
+  progText.textContent = coins.length + '개 코인 분석 완료 (' + elapsed + '초) | '
+    + allResults.length + '개 신호 | ' + allTrades.length + '건 매매';
+
+  document.getElementById('resultArea').style.display = '';
+  renderRankingPanel();
+  renderTradesPanel();
+  renderEquityPanel();
+  renderHourlyPanel();
+
+  // 모니터링 대상 갱신
+  buildMonitorCoins();
+  if (monitorCoins.length > 0) {
+    document.getElementById('liveArea').style.display = '';
+    renderMonitorCards();
+  }
+}
+
+// ========================================
+// Tab Switch
+// ========================================
+function switchTab(el) {
+  document.querySelectorAll('.bt-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.bt-panel').forEach(function(p) { p.classList.remove('active'); });
+  el.classList.add('active');
+  document.getElementById('panel-' + el.dataset.tab).classList.add('active');
+}
+
+// ========================================
+// Render: Ranking Panel
+// ========================================
+function renderRankingPanel() {
+  var panel = document.getElementById('panel-ranking');
+  if (allResults.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">조건에 맞는 신호가 없습니다</div>';
+    return;
+  }
+
+  var totalTrades = allTrades.length;
+  var totalWins = allTrades.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = allTrades.reduce(function(s, t) { return s + t.netPct; }, 0);
+  var winRate = totalTrades > 0 ? totalWins / totalTrades * 100 : 0;
+  var avgElapsed = allTrades.reduce(function(s, t) { return s + t.elapsed; }, 0) / (totalTrades || 1);
+  var volTrades = allTrades.filter(function(t) { return t.volSurge; });
+  var volWins = volTrades.filter(function(t) { return t.netPct > 0; }).length;
+  var volWR = volTrades.length > 0 ? volWins / volTrades.length * 100 : 0;
+
+  // Reason breakdown
+  var reasons = {};
+  allTrades.forEach(function(t) { reasons[t.reason] = (reasons[t.reason] || 0) + 1; });
+
+  var html = '<div class="stats-bar">'
+    + '<div class="stat-card"><div class="stat-label">감지 코인</div><div class="stat-value">' + allResults.length + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">총 매매</div><div class="stat-value">' + totalTrades + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">승률</div><div class="stat-value" style="color:' + (winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + winRate.toFixed(1) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">총 수익률</div><div class="stat-value" style="color:' + (totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">평균 보유</div><div class="stat-value" style="font-size:14px">' + fmtElapsed(avgElapsed) + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">거래량확인 승률</div><div class="stat-value" style="color:var(--purple)">' + volWR.toFixed(1) + '% <span style="font-size:11px;color:var(--muted)">' + volTrades.length + '건</span></div></div>'
+    + '</div>';
+
+  // Reason breakdown bar
+  html += '<div style="padding:4px 24px 12px;display:flex;gap:12px;flex-wrap:wrap">';
+  var reasonMap = { profit: '익절', stoploss: '손절', timeout: '시간초과', rsi_exit: 'RSI매도', bb_mid: 'BB중심', open: '미결' };
+  var reasonColors = { profit: 'var(--up)', stoploss: 'var(--down)', timeout: 'var(--muted)', rsi_exit: 'var(--accent3)', bb_mid: 'var(--purple)', open: 'var(--gold)' };
+  Object.keys(reasons).forEach(function(r) {
+    html += '<span style="font-size:11px;font-family:\'IBM Plex Mono\',monospace;color:' + (reasonColors[r] || 'var(--muted)') + '">'
+      + (reasonMap[r] || r) + ': ' + reasons[r] + '건</span>';
+  });
+  html += '</div>';
+
+  // Coin table
+  html += '<div style="padding:0 24px 16px"><div class="table-wrapper" style="max-height:450px"><table><thead><tr>'
+    + '<th>순위</th><th>코인</th><th>매매수</th><th>승률</th><th>총수익률</th>'
+    + '<th>평균RSI</th><th>평균보유</th><th>익절/손절/RSI/BB/시간</th>'
+    + '</tr></thead><tbody>';
+
+  allResults.forEach(function(c, idx) {
+    var rankCls = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'normal';
+    var avgRsi = c.trades.reduce(function(s, t) { return s + t.buyRsi; }, 0) / c.trades.length;
+    var r = c.reasons || {};
+    html += '<tr style="cursor:pointer;' + (c.totalPct > 0 ? 'background:rgba(168,85,247,0.06)' : '') + '" onclick="showCoinTrades(\'' + c.symbol + '\')">'
+      + '<td><span class="rank-badge ' + rankCls + '">' + (idx + 1) + '</span></td>'
+      + '<td style="font-weight:700">' + c.symbol + ' <span style="font-size:10px;color:var(--muted)">' + c.name + '</span></td>'
+      + '<td>' + c.count + '</td>'
+      + '<td style="color:' + (c.winRate >= 50 ? 'var(--up)' : 'var(--down)') + ';font-weight:700">' + c.winRate.toFixed(1) + '%</td>'
+      + '<td style="font-weight:700;color:' + (c.totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (c.totalPct >= 0 ? '+' : '') + c.totalPct.toFixed(2) + '%</td>'
+      + '<td class="mono" style="color:var(--down)">' + avgRsi.toFixed(1) + '</td>'
+      + '<td class="mono" style="font-size:10px">' + fmtElapsed(c.avgElapsed) + '</td>'
+      + '<td class="mono" style="font-size:10px">' + (r.profit || 0) + '/' + (r.stoploss || 0) + '/' + (r.rsi_exit || 0) + '/' + (r.bb_mid || 0) + '/' + (r.timeout || 0) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  panel.innerHTML = html;
+}
+
+// ========================================
+// Render: Trades Panel
+// ========================================
+function renderTradesPanel() {
+  var panel = document.getElementById('panel-trades');
+  if (allTrades.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">매매 내역 없음</div>';
+    return;
+  }
+
+  var reasonMap = { profit: '익절', stoploss: '손절', timeout: '시간초과', rsi_exit: 'RSI매도', bb_mid: 'BB중심', open: '미결' };
+  var reasonColors = { profit: 'var(--up)', stoploss: 'var(--down)', timeout: 'var(--muted)', rsi_exit: 'var(--accent3)', bb_mid: 'var(--purple)', open: 'var(--gold)' };
+
+  var html = '<div style="padding:12px 24px 16px"><div class="table-wrapper" style="max-height:500px"><table><thead><tr>'
+    + '<th>#</th><th>코인</th><th>매수시각</th><th>매수가</th><th>RSI</th>'
+    + '<th>매도시각</th><th>매도가</th><th>수익률</th><th>보유</th><th>사유</th><th>VOL</th>'
+    + '</tr></thead><tbody>';
+
+  allTrades.forEach(function(t, idx) {
+    html += '<tr>'
+      + '<td style="color:var(--muted)">' + (idx + 1) + '</td>'
+      + '<td style="font-weight:700">' + t.symbol + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.buyTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.buyPrice) + '</td>'
+      + '<td class="mono" style="color:var(--down)">' + t.buyRsi.toFixed(1) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.sellTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.sellPrice) + '</td>'
+      + '<td style="font-weight:700;color:' + (t.netPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (t.netPct >= 0 ? '+' : '') + t.netPct.toFixed(3) + '%</td>'
+      + '<td class="mono" style="font-size:10px">' + fmtElapsed(t.elapsed) + '</td>'
+      + '<td style="color:' + (reasonColors[t.reason] || 'var(--muted)') + ';font-size:10px">' + (reasonMap[t.reason] || t.reason) + '</td>'
+      + '<td>' + (t.volSurge ? '<span class="signal-tag vol">VOL</span>' : '') + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+  panel.innerHTML = html;
+}
+
+// ========================================
+// Render: Equity Curve Panel
+// ========================================
+function renderEquityPanel() {
+  var panel = document.getElementById('panel-equity');
+  if (allTrades.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">데이터 없음</div>';
+    return;
+  }
+
+  // Build equity curve
+  var equity = [0];
+  var cumPct = 0;
+  allTrades.forEach(function(t) {
+    cumPct += t.netPct;
+    equity.push(cumPct);
+  });
+
+  var maxEq = Math.max.apply(null, equity);
+  var minEq = Math.min.apply(null, equity);
+  var range = maxEq - minEq || 1;
+
+  // Stats
+  var maxDD = 0, peak = 0;
+  for (var i = 0; i < equity.length; i++) {
+    if (equity[i] > peak) peak = equity[i];
+    var dd = peak - equity[i];
+    if (dd > maxDD) maxDD = dd;
+  }
+  var consecutive = { win: 0, loss: 0, maxWin: 0, maxLoss: 0 };
+  allTrades.forEach(function(t) {
+    if (t.netPct > 0) { consecutive.win++; consecutive.loss = 0; if (consecutive.win > consecutive.maxWin) consecutive.maxWin = consecutive.win; }
+    else { consecutive.loss++; consecutive.win = 0; if (consecutive.loss > consecutive.maxLoss) consecutive.maxLoss = consecutive.loss; }
+  });
+
+  var html = '<div class="stats-bar">'
+    + '<div class="stat-card"><div class="stat-label">최대 낙폭</div><div class="stat-value" style="color:var(--down)">' + maxDD.toFixed(2) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">최대 연승</div><div class="stat-value" style="color:var(--up)">' + consecutive.maxWin + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">최대 연패</div><div class="stat-value" style="color:var(--down)">' + consecutive.maxLoss + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">최종 수익률</div><div class="stat-value" style="color:' + (cumPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (cumPct >= 0 ? '+' : '') + cumPct.toFixed(2) + '%</div></div>'
+    + '</div>';
+
+  // Canvas for equity curve
+  html += '<div style="padding:0 24px 16px"><canvas id="equityCanvas" class="equity-canvas" height="150"></canvas></div>';
+  panel.innerHTML = html;
+
+  // Draw
+  requestAnimationFrame(function() { drawEquityCurve(equity); });
+}
+
+function drawEquityCurve(equity) {
+  var canvas = document.getElementById('equityCanvas');
+  if (!canvas) return;
+  canvas.width = canvas.offsetWidth * 2;
+  canvas.height = 300;
+  var ctx = canvas.getContext('2d');
+  ctx.scale(2, 2);
+  var w = canvas.offsetWidth;
+  var h = 150;
+  var pad = { top: 20, bottom: 30, left: 50, right: 20 };
+
+  var maxEq = Math.max.apply(null, equity);
+  var minEq = Math.min.apply(null, equity);
+  var range = maxEq - minEq || 1;
+
+  // Background
+  ctx.fillStyle = '#0d1420';
+  ctx.fillRect(0, 0, w, h);
+
+  // Zero line
+  var zeroY = pad.top + (maxEq / range) * (h - pad.top - pad.bottom);
+  ctx.strokeStyle = 'rgba(90,112,144,0.3)';
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(pad.left, zeroY); ctx.lineTo(w - pad.right, zeroY); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Equity line
+  var plotW = w - pad.left - pad.right;
+  var plotH = h - pad.top - pad.bottom;
+  ctx.beginPath();
+  for (var i = 0; i < equity.length; i++) {
+    var x = pad.left + (i / (equity.length - 1)) * plotW;
+    var y = pad.top + ((maxEq - equity[i]) / range) * plotH;
+    if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+  }
+  ctx.strokeStyle = '#a855f7';
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+
+  // Fill area
+  var lastX = pad.left + plotW;
+  var lastY = pad.top + ((maxEq - equity[equity.length - 1]) / range) * plotH;
+  ctx.lineTo(lastX, zeroY);
+  ctx.lineTo(pad.left, zeroY);
+  ctx.closePath();
+  var grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+  grad.addColorStop(0, 'rgba(168,85,247,0.2)');
+  grad.addColorStop(1, 'rgba(168,85,247,0.02)');
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Labels
+  ctx.fillStyle = '#5a7090';
+  ctx.font = '10px IBM Plex Mono';
+  ctx.textAlign = 'right';
+  ctx.fillText('+' + maxEq.toFixed(2) + '%', pad.left - 4, pad.top + 10);
+  ctx.fillText((minEq >= 0 ? '+' : '') + minEq.toFixed(2) + '%', pad.left - 4, h - pad.bottom);
+  ctx.fillText('0%', pad.left - 4, zeroY + 4);
+
+  ctx.textAlign = 'left';
+  ctx.fillText('1', pad.left, h - pad.bottom + 14);
+  ctx.textAlign = 'right';
+  ctx.fillText(String(equity.length - 1), w - pad.right, h - pad.bottom + 14);
+  ctx.textAlign = 'center';
+  ctx.fillText('매매 #', w / 2, h - pad.bottom + 14);
+}
+
+// ========================================
+// Render: Hourly Analysis Panel
+// ========================================
+function renderHourlyPanel() {
+  var panel = document.getElementById('panel-hourly');
+  if (allTrades.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">데이터 없음</div>';
+    return;
+  }
+
+  // Group by hour
+  var hourData = {};
+  for (var h = 0; h < 24; h++) hourData[h] = { total: 0, wins: 0, pct: 0 };
+  allTrades.forEach(function(t) {
+    var h = new Date(t.buyTime).getHours();
+    hourData[h].total++;
+    if (t.netPct > 0) hourData[h].wins++;
+    hourData[h].pct += t.netPct;
+  });
+
+  var html = '<div style="padding:16px 24px">';
+  html += '<div style="font-size:13px;font-weight:700;margin-bottom:12px;color:var(--purple)">시간대별 성과 분석</div>';
+
+  // Bar chart as HTML
+  var maxTrades = 0;
+  for (var h = 0; h < 24; h++) { if (hourData[h].total > maxTrades) maxTrades = hourData[h].total; }
+
+  html += '<div style="display:flex;gap:2px;align-items:flex-end;height:120px;padding:0 0 4px">';
+  for (var h = 0; h < 24; h++) {
+    var d = hourData[h];
+    var barH = maxTrades > 0 ? (d.total / maxTrades) * 100 : 0;
+    var wr = d.total > 0 ? d.wins / d.total * 100 : 0;
+    var color = d.total === 0 ? 'var(--surface2)' : wr >= 60 ? 'var(--up)' : wr >= 40 ? 'var(--accent3)' : 'var(--down)';
+    html += '<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end" title="' + h + '시: ' + d.total + '건 승률' + wr.toFixed(0) + '% 수익' + (d.pct >= 0 ? '+' : '') + d.pct.toFixed(2) + '%">'
+      + '<div style="font-size:8px;color:var(--muted);margin-bottom:2px">' + (d.total > 0 ? d.total : '') + '</div>'
+      + '<div style="width:100%;max-width:28px;height:' + Math.max(barH, 2) + '%;background:' + color + ';border-radius:3px 3px 0 0;transition:height 0.3s"></div>'
+      + '</div>';
+  }
+  html += '</div>';
+
+  // Hour labels
+  html += '<div style="display:flex;gap:2px">';
+  for (var h = 0; h < 24; h++) {
+    html += '<div style="flex:1;text-align:center;font-size:9px;color:var(--muted);font-family:\'IBM Plex Mono\',monospace">' + h + '</div>';
+  }
+  html += '</div>';
+
+  // Legend
+  html += '<div style="display:flex;gap:16px;margin-top:12px;font-size:10px">'
+    + '<span style="color:var(--up)">&#9632; 승률 60%+</span>'
+    + '<span style="color:var(--accent3)">&#9632; 승률 40~60%</span>'
+    + '<span style="color:var(--down)">&#9632; 승률 40% 미만</span>'
+    + '</div>';
+
+  // Detail table
+  html += '<div class="table-wrapper" style="max-height:400px;margin-top:16px"><table><thead><tr>'
+    + '<th>시간</th><th>매매수</th><th>승</th><th>패</th><th>승률</th><th>수익률</th><th>건당 평균</th>'
+    + '</tr></thead><tbody>';
+
+  for (var h = 0; h < 24; h++) {
+    var d = hourData[h];
+    if (d.total === 0) continue;
+    var wr = d.wins / d.total * 100;
+    var avg = d.pct / d.total;
+    html += '<tr>'
+      + '<td class="mono" style="font-weight:700">' + ('0' + h).slice(-2) + ':00</td>'
+      + '<td>' + d.total + '</td>'
+      + '<td style="color:var(--up)">' + d.wins + '</td>'
+      + '<td style="color:var(--down)">' + (d.total - d.wins) + '</td>'
+      + '<td style="font-weight:700;color:' + (wr >= 50 ? 'var(--up)' : 'var(--down)') + '">' + wr.toFixed(1) + '%</td>'
+      + '<td style="font-weight:700;color:' + (d.pct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (d.pct >= 0 ? '+' : '') + d.pct.toFixed(3) + '%</td>'
+      + '<td class="mono" style="color:' + (avg >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (avg >= 0 ? '+' : '') + avg.toFixed(3) + '%</td>'
+      + '</tr>';
+  }
+  html += '</tbody></table></div></div>';
+  panel.innerHTML = html;
+}
+
+// ========================================
+// Coin Trade Detail Popup
+// ========================================
+function showCoinTrades(symbol) {
+  var result = allResults.find(function(r) { return r.symbol === symbol; });
+  if (!result) return;
+
+  document.getElementById('tpSym').textContent = symbol;
+  document.getElementById('tpName').textContent = result.name;
+
+  var reasonMap = { profit: '익절', stoploss: '손절', timeout: '시간초과', rsi_exit: 'RSI매도', bb_mid: 'BB중심', open: '미결' };
+  var reasonColors = { profit: 'var(--up)', stoploss: 'var(--down)', timeout: 'var(--muted)', rsi_exit: 'var(--accent3)', bb_mid: 'var(--purple)', open: 'var(--gold)' };
+
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px">'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">매매수</div><div class="mono" style="font-size:18px;font-weight:700">' + result.count + '</div></div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">승률</div><div class="mono" style="font-size:18px;font-weight:700;color:' + (result.winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + result.winRate.toFixed(1) + '%</div></div>'
+    + '<div style="background:var(--surface2);border-radius:8px;padding:10px;text-align:center"><div style="font-size:10px;color:var(--muted)">총수익률</div><div class="mono" style="font-size:18px;font-weight:700;color:' + (result.totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (result.totalPct >= 0 ? '+' : '') + result.totalPct.toFixed(2) + '%</div></div>'
+    + '</div>';
+
+  html += '<div class="table-wrapper" style="max-height:350px"><table><thead><tr>'
+    + '<th>#</th><th>매수</th><th>RSI</th><th>매수가</th><th>매도</th><th>매도가</th><th>수익률</th><th>보유</th><th>사유</th>'
+    + '</tr></thead><tbody>';
+
+  result.trades.forEach(function(t, idx) {
+    html += '<tr>'
+      + '<td style="color:var(--muted)">' + (idx + 1) + '</td>'
+      + '<td class="mono" style="font-size:10px">' + fmtDt(new Date(t.buyTime)) + '</td>'
+      + '<td class="mono" style="color:var(--down)">' + t.buyRsi.toFixed(1) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.buyPrice) + '</td>'
+      + '<td class="mono" style="font-size:10px">' + fmtDt(new Date(t.sellTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.sellPrice) + '</td>'
+      + '<td style="font-weight:700;color:' + (t.netPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (t.netPct >= 0 ? '+' : '') + t.netPct.toFixed(3) + '%</td>'
+      + '<td class="mono" style="font-size:10px">' + fmtElapsed(t.elapsed) + '</td>'
+      + '<td style="color:' + (reasonColors[t.reason] || 'var(--muted)') + ';font-size:10px">' + (reasonMap[t.reason] || t.reason) + '</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+
+  document.getElementById('tpBody').innerHTML = html;
+  document.getElementById('tradePopup').classList.add('show');
+}
+
+function closeTradePopup() {
+  document.getElementById('tradePopup').classList.remove('show');
+}
+document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeTradePopup(); });
+
+// ========================================
+// Pre-compute Indicators (for optimization speed)
+// ========================================
+function precompute(candles, rsiPeriod, bbPeriod, bbMult) {
+  var asc = candles.slice().reverse();
+  var closes = [], highs = [], lows = [], opens = [], volumes = [], times = [];
+  for (var i = 0; i < asc.length; i++) {
+    closes.push(asc[i].trade_price);
+    highs.push(asc[i].high_price);
+    lows.push(asc[i].low_price);
+    opens.push(asc[i].opening_price);
+    volumes.push(asc[i].candle_acc_trade_volume);
+    times.push(new Date(asc[i].candle_date_time_kst || asc[i].candle_date_time_utc));
+  }
+  var rsiArr = calcRSI(closes, rsiPeriod);
+  var bb = calcBB(closes, bbPeriod, bbMult);
+  var volAvg = [];
+  for (var i = 0; i < volumes.length; i++) {
+    if (i < 20) { volAvg.push(0); continue; }
+    var s = 0; for (var j = i - 20; j < i; j++) s += volumes[j];
+    volAvg.push(s / 20);
+  }
+  return { closes: closes, highs: highs, lows: lows, opens: opens, volumes: volumes, times: times, rsiArr: rsiArr, bb: bb, volAvg: volAvg, rsiPeriod: rsiPeriod, bbPeriod: bbPeriod };
+}
+
+// Fast backtest using pre-computed indicators
+function fastBacktest(ind, params) {
+  var startIdx = Math.max(ind.rsiPeriod, ind.bbPeriod - 1) + 1;
+  var reqPct = params.profitTarget + (FEE_ROUND * 100);
+  var stopPct = -(params.stopLoss + FEE_ROUND * 100);
+  var stopMs = params.timeLimit * 60000;
+  var bbProxR = params.bbProx / 100;
+  var lookbackN = params.lookback;
+  var hourStart = params.hourStart;
+  var hourEnd = params.hourEnd;
+
+  var trades = 0, wins = 0, totalPct = 0;
+  var inPos = false, entryPrice = 0, entryTime = 0;
+
+  for (var i = startIdx; i < ind.closes.length; i++) {
+    var rsiIdx = i - ind.rsiPeriod;
+    var bbIdx = i - (ind.bbPeriod - 1);
+    if (rsiIdx < 0 || rsiIdx >= ind.rsiArr.length) continue;
+    if (bbIdx < 0 || bbIdx >= ind.bb.mid.length) continue;
+
+    var curRsi = ind.rsiArr[rsiIdx];
+    var curClose = ind.closes[i];
+    var curHigh = ind.highs[i];
+    var curLow = ind.lows[i];
+    var curOpen = ind.opens[i];
+    var bbLow = ind.bb.lower[bbIdx];
+    var bbMid = ind.bb.mid[bbIdx];
+    var curTimeMs = ind.times[i].getTime();
+
+    if (inPos) {
+      var gpHigh = ((curHigh - entryPrice) / entryPrice) * 100;
+      var gpLow = ((curLow - entryPrice) / entryPrice) * 100;
+      var gp = ((curClose - entryPrice) / entryPrice) * 100;
+      var elapsed = curTimeMs - entryTime;
+      var sellPrice = curClose;
+      var sold = false;
+      if (gpLow <= stopPct) { sellPrice = entryPrice * (1 + stopPct / 100); sold = true; }
+      else if (gpHigh >= reqPct) { sellPrice = entryPrice * (1 + reqPct / 100); sold = true; }
+      else if (curRsi >= params.rsiSell) { sold = true; }
+      else if (curHigh >= bbMid) { sellPrice = curOpen < bbMid ? bbMid : curClose; sold = true; }
+      else if (elapsed >= stopMs) { sold = true; }
+      if (sold) {
+        var netPct = ((sellPrice - entryPrice) / entryPrice) * 100 - (FEE_ROUND * 100);
+        trades++; totalPct += netPct;
+        if (netPct > 0) wins++;
+        inPos = false;
+      }
+      continue;
+    }
+
+    // Hour filter
+    var curHour = ind.times[i].getHours();
+    if (hourStart <= hourEnd) { if (curHour < hourStart || curHour >= hourEnd) continue; }
+    else { if (curHour < hourStart && curHour >= hourEnd) continue; }
+
+    // RSI check
+    if (curRsi > params.rsiBuy) continue;
+
+    // BB proximity lookback
+    var touched = false;
+    for (var lb = 0; lb <= lookbackN && (i - lb) >= 0; lb++) {
+      var ci2 = i - lb;
+      var bi2 = ci2 - (ind.bbPeriod - 1);
+      if (bi2 < 0 || bi2 >= ind.bb.lower.length) continue;
+      if (ind.lows[ci2] <= ind.bb.lower[bi2] * (1 + bbProxR)) { touched = true; break; }
+    }
+    if (!touched) continue;
+
+    // Re-entry check
+    if (curClose < bbLow) continue;
+
+    // Volume filter
+    if (params.volFilter && i >= 20 && ind.volAvg[i] > 0) {
+      if (ind.volumes[i] < ind.volAvg[i] * 1.5) continue;
+    }
+
+    inPos = true;
+    entryPrice = curClose;
+    entryTime = curTimeMs;
+  }
+
+  // Close open position
+  if (inPos) {
+    var lp = ind.closes[ind.closes.length - 1];
+    var netPct = ((lp - entryPrice) / entryPrice) * 100 - (FEE_ROUND * 100);
+    trades++; totalPct += netPct;
+    if (netPct > 0) wins++;
+  }
+
+  return { trades: trades, wins: wins, totalPct: totalPct };
+}
+
+// ========================================
+// Auto Optimization
+// ========================================
+var optimizing = false;
+
+async function runOptimize() {
+  if (!cachedData || cachedData.coins.length === 0) {
+    showToast('먼저 데이터를 수집하세요', 'error'); return;
+  }
+  if (optimizing) return;
+  optimizing = true;
+
+  var btn = document.getElementById('optBtn');
+  btn.disabled = true; btn.textContent = '최적화 중...';
+  var progFill = document.getElementById('progressFill');
+  var progText = document.getElementById('progressText');
+  progFill.style.width = '0%';
+
+  var rsiPeriod = parseInt(document.getElementById('rsiPeriod').value) || 14;
+  var bbPeriod = parseInt(document.getElementById('bbPeriod').value) || 20;
+  var bbMult = parseFloat(document.getElementById('bbMult').value) || 2.0;
+  var hourStart = parseInt(document.getElementById('hourStart').value);
+  var hourEnd = parseInt(document.getElementById('hourEnd').value);
+  if (hourEnd === 0) hourEnd = 24;
+
+  // Pre-compute indicators for all coins (once)
+  progText.textContent = '지표 사전 계산 중...';
+  await sleep(10);
+  var preList = [];
+  for (var ci = 0; ci < cachedData.coins.length; ci++) {
+    var coin = cachedData.coins[ci];
+    if (coin.candles.length < 50) continue;
+    var tickPct = getTickPct(coin.candles[0].trade_price);
+    preList.push({ ind: precompute(coin.candles, rsiPeriod, bbPeriod, bbMult), symbol: coin.symbol, name: coin.name, tickPct: tickPct });
+  }
+
+  // Parameter grid
+  var grid = {
+    rsiBuy:       [25, 30, 35, 40],
+    rsiSell:      [45, 50, 55, 60],
+    bbProx:       [0.2, 0.5, 1.0],
+    lookback:     [3, 5, 8],
+    profitTarget: [0.3, 0.5, 0.7, 1.0],
+    stopLoss:     [0.3, 0.5, 0.8],
+    timeLimit:    [10, 20, 30],
+    volFilter:    [true, false]
+  };
+
+  // Generate all combinations
+  var combos = [];
+  for (var a = 0; a < grid.rsiBuy.length; a++)
+  for (var b = 0; b < grid.rsiSell.length; b++)
+  for (var c = 0; c < grid.bbProx.length; c++)
+  for (var d = 0; d < grid.lookback.length; d++)
+  for (var e = 0; e < grid.profitTarget.length; e++)
+  for (var f = 0; f < grid.stopLoss.length; f++)
+  for (var g = 0; g < grid.timeLimit.length; g++)
+  for (var h = 0; h < grid.volFilter.length; h++) {
+    // rsiBuy must be < rsiSell
+    if (grid.rsiBuy[a] >= grid.rsiSell[b]) continue;
+    // stopLoss should be <= profitTarget * 2
+    combos.push({
+      rsiBuy: grid.rsiBuy[a], rsiSell: grid.rsiSell[b],
+      bbProx: grid.bbProx[c], lookback: grid.lookback[d],
+      profitTarget: grid.profitTarget[e], stopLoss: grid.stopLoss[f],
+      timeLimit: grid.timeLimit[g], volFilter: grid.volFilter[h],
+      hourStart: hourStart, hourEnd: hourEnd
+    });
+  }
+
+  progText.textContent = combos.length + '개 파라미터 조합 탐색 시작...';
+  await sleep(10);
+
+  var startTime = performance.now();
+  var optResults = [];
+  var BATCH = 100;
+
+  for (var ci = 0; ci < combos.length; ci++) {
+    var p = combos[ci];
+    var totTrades = 0, totWins = 0, totPct = 0;
+
+    for (var pi = 0; pi < preList.length; pi++) {
+      if (p.profitTarget < preList[pi].tickPct * 2) continue;
+      var r = fastBacktest(preList[pi].ind, p);
+      totTrades += r.trades;
+      totWins += r.wins;
+      totPct += r.totalPct;
+    }
+
+    if (totTrades >= 5) {
+      var wr = totWins / totTrades * 100;
+      var avgPct = totPct / totTrades;
+      // Score: 수익률 * 승률 보정 * 거래량 보정
+      var tradeScore = Math.min(1, totTrades / 20);
+      var score = totPct * (wr / 100) * tradeScore;
+      optResults.push({
+        params: p, trades: totTrades, wins: totWins,
+        winRate: wr, totalPct: totPct, avgPct: avgPct, score: score
+      });
+    }
+
+    // Yield to UI
+    if (ci % BATCH === 0) {
+      var pct = ((ci + 1) / combos.length * 100);
+      progFill.style.width = pct + '%';
+      var elapsed = ((performance.now() - startTime) / 1000);
+      var eta = elapsed / ((ci + 1) / combos.length) - elapsed;
+      progText.textContent = '최적화 ' + (ci + 1) + '/' + combos.length + ' (' + elapsed.toFixed(1) + '초 경과, ~' + Math.max(0, eta).toFixed(0) + '초 남음)';
+      await sleep(0);
+    }
+  }
+
+  var totalElapsed = ((performance.now() - startTime) / 1000).toFixed(1);
+
+  // Sort by score
+  optResults.sort(function(a, b) { return b.score - a.score; });
+
+  progFill.style.width = '100%';
+  progText.textContent = combos.length + '개 조합 완료 (' + totalElapsed + '초) | 유효 ' + optResults.length + '개';
+
+  // Render results
+  document.getElementById('resultArea').style.display = '';
+  renderOptimizePanel(optResults, totalElapsed, combos.length);
+  // Auto-switch to optimize tab
+  document.querySelectorAll('.bt-tab').forEach(function(t) { t.classList.remove('active'); });
+  document.querySelectorAll('.bt-panel').forEach(function(p) { p.classList.remove('active'); });
+  document.querySelector('.bt-tab[data-tab="optimize"]').classList.add('active');
+  document.getElementById('panel-optimize').classList.add('active');
+
+  btn.disabled = false; btn.textContent = '자동 최적화';
+  optimizing = false;
+}
+
+function renderOptimizePanel(results, elapsed, totalCombos) {
+  var panel = document.getElementById('panel-optimize');
+  if (results.length === 0) {
+    panel.innerHTML = '<div style="text-align:center;padding:40px;color:var(--muted)">유효한 결과 없음 (최소 5건 매매 필요)</div>';
+    return;
+  }
+
+  var top = results.slice(0, 30);
+  var best = top[0];
+
+  // Best summary
+  var html = '<div class="stats-bar">'
+    + '<div class="stat-card" style="border-color:var(--gold)"><div class="stat-label" style="color:var(--gold)">BEST 수익률</div><div class="stat-value" style="color:var(--up)">' + (best.totalPct >= 0 ? '+' : '') + best.totalPct.toFixed(2) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">BEST 승률</div><div class="stat-value" style="color:' + (best.winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + best.winRate.toFixed(1) + '%</div></div>'
+    + '<div class="stat-card"><div class="stat-label">BEST 매매수</div><div class="stat-value">' + best.trades + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">탐색 조합</div><div class="stat-value" style="font-size:14px">' + totalCombos.toLocaleString() + '</div></div>'
+    + '<div class="stat-card"><div class="stat-label">소요 시간</div><div class="stat-value" style="font-size:14px">' + elapsed + '초</div></div>'
+    + '</div>';
+
+  // Best params highlight
+  var bp = best.params;
+  html += '<div style="padding:4px 24px 12px">'
+    + '<div style="background:var(--surface);border:1px solid var(--gold);border-radius:8px;padding:12px 16px;display:flex;gap:16px;flex-wrap:wrap;align-items:center">'
+    + '<span style="font-size:12px;font-weight:700;color:var(--gold)">BEST 파라미터:</span>'
+    + '<span class="mono" style="font-size:11px">RSI매수=' + bp.rsiBuy + '</span>'
+    + '<span class="mono" style="font-size:11px">RSI매도=' + bp.rsiSell + '</span>'
+    + '<span class="mono" style="font-size:11px">BB근접=' + bp.bbProx + '%</span>'
+    + '<span class="mono" style="font-size:11px">되돌림=' + bp.lookback + '봉</span>'
+    + '<span class="mono" style="font-size:11px">목표=' + bp.profitTarget + '%</span>'
+    + '<span class="mono" style="font-size:11px">손절=' + bp.stopLoss + '%</span>'
+    + '<span class="mono" style="font-size:11px">제한=' + bp.timeLimit + '분</span>'
+    + '<span class="mono" style="font-size:11px">VOL=' + (bp.volFilter ? 'ON' : 'OFF') + '</span>'
+    + '<button onclick="applyParams(0)" class="action-btn" style="padding:5px 14px;font-size:11px">적용</button>'
+    + '</div></div>';
+
+  // Top 30 table
+  html += '<div style="padding:0 24px 16px"><div class="table-wrapper" style="max-height:500px"><table><thead><tr>'
+    + '<th>순위</th><th>Score</th><th>수익률</th><th>승률</th><th>매매수</th><th>건당평균</th>'
+    + '<th>RSI매수</th><th>RSI매도</th><th>BB근접</th><th>되돌림</th><th>목표</th><th>손절</th><th>제한</th><th>VOL</th><th></th>'
+    + '</tr></thead><tbody>';
+
+  top.forEach(function(r, idx) {
+    var p = r.params;
+    var rankCls = idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : 'normal';
+    html += '<tr style="' + (idx === 0 ? 'background:rgba(255,215,0,0.08)' : idx < 3 ? 'background:rgba(168,85,247,0.04)' : '') + '">'
+      + '<td><span class="rank-badge ' + rankCls + '">' + (idx + 1) + '</span></td>'
+      + '<td class="mono" style="color:var(--gold)">' + r.score.toFixed(2) + '</td>'
+      + '<td style="font-weight:700;color:' + (r.totalPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (r.totalPct >= 0 ? '+' : '') + r.totalPct.toFixed(2) + '%</td>'
+      + '<td style="color:' + (r.winRate >= 50 ? 'var(--up)' : 'var(--down)') + '">' + r.winRate.toFixed(1) + '%</td>'
+      + '<td>' + r.trades + '</td>'
+      + '<td class="mono" style="color:' + (r.avgPct >= 0 ? 'var(--up)' : 'var(--down)') + '">' + (r.avgPct >= 0 ? '+' : '') + r.avgPct.toFixed(3) + '%</td>'
+      + '<td class="mono">' + p.rsiBuy + '</td>'
+      + '<td class="mono">' + p.rsiSell + '</td>'
+      + '<td class="mono">' + p.bbProx + '</td>'
+      + '<td class="mono">' + p.lookback + '</td>'
+      + '<td class="mono">' + p.profitTarget + '%</td>'
+      + '<td class="mono">' + p.stopLoss + '%</td>'
+      + '<td class="mono">' + p.timeLimit + '분</td>'
+      + '<td>' + (p.volFilter ? '<span style="color:var(--purple)">ON</span>' : '<span style="color:var(--muted)">OFF</span>') + '</td>'
+      + '<td><button onclick="applyParams(' + idx + ')" class="ctrl-btn" style="font-size:9px;padding:3px 8px">적용</button></td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div></div>';
+
+  panel.innerHTML = html;
+  // Store results for apply
+  panel._optResults = top;
+}
+
+function applyParams(idx) {
+  var panel = document.getElementById('panel-optimize');
+  var results = panel._optResults;
+  if (!results || !results[idx]) return;
+  var p = results[idx].params;
+
+  document.getElementById('rsiBuy').value = p.rsiBuy;
+  document.getElementById('rsiSell').value = p.rsiSell;
+  document.getElementById('bbProx').value = p.bbProx;
+  document.getElementById('lookback').value = p.lookback;
+  document.getElementById('profitTarget').value = p.profitTarget;
+  document.getElementById('stopLoss').value = p.stopLoss;
+  document.getElementById('timeLimit').value = p.timeLimit;
+  document.getElementById('volFilter').checked = p.volFilter;
+
+  // Save to cookies
+  setCookie('ct8_rsiBuy', p.rsiBuy);
+  setCookie('ct8_rsiSell', p.rsiSell);
+  setCookie('ct8_bbProx', p.bbProx);
+  setCookie('ct8_lookback', p.lookback);
+  setCookie('ct8_profitTarget', p.profitTarget);
+  setCookie('ct8_stopLoss', p.stopLoss);
+  setCookie('ct8_timeLimit', p.timeLimit);
+
+  showToast('#' + (idx + 1) + ' 파라미터 적용 완료 - "전략 실행" 클릭', 'success');
+
+  // Auto-run strategy
+  runStrategy();
+  // Switch to ranking tab
+  setTimeout(function() {
+    document.querySelectorAll('.bt-tab').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.bt-panel').forEach(function(p) { p.classList.remove('active'); });
+    document.querySelector('.bt-tab[data-tab="ranking"]').classList.add('active');
+    document.getElementById('panel-ranking').classList.add('active');
+  }, 50);
+}
+
+// ========================================
+// ========================================
+// JWT Auth
+// ========================================
+function base64url(source) {
+  var str = '';
+  if (typeof source === 'string') { str = btoa(source); }
+  else { var bytes = new Uint8Array(source); for (var i = 0; i < bytes.length; i++) str += String.fromCharCode(bytes[i]); str = btoa(str); }
+  return str.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function uuidv4() {
+  if (crypto.randomUUID) return crypto.randomUUID();
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) { var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16); });
+}
+async function sha512(message) {
+  var data = new TextEncoder().encode(message);
+  var hashBuffer = await crypto.subtle.digest('SHA-512', data);
+  return Array.from(new Uint8Array(hashBuffer)).map(function(b) { return b.toString(16).padStart(2, '0'); }).join('');
+}
+async function generateJWT(queryString) {
+  if (!accessKey || !secretKey) throw new Error('API Key 미설정');
+  var header = { alg: 'HS256', typ: 'JWT' };
+  var payload = { access_key: accessKey, nonce: uuidv4(), timestamp: Date.now() };
+  if (queryString) { payload.query_hash = await sha512(queryString); payload.query_hash_alg = 'SHA512'; }
+  var encodedHeader = base64url(JSON.stringify(header));
+  var encodedPayload = base64url(JSON.stringify(payload));
+  var signingInput = encodedHeader + '.' + encodedPayload;
+  var key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secretKey), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  var signature = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signingInput));
+  return signingInput + '.' + base64url(signature);
+}
+async function apiAuth(method, url, params) {
+  var queryString = '';
+  var fetchUrl = url;
+  if (params && Object.keys(params).length > 0) {
+    queryString = new URLSearchParams(params).toString();
+    if (method === 'GET' || method === 'DELETE') fetchUrl = url + '?' + queryString;
+  }
+  var token = await generateJWT(queryString || undefined);
+  var options = { method: method, headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' } };
+  if (method === 'POST' && params) options.body = JSON.stringify(params);
+  var response = await fetch(fetchUrl, options);
+  var data = await response.json();
+  if (data.error) throw new Error(data.error.message || data.error.name || 'API 오류');
+  return data;
+}
+
+// ========================================
+// API Key / Balance
+// ========================================
+function openApiModal() { document.getElementById('inputAccessKey').value = accessKey; document.getElementById('inputSecretKey').value = secretKey; document.getElementById('apiModal').classList.add('show'); }
+function closeApiModal() { document.getElementById('apiModal').classList.remove('show'); }
+function saveApiKey() {
+  accessKey = document.getElementById('inputAccessKey').value.trim();
+  secretKey = document.getElementById('inputSecretKey').value.trim();
+  localStorage.setItem('bit_access_key', accessKey);
+  localStorage.setItem('bit_secret_key', secretKey);
+  closeApiModal(); updateApiStatus(); showToast('API Key 저장 완료', 'success');
+  if (accessKey && secretKey) loadBalance();
+}
+function clearApiKey() {
+  accessKey = ''; secretKey = '';
+  localStorage.removeItem('bit_access_key'); localStorage.removeItem('bit_secret_key');
+  document.getElementById('inputAccessKey').value = ''; document.getElementById('inputSecretKey').value = '';
+  closeApiModal(); updateApiStatus(); showToast('API Key 초기화', 'success');
+}
+function updateApiStatus() {
+  var btn = document.getElementById('apiKeyBtn');
+  if (accessKey && secretKey) { btn.classList.add('connected'); btn.textContent = 'API \u2713'; }
+  else { btn.classList.remove('connected'); btn.textContent = 'API Key'; }
+}
+async function loadBalance() {
+  try {
+    var accounts = await apiAuth('GET', API + '/accounts', {});
+    var krwAcc = accounts.find(function(a) { return a.currency === 'KRW'; });
+    krwBalance = krwAcc ? parseFloat(krwAcc.balance) : 0;
+    document.getElementById('balanceDisplay').textContent = 'KRW ' + Math.floor(krwBalance).toLocaleString('ko-KR') + '원';
+  } catch (e) { document.getElementById('balanceDisplay').textContent = ''; }
+}
+
+// ========================================
+// Trade Controls
+// ========================================
+function onAutoTradeToggle() {
+  var checked = document.getElementById('autoTradeToggle').checked;
+  if (checked && (!accessKey || !secretKey)) {
+    document.getElementById('autoTradeToggle').checked = false;
+    showToast('API Key를 먼저 설정하세요', 'error'); return;
+  }
+  autoTradeOn = checked;
+  var statusEl = document.getElementById('tradeStatusText');
+  if (autoTradeOn) { statusEl.textContent = 'LIVE 자동매매'; statusEl.className = 'trade-status live'; addLog('info', '*** 자동매매 ON ***'); loadBalance(); }
+  else { statusEl.textContent = '시뮬레이션'; statusEl.className = 'trade-status sim'; addLog('info', '자동매매 OFF'); }
+}
+function setBuyMode(btn) {
+  document.querySelectorAll('.ctrl-btn[data-bm]').forEach(function(b) { b.classList.remove('active'); });
+  btn.classList.add('active'); buyMode = btn.dataset.bm;
+  var label = document.getElementById('buyAmtLabel'); var unit = document.getElementById('buyAmtUnit'); var input = document.getElementById('buyAmount');
+  if (buyMode === 'fixed') { label.textContent = '매수금액'; unit.textContent = '원'; input.value = '5000'; }
+  else { label.textContent = '잔고비율'; unit.textContent = '%'; input.value = '5'; }
+}
+function getBuyAmount() {
+  var val = parseFloat(document.getElementById('buyAmount').value) || 0;
+  if (buyMode === 'fixed') return val;
+  return Math.floor(krwBalance * val / 100);
+}
+
+// ========================================
+// Trade Execution
+// ========================================
+async function checkTradeKey() {
+  try { var r = await fetch('key.json?t=' + Date.now()); if (!r.ok) return false; var data = await r.json(); return data.autoTrade === true; } catch (e) { return false; }
+}
+async function executeBuy(market, sym) {
+  var allowed = await checkTradeKey();
+  if (!allowed) { addLog('sell', sym + ' 매수 차단: key.json'); showToast('key.json 안전장치: 매매 차단됨', 'error'); return null; }
+  // 잔고 최신화 후 확인
+  await loadBalance();
+  var amount = getBuyAmount();
+  if (amount < 5000) { addLog('sell', sym + ' 매수 실패: 최소 5,000원'); return null; }
+  if (amount > krwBalance) { addLog('sell', sym + ' 매수 실패: 잔고부족 (필요 ' + amount.toLocaleString() + '원 / 잔고 ' + Math.floor(krwBalance).toLocaleString() + '원)'); showToast(sym + ' 잔고 부족', 'error'); return null; }
+  try {
+    var params = { market: market, side: 'bid', ord_type: 'price', price: String(amount) };
+    var result = await apiAuth('POST', API + '/orders', params);
+    addLog('buy', '[실매매] ' + sym + ' 시장가 매수 ' + amount.toLocaleString() + '원');
+    showToast(sym + ' 매수 주문 체결', 'success');
+    await sleep(2000);
+    var orderDetail = await apiAuth('GET', API + '/order', { uuid: result.uuid });
+    var avgPrice = 0, totalVolume = 0;
+    if (orderDetail.trades && orderDetail.trades.length > 0) {
+      var totalCost = 0;
+      orderDetail.trades.forEach(function(t) { var p = parseFloat(t.price); var v = parseFloat(t.volume); totalCost += p * v; totalVolume += v; });
+      avgPrice = totalCost / totalVolume;
+    }
+    // 실제 체결 수량 확인 - 미체결 시 계좌에서 직접 조회
+    if (totalVolume <= 0) {
+      await sleep(1000);
+      try {
+        var accounts = await apiAuth('GET', API + '/accounts', {});
+        var coinCurrency = market.replace('KRW-', '');
+        var coinAcc = accounts.find(function(a) { return a.currency === coinCurrency; });
+        if (coinAcc) {
+          totalVolume = parseFloat(coinAcc.balance) || 0;
+          avgPrice = totalVolume > 0 ? amount / totalVolume : 0;
+        }
+      } catch (e2) { console.error('계좌 조회 실패:', e2.message); }
+    }
+    if (totalVolume <= 0) { addLog('sell', '[실매매] ' + sym + ' 매수 체결 확인 실패: 수량 0'); return null; }
+    addLog('buy', '[실매매] ' + sym + ' 체결확인: ' + totalVolume.toFixed(8) + '개 @ ' + fmtPrice(avgPrice));
+    return { price: avgPrice, volume: totalVolume, uuid: result.uuid };
+  } catch (e) { addLog('sell', '[실매매] ' + sym + ' 매수 실패: ' + e.message); showToast(sym + ' 매수 실패', 'error'); return null; }
+}
+async function executeSell(market, sym, volume) {
+  var allowed = await checkTradeKey();
+  if (!allowed) { addLog('sell', sym + ' 매도 차단: key.json'); showToast('key.json 안전장치: 매매 차단됨', 'error'); return null; }
+  try {
+    var params = { market: market, side: 'ask', ord_type: 'market', volume: String(volume) };
+    var result = await apiAuth('POST', API + '/orders', params);
+    addLog('sell', '[실매매] ' + sym + ' 시장가 매도');
+    showToast(sym + ' 매도 주문 체결', 'success');
+    await sleep(2000);
+    var orderDetail = await apiAuth('GET', API + '/order', { uuid: result.uuid });
+    var avgPrice = 0;
+    if (orderDetail.trades && orderDetail.trades.length > 0) {
+      var totalCost = 0, totalVol = 0;
+      orderDetail.trades.forEach(function(t) { totalCost += parseFloat(t.price) * parseFloat(t.volume); totalVol += parseFloat(t.volume); });
+      avgPrice = totalCost / totalVol;
+    }
+    return { price: avgPrice, uuid: result.uuid };
+  } catch (e) { addLog('sell', '[실매매] ' + sym + ' 매도 실패: ' + e.message); showToast(sym + ' 매도 실패', 'error'); return null; }
+}
+
+// ========================================
+// Live Monitor
+// ========================================
+function buildMonitorCoins() {
+  // 백테스트 결과에서 승률 50%+ 또는 수익 양수인 코인을 모니터링 대상으로
+  monitorCoins = [];
+  if (allResults.length > 0) {
+    allResults.forEach(function(r) {
+      if (r.winRate >= 40 || r.totalPct > 0) {
+        monitorCoins.push({ symbol: r.symbol, name: r.name, market: r.market, winRate: r.winRate, totalPct: r.totalPct, trades: r.count });
+      }
+    });
+  }
+  // 캐시된 데이터에서도 코인 목록 보충
+  if (monitorCoins.length === 0 && cachedData) {
+    cachedData.coins.forEach(function(c) {
+      monitorCoins.push({ symbol: c.symbol, name: c.name, market: c.market, winRate: 0, totalPct: 0, trades: 0 });
+    });
+  }
+}
+
+function toggleMonitor() {
+  if (monitorRunning) stopMonitor(); else startMonitor();
+}
+
+var posRefreshInterval = null;
+
+function startMonitor() {
+  buildMonitorCoins();
+  if (monitorCoins.length === 0) { showToast('먼저 백테스트를 실행하세요', 'error'); return; }
+  monitorRunning = true;
+  document.getElementById('liveArea').style.display = '';
+  var btn = document.getElementById('monBtn');
+  btn.textContent = '모니터링 중지'; btn.classList.add('running');
+  document.getElementById('monitorStatus').textContent = '실행 중';
+  renderMonitorCards();
+  addLog('info', '모니터링 시작 - ' + monitorCoins.length + '개 코인 감시');
+
+  // 1초마다 보유 포지션 테이블 갱신 (경과시간/현재가 실시간 업데이트)
+  if (posRefreshInterval) clearInterval(posRefreshInterval);
+  posRefreshInterval = setInterval(function() {
+    if (Object.keys(livePositions).length > 0) renderLivePositions();
+  }, 1000);
+
+  function scheduleNext() {
+    var now = Date.now();
+    var sec = new Date(now).getSeconds();
+    var ms = new Date(now).getMilliseconds();
+    var nextSec = sec < 15 ? 15 : sec < 30 ? 30 : sec < 45 ? 45 : 60;
+    var delay = (nextSec - sec) * 1000 - ms;
+    if (delay <= 0) delay += 15000;
+    monitorInterval = setTimeout(function() {
+      if (!monitorRunning) return;
+      monitorCycle();
+      scheduleNext();
+    }, delay);
+  }
+  monitorCycle();
+  scheduleNext();
+}
+
+function stopMonitor() {
+  monitorRunning = false;
+  if (monitorInterval) { clearTimeout(monitorInterval); monitorInterval = null; }
+  if (posRefreshInterval) { clearInterval(posRefreshInterval); posRefreshInterval = null; }
+  var btn = document.getElementById('monBtn');
+  btn.textContent = '모니터링 시작'; btn.classList.remove('running');
+  document.getElementById('monitorStatus').textContent = '중지됨';
+  addLog('info', '모니터링 중지');
+}
+
+function renderMonitorCards() {
+  var el = document.getElementById('qualifiedCoins');
+  var html = '';
+  monitorCoins.forEach(function(c) {
+    var held = livePositions[c.symbol];
+    var cls = held ? 'signal-active' : '';
+    var badge = held ? '<span class="signal-badge-live">보유중</span>' : '';
+    html += '<div class="q-coin-card ' + cls + '" id="qcard-' + c.symbol + '">'
+      + badge
+      + '<div class="coin-sym">' + c.symbol + '</div>'
+      + '<div class="coin-name">' + c.name + '</div>'
+      + '<div class="coin-wr" style="color:' + (c.winRate >= 50 ? 'var(--up)' : 'var(--muted)') + '">'
+      + (c.winRate > 0 ? c.winRate.toFixed(0) + '% <span style="font-size:11px;color:var(--muted)">' + c.trades + '건</span>' : '-')
+      + '</div>'
+      + '<div class="coin-detail">'
+      + (c.totalPct !== 0 ? '백테스트 ' + (c.totalPct >= 0 ? '+' : '') + c.totalPct.toFixed(2) + '%<br>' : '')
+      + '<span id="qstatus-' + c.symbol + '" style="color:var(--muted)">대기중</span>'
+      + '</div></div>';
+  });
+  el.innerHTML = html;
+}
+
+async function fetchRecentCandles(market, unit, count) {
+  return await apiFetch('/candles/minutes/' + unit + '?market=' + market + '&count=' + count);
+}
+
+async function monitorCycle() {
+  if (!monitorRunning) return;
+
+  var params = {
+    rsiPeriod: parseInt(document.getElementById('rsiPeriod').value) || 14,
+    rsiBuy: parseFloat(document.getElementById('rsiBuy').value) || 35,
+    rsiSell: parseFloat(document.getElementById('rsiSell').value) || 50,
+    bbPeriod: parseInt(document.getElementById('bbPeriod').value) || 20,
+    bbMult: parseFloat(document.getElementById('bbMult').value) || 2.0,
+    bbProx: parseFloat(document.getElementById('bbProx').value) || 0.3,
+    lookback: parseInt(document.getElementById('lookback').value) || 5,
+    profitTarget: parseFloat(document.getElementById('profitTarget').value) || 0.7,
+    stopLoss: parseFloat(document.getElementById('stopLoss').value) || 0.5,
+    timeLimit: parseInt(document.getElementById('timeLimit').value) || 20,
+    volFilter: document.getElementById('volFilter').checked
+  };
+  var reqPct = params.profitTarget + (FEE_ROUND * 100);
+  var stopPct = -(params.stopLoss + FEE_ROUND * 100);
+  var stopMs = params.timeLimit * 60000;
+  var bbProxR = params.bbProx / 100;
+
+  document.getElementById('monitorTimer').textContent = fmtTime(new Date()) + ':' + ('0' + new Date().getSeconds()).slice(-2);
+
+  for (var qi = 0; qi < monitorCoins.length; qi++) {
+    if (!monitorRunning) break;
+    var coin = monitorCoins[qi];
+    var sym = coin.symbol;
+    var statusEl = document.getElementById('qstatus-' + sym);
+    var cardEl = document.getElementById('qcard-' + sym);
+
+    try {
+      var candleCount = Math.max(40, params.rsiPeriod + params.bbPeriod + params.lookback + 5);
+      var candles = await fetchRecentCandles(coin.market, btTf, candleCount);
+      if (!candles || candles.length < params.bbPeriod + 2) continue;
+      liveCandleCache[sym] = candles;
+
+      // Convert to ascending & compute indicators
+      var asc = candles.slice().reverse();
+      var closes = asc.map(function(c) { return c.trade_price; });
+      var lows = asc.map(function(c) { return c.low_price; });
+      var highs = asc.map(function(c) { return c.high_price; });
+      var volumes = asc.map(function(c) { return c.candle_acc_trade_volume; });
+      var rsiArr = calcRSI(closes, params.rsiPeriod);
+      var bb = calcBB(closes, params.bbPeriod, params.bbMult);
+      var curIdx = closes.length - 1;
+      var rsiIdx = curIdx - params.rsiPeriod;
+      var bbIdx = curIdx - (params.bbPeriod - 1);
+      if (rsiIdx < 0 || rsiIdx >= rsiArr.length || bbIdx < 0 || bbIdx >= bb.mid.length) continue;
+
+      var curRsi = rsiArr[rsiIdx];
+      var curPrice = closes[curIdx];
+      var curHigh = highs[curIdx];
+      var curLow = lows[curIdx];
+      var curBBLow = bb.lower[bbIdx];
+      var curBBMid = bb.mid[bbIdx];
+
+      // Volume average
+      var volAvg = 0;
+      if (curIdx >= 20) { for (var vi = curIdx - 20; vi < curIdx; vi++) volAvg += volumes[vi]; volAvg /= 20; }
+
+      // ===== SELL CHECK =====
+      if (livePositions[sym]) {
+        var pos = livePositions[sym];
+        var gp = ((curPrice - pos.price) / pos.price) * 100;
+        var elapsed = Date.now() - pos.time;
+
+        var reason = null;
+        if (gp <= stopPct) reason = 'stoploss';
+        if (!reason && gp >= reqPct) reason = 'profit';
+        if (!reason && curRsi >= params.rsiSell) reason = 'rsi_exit';
+        if (!reason && curHigh >= curBBMid) reason = 'bb_mid';
+        if (!reason && elapsed >= stopMs) reason = 'timeout';
+
+        if (reason) {
+          var sellPrice = curPrice;
+          if (pos.live && pos.volume > 0) {
+            var sellResult = await executeSell(coin.market, sym, pos.volume);
+            if (sellResult && sellResult.price > 0) sellPrice = sellResult.price;
+            await loadBalance();
+          }
+          var realGp = ((sellPrice - pos.price) / pos.price) * 100;
+          var netPct = realGp - (FEE_ROUND * 100);
+          var reasonMap = { profit: '익절', stoploss: '손절', timeout: '시간초과', rsi_exit: 'RSI매도', bb_mid: 'BB중심' };
+          liveTradeHistory.push({ symbol: sym, name: coin.name, buyTime: pos.time, buyPrice: pos.price, sellTime: Date.now(), sellPrice: sellPrice, netPct: netPct, reason: reason, rsi: pos.rsi, live: pos.live || false });
+          addLog(netPct >= 0 ? 'buy' : 'sell', (pos.live ? '[실매매] ' : '') + sym + ' 매도(' + (reasonMap[reason] || reason) + ') ' + (netPct >= 0 ? '+' : '') + netPct.toFixed(2) + '% RSI:' + curRsi.toFixed(1));
+          delete livePositions[sym];
+          savePositions(); saveTradeHistory();
+          cooldowns[sym] = Date.now();
+          if (cardEl) { cardEl.classList.remove('signal-active'); var b = cardEl.querySelector('.signal-badge-live'); if (b) b.remove(); }
+          renderLivePositions(); renderLiveTradeHistory();
+        } else {
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--up)">보유 ' + (gp >= 0 ? '+' : '') + gp.toFixed(2) + '% RSI:' + curRsi.toFixed(1) + '</span>';
+        }
+        continue;
+      }
+
+      // Cooldown check
+      if (cooldowns[sym] && (Date.now() - cooldowns[sym]) < COOLDOWN_MS) {
+        var cdLeft = Math.ceil((COOLDOWN_MS - (Date.now() - cooldowns[sym])) / 60000);
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">쿨다운 ' + cdLeft + '분</span>';
+        continue;
+      }
+      if (cooldowns[sym]) delete cooldowns[sym];
+
+      // ===== BUY SIGNAL CHECK =====
+      // 0. 거래시간 필터
+      var nowHour = new Date().getHours();
+      var hStart = parseInt(document.getElementById('liveHourStart').value);
+      var hEnd = parseInt(document.getElementById('liveHourEnd').value);
+      if (hEnd === 0) hEnd = 24;
+      if (hStart <= hEnd) { if (nowHour < hStart || nowHour >= hEnd) { if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">거래시간 외</span>'; continue; } }
+      else { if (nowHour < hStart && nowHour >= hEnd) { if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">거래시간 외</span>'; continue; } }
+
+      // 1. RSI oversold
+      if (curRsi > params.rsiBuy) {
+        var rsiColor = curRsi <= params.rsiBuy + 5 ? 'var(--accent2)' : curRsi >= 60 ? 'var(--up)' : 'var(--muted)';
+        if (statusEl) statusEl.innerHTML = '<span style="color:' + rsiColor + '">RSI ' + curRsi.toFixed(1) + ' | BB ' + ((curPrice - curBBLow) / curBBLow * 100).toFixed(2) + '%</span>';
+        continue;
+      }
+
+      // 2. BB lower proximity/touch in lookback
+      var touchedBB = false;
+      for (var lb = 0; lb <= params.lookback && (curIdx - lb) >= 0; lb++) {
+        var ci2 = curIdx - lb;
+        var bi2 = ci2 - (params.bbPeriod - 1);
+        if (bi2 < 0 || bi2 >= bb.lower.length) continue;
+        if (lows[ci2] <= bb.lower[bi2] * (1 + bbProxR)) { touchedBB = true; break; }
+      }
+      if (!touchedBB) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (BB미접근)</span>';
+        continue;
+      }
+
+      // 3. Re-entry
+      if (curPrice < curBBLow) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--down)">RSI ' + curRsi.toFixed(1) + ' BB이탈중</span>';
+        continue;
+      }
+
+      // 4. Volume filter
+      var volSurge = volAvg > 0 && volumes[curIdx] >= volAvg * 1.5;
+      if (params.volFilter && !volSurge) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (거래량부족)</span>';
+        continue;
+      }
+
+      // ===== BUY =====
+      var buyPrice = curPrice;
+      var buyVolume = 0;
+      if (autoTradeOn) {
+        var buyResult = await executeBuy(coin.market, sym);
+        if (!buyResult || buyResult.price <= 0) continue;
+        buyPrice = buyResult.price;
+        buyVolume = buyResult.volume;
+        await loadBalance();
+      }
+      livePositions[sym] = { price: buyPrice, time: Date.now(), peakPct: 0, rsi: curRsi, market: coin.market, volume: buyVolume, live: autoTradeOn };
+      savePositions();
+      addLog('buy', (autoTradeOn ? '[실매매] ' : '') + sym + ' BB+RSI 매수! RSI:' + curRsi.toFixed(1) + ' @ ' + fmtPrice(buyPrice) + (volSurge ? ' VOL+' : ''));
+      if (cardEl) {
+        cardEl.classList.add('signal-active');
+        var eb = cardEl.querySelector('.signal-badge-live'); if (eb) eb.remove();
+        cardEl.insertAdjacentHTML('afterbegin', '<span class="signal-badge-live">보유중</span>');
+      }
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--purple)">매수! RSI:' + curRsi.toFixed(1) + '</span>';
+      renderLivePositions();
+
+    } catch (e) {
+      console.error('Mon err:', sym, e.message);
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--down)">에러</span>';
+    }
+    await sleep(200);
+  }
+}
+
+// ========================================
+// Live Positions & Trade History Render
+// ========================================
+function renderLivePositions() {
+  var keys = Object.keys(livePositions);
+  var section = document.getElementById('posSection');
+  if (keys.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  var html = '';
+  keys.forEach(function(sym) {
+    var pos = livePositions[sym];
+    var cached = liveCandleCache[sym];
+    var curPrice = cached && cached.length > 0 ? cached[0].trade_price : pos.price;
+    var gp = ((curPrice - pos.price) / pos.price) * 100;
+    html += '<tr>'
+      + '<td style="font-weight:700">' + sym + (pos.live ? ' <span style="color:var(--accent);font-size:9px">LIVE</span>' : '') + '</td>'
+      + '<td class="mono" style="color:var(--down)">' + pos.rsi.toFixed(1) + '</td>'
+      + '<td class="mono">' + fmtPrice(pos.price) + '</td>'
+      + '<td class="mono">' + fmtPrice(curPrice) + '</td>'
+      + '<td style="color:' + (gp >= 0 ? 'var(--up)' : 'var(--down)') + ';font-weight:700">' + (gp >= 0 ? '+' : '') + gp.toFixed(2) + '%</td>'
+      + '<td class="mono">' + fmtDt(new Date(pos.time)) + '</td>'
+      + '<td class="mono">' + fmtElapsed(Date.now() - pos.time) + '</td>'
+      + '<td style="color:var(--gold)">보유중</td>'
+      + '<td>'
+      + '<button onclick="manualSell(\'' + sym + '\')" style="background:var(--down);color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:10px;cursor:pointer;margin-right:4px" title="매도">매도</button>'
+      + '<button onclick="removePosition(\'' + sym + '\')" style="background:#555;color:#fff;border:none;border-radius:3px;padding:2px 8px;font-size:10px;cursor:pointer" title="삭제">삭제</button>'
+      + '</td></tr>';
+  });
+  document.querySelector('#posTable tbody').innerHTML = html;
+}
+
+// 수동 매도
+async function manualSell(sym) {
+  var pos = livePositions[sym];
+  if (!pos) { showToast(sym + ' 포지션 없음', 'error'); return; }
+  if (!confirm(sym + ' 매도하시겠습니까?')) return;
+  if (pos.live && pos.volume > 0) {
+    var result = await executeSell(pos.market, sym, pos.volume);
+    if (!result) return;
+    var sellPrice = result.price || pos.price;
+    var netPct = ((sellPrice - pos.price) / pos.price) * 100 - 0.25;
+    liveTradeHistory.push({ symbol: sym, rsi: pos.rsi, buyTime: pos.time, buyPrice: pos.price, sellTime: Date.now(), sellPrice: sellPrice, netPct: netPct, reason: '수동매도', live: true });
+    saveTradeHistory();
+    addLog('sell', '[수동매도] ' + sym + ' ' + (netPct >= 0 ? '+' : '') + netPct.toFixed(2) + '%');
+  } else {
+    var cached = liveCandleCache[sym];
+    var curPrice = cached && cached.length > 0 ? cached[0].trade_price : pos.price;
+    var netPct = ((curPrice - pos.price) / pos.price) * 100 - 0.25;
+    liveTradeHistory.push({ symbol: sym, rsi: pos.rsi, buyTime: pos.time, buyPrice: pos.price, sellTime: Date.now(), sellPrice: curPrice, netPct: netPct, reason: '수동매도', live: false });
+    saveTradeHistory();
+    addLog('sell', '[수동매도-시뮬] ' + sym + ' ' + (netPct >= 0 ? '+' : '') + netPct.toFixed(2) + '%');
+  }
+  delete livePositions[sym];
+  savePositions();
+  renderLivePositions();
+  renderLiveTradeHistory();
+}
+
+// 포지션 삭제 (매도 없이 기록만 제거)
+function removePosition(sym) {
+  if (!confirm(sym + ' 포지션을 삭제하시겠습니까?\n(실제 매도 없이 기록만 제거)')) return;
+  delete livePositions[sym];
+  savePositions();
+  renderLivePositions();
+  addLog('info', sym + ' 포지션 수동 삭제');
+  showToast(sym + ' 포지션 삭제됨');
+}
+
+function renderLiveTradeHistory() {
+  var section = document.getElementById('liveTradeSection');
+  if (!liveTradeHistory || liveTradeHistory.length === 0) { section.style.display = 'none'; return; }
+  section.style.display = '';
+  var wins = liveTradeHistory.filter(function(t) { return t.netPct > 0; }).length;
+  var totalPct = liveTradeHistory.reduce(function(s, t) { return s + t.netPct; }, 0);
+  document.getElementById('liveTradeSummary').textContent =
+    liveTradeHistory.length + '건 | 승률 ' + (wins / liveTradeHistory.length * 100).toFixed(0) + '% | 총수익 ' + (totalPct >= 0 ? '+' : '') + totalPct.toFixed(2) + '%';
+  var reasonMap = { profit: '익절', stoploss: '손절', timeout: '시간초과', rsi_exit: 'RSI매도', bb_mid: 'BB중심' };
+  var html = '';
+  liveTradeHistory.slice().reverse().forEach(function(t) {
+    html += '<tr>'
+      + '<td style="font-weight:700">' + t.symbol + '</td>'
+      + '<td class="mono" style="color:var(--down)">' + t.rsi.toFixed(1) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.buyTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.buyPrice) + '</td>'
+      + '<td class="mono">' + fmtDt(new Date(t.sellTime)) + '</td>'
+      + '<td class="mono">' + fmtPrice(t.sellPrice) + '</td>'
+      + '<td style="color:' + (t.netPct >= 0 ? 'var(--up)' : 'var(--down)') + ';font-weight:700">' + (t.netPct >= 0 ? '+' : '') + t.netPct.toFixed(2) + '%</td>'
+      + '<td class="mono" style="font-size:10px">' + (reasonMap[t.reason] || t.reason) + (t.live ? ' <span style="color:var(--accent)">LIVE</span>' : '') + '</td></tr>';
+  });
+  document.querySelector('#liveTradeTable tbody').innerHTML = html;
+}
+
+// ========================================
+// Log
+// ========================================
+function addLog(type, msg) {
+  var el = document.getElementById('monitorLog');
+  var cls = type === 'buy' ? 'log-buy' : type === 'sell' ? 'log-sell' : 'log-info';
+  el.insertAdjacentHTML('afterbegin', '<div class="log-entry"><span class="log-time">' + fmtTime(new Date()) + ':' + ('0' + new Date().getSeconds()).slice(-2) + '</span><span class="' + cls + '">' + msg + '</span></div>');
+  while (el.children.length > 200) el.removeChild(el.lastChild);
+}
+
+// ========================================
+// Lock Screen
+// ========================================
+var lockTimerInterval = null;
+function lockScreen() { document.getElementById('lockOverlay').classList.add('show'); updateLockTime(); lockTimerInterval = setInterval(updateLockTime, 1000); }
+function unlockScreen() { document.getElementById('lockOverlay').classList.remove('show'); if (lockTimerInterval) { clearInterval(lockTimerInterval); lockTimerInterval = null; } }
+function updateLockTime() { var n = new Date(); document.getElementById('lockTime').textContent = ('0'+n.getHours()).slice(-2)+':'+('0'+n.getMinutes()).slice(-2)+':'+('0'+n.getSeconds()).slice(-2); }
+var lockClickCount = 0, lockClickTimer = null;
+function onLockClick(e) {
+  e.stopPropagation(); lockClickCount++;
+  if (lockClickCount === 1) { lockClickTimer = setTimeout(function() { lockClickCount = 0; }, 400); }
+  else if (lockClickCount >= 2) { clearTimeout(lockClickTimer); lockClickCount = 0; unlockScreen(); }
+}
+
+// ========================================
+// Toast
+// ========================================
+function showToast(msg, type) {
+  var container = document.getElementById('toastContainer');
+  var el = document.createElement('div');
+  el.className = 'toast-msg ' + (type || ''); el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(function() { el.style.opacity = '0'; setTimeout(function() { el.remove(); }, 300); }, 3000);
+}
+
+// ========================================
+// Init: Load cache on startup
+// ========================================
+(async function init() {
+  // Load candle cache
+  var loaded = loadCacheFromStorage();
+  if (loaded && loaded.coins && loaded.coins.length > 0) {
+    cachedData = loaded;
+    document.getElementById('runBtn').disabled = false;
+    document.getElementById('optBtn').disabled = false;
+  }
+  updateCacheStatus();
+
+  // Load API keys
+  try {
+    var r = await fetch('key.json?t=' + Date.now());
+    if (r.ok) {
+      var keyData = await r.json();
+      if (keyData.accessKey) accessKey = keyData.accessKey;
+      if (keyData.secretKey) secretKey = keyData.secretKey;
+      if (accessKey) localStorage.setItem('bit_access_key', accessKey);
+      if (secretKey) localStorage.setItem('bit_secret_key', secretKey);
+    }
+  } catch (e) {}
+  if (!accessKey) accessKey = localStorage.getItem('bit_access_key') || '';
+  if (!secretKey) secretKey = localStorage.getItem('bit_secret_key') || '';
+  updateApiStatus();
+  if (accessKey && secretKey) loadBalance();
+
+  // 포지션 & 매매이력 복원
+  loadPositions();
+  loadTradeHistory();
+  if (Object.keys(livePositions).length > 0 || liveTradeHistory.length > 0) {
+    document.getElementById('liveArea').style.display = '';
+    renderLivePositions();
+    renderLiveTradeHistory();
+  }
+})();
+</script>
+</body>
+</html>
