@@ -597,7 +597,7 @@
 var API = 'https://api.bithumb.com/v1';
 var FEE_RATE = 0.0004;
 var FEE_ROUND = 0.0008;
-var SLIPPAGE = 0.0015; // 시장가 슬리피지 0.15%
+var BASE_SLIPPAGE = 0.0010; // 기본 슬리피지 0.10%
 var EXCLUDE_COINS = ['USDT','USDC','DAI','TUSD','BUSD','USDD','XAUT','TRX'];
 
 var btTf = '1';
@@ -650,6 +650,13 @@ function getTickSize(price) {
   return 0.0001;
 }
 function getTickPct(price) { return (getTickSize(price) / price) * 100; }
+
+// 동적 슬리피지: 호가 단위 기반 (최소 2틱 + 기본 슬리피지)
+function getDynSlippage(price) {
+  var tickPct = getTickPct(price);
+  var tickSlip = tickPct * 2 / 100; // 2틱 분량 (비율)
+  return Math.max(BASE_SLIPPAGE, tickSlip);
+}
 
 // ========================================
 // Timeframe-adaptive defaults
@@ -864,18 +871,16 @@ function backtestCoin(candles, params) {
   var rsiArr = calcRSI(closes, params.rsiPeriod);
   var bb = calcBB(closes, params.bbPeriod, params.bbMult);
 
-  // Align indices: RSI starts at closes index params.rsiPeriod
-  // BB starts at closes index params.bbPeriod - 1
-  var startIdx = Math.max(params.rsiPeriod, params.bbPeriod - 1) + 1; // need previous candle too
+  // startIdx: 신호를 i-1(완성봉)에서 판단하고 i봉에서 진입하므로 +2
+  var startIdx = Math.max(params.rsiPeriod, params.bbPeriod - 1) + 2;
 
-  var reqPct = params.profitTarget + (FEE_ROUND * 100);
   var stopPct = -(params.stopLoss + FEE_ROUND * 100);
   var stopMs = params.timeLimit * 60000;
-  var tfMs = (params.tf || 5) * 60000; // 최소 1봉 보유시간
+  var tfMs = (params.tf || 5) * 60000;
   var hourStart = params.hourStart;
   var hourEnd = params.hourEnd;
   var useVolFilter = params.volFilter;
-  var bbProxPct = params.bbProx / 100; // BB proximity as ratio
+  var bbProxPct = params.bbProx / 100;
   var lookbackN = params.lookback || 5;
 
   // Average volume (rolling 20)
@@ -889,6 +894,8 @@ function backtestCoin(candles, params) {
   var trades = [];
   var inPos = false;
   var entry = null;
+  var pendingBuy = false; // 직전 완성봉에서 매수 신호 감지됨
+  var pendingRsi = 0, pendingBBLower = 0, pendingBBMid = 0, pendingVolSurge = false;
 
   for (var i = startIdx; i < closes.length; i++) {
     var rsiIdx = i - params.rsiPeriod;
@@ -906,46 +913,72 @@ function backtestCoin(candles, params) {
     var curTime = times[i];
     var curTimeMs = curTime.getTime();
     var curHour = curTime.getHours();
+    var dynSlip = getDynSlippage(curClose);
 
-    // Position management
+    // ===== 대기 중인 매수 실행 (직전봉 신호 → 현재봉 시가에 진입) =====
+    if (pendingBuy && !inPos) {
+      inPos = true;
+      var entryPrice = curOpen * (1 + dynSlip); // 시가 기준 + 동적 슬리피지
+      entry = {
+        price: entryPrice, time: curTimeMs, peakPct: 0,
+        rsi: pendingRsi, bbLower: pendingBBLower, bbMid: pendingBBMid,
+        volSurge: pendingVolSurge
+      };
+      pendingBuy = false;
+    }
+
+    // ===== Position management (매도) =====
     if (inPos && entry) {
       var gp = ((curClose - entry.price) / entry.price) * 100;
       var gpHigh = ((curHigh - entry.price) / entry.price) * 100;
       var gpLow = ((curLow - entry.price) / entry.price) * 100;
       var elapsed = curTimeMs - entry.time;
+      // peakPct는 직전봉까지의 고점만 사용 (현재봉 고가는 미확정)
+      // → 보수적: 이전 봉들의 peakPct + 현재봉 시가 기준
+      var prevPeakPct = entry.peakPct;
+      var openPct = ((curOpen - entry.price) / entry.price) * 100;
+      if (openPct > prevPeakPct) prevPeakPct = openPct;
+      // 봉 완료 후 peakPct 갱신 (다음 봉에서 사용)
       if (gpHigh > entry.peakPct) entry.peakPct = gpHigh;
 
       var reason = null;
-      var sellPrice = curClose * (1 - SLIPPAGE);
+      var sellSlip = getDynSlippage(entry.price);
+      var sellPrice = curClose * (1 - sellSlip);
 
-      // 1. Stop loss (항상 최우선)
+      // 1. Stop loss (항상 최우선 - 봉 내 손절 우선)
       if (gpLow <= stopPct) {
         reason = 'stoploss'; sellPrice = entry.price * (1 + stopPct / 100);
       }
 
-      // 2. 트레일링 스탑: 고점 대비 trailPct% 하락 시 청산 (활성화 조건 충족 후)
-      if (!reason && entry.peakPct >= params.trailActivate) {
-        var dropFromPeak = entry.peakPct - gpHigh;
+      // 2. 트레일링 스탑 (직전봉까지의 peakPct 기준 - 보수적)
+      if (!reason && prevPeakPct >= params.trailActivate) {
+        // 현재봉 시가 기준으로 하락 판단 (봉 완성 전에도 감지 가능한 수준)
+        var dropFromPeak = prevPeakPct - openPct;
         if (dropFromPeak >= params.trailPct) {
           reason = 'trail';
-          var trailPrice = entry.price * (1 + (entry.peakPct - params.trailPct) / 100);
-          sellPrice = Math.min(curClose, trailPrice) * (1 - SLIPPAGE);
+          var trailPrice = entry.price * (1 + (prevPeakPct - params.trailPct) / 100);
+          sellPrice = Math.min(curOpen, trailPrice) * (1 - sellSlip);
         }
       }
 
-      // 3. RSI 매도: 수익 구간에서만 + RSI >= rsiSell (최소 1봉 보유)
-      if (!reason && elapsed >= tfMs && gp > 0 && curRsi >= params.rsiSell) {
-        reason = 'rsi_exit'; sellPrice = curClose * (1 - SLIPPAGE);
+      // 3. RSI 매도: 수익 구간에서만 (최소 1봉 보유) - 직전봉 RSI 사용
+      var prevRsiSell = rsiIdx - 1 >= 0 ? rsiArr[rsiIdx - 1] : curRsi;
+      if (!reason && elapsed >= tfMs && gp > 0 && prevRsiSell >= params.rsiSell) {
+        reason = 'rsi_exit'; sellPrice = curOpen * (1 - sellSlip);
       }
 
       // 4. BB중심선: 수익 구간에서만 (최소 1봉 보유)
-      if (!reason && elapsed >= tfMs && gp > 0 && curHigh >= curBBMid) {
-        reason = 'bb_mid'; sellPrice = Math.min(curClose, curBBMid) * (1 - SLIPPAGE);
+      // 직전봉 고가가 BB중심 도달했으면 현재봉 시가에 매도
+      var prevBBIdx = (i - 1) - (params.bbPeriod - 1);
+      if (!reason && elapsed >= tfMs && gp > 0 && prevBBIdx >= 0 && prevBBIdx < bb.mid.length) {
+        if (highs[i - 1] >= bb.mid[prevBBIdx]) {
+          reason = 'bb_mid'; sellPrice = Math.min(curOpen, bb.mid[prevBBIdx]) * (1 - sellSlip);
+        }
       }
 
       // 5. Timeout
       if (!reason && elapsed >= stopMs) {
-        reason = 'timeout'; sellPrice = curClose * (1 - SLIPPAGE);
+        reason = 'timeout'; sellPrice = curOpen * (1 - sellSlip);
       }
 
       if (reason) {
@@ -953,7 +986,7 @@ function backtestCoin(candles, params) {
         trades.push({
           buyTime: entry.time, buyPrice: entry.price, buyRsi: entry.rsi,
           buyBBLower: entry.bbLower, buyBBMid: entry.bbMid,
-          sellTime: curTimeMs, sellPrice: sellPrice, sellRsi: curRsi,
+          sellTime: curTimeMs, sellPrice: sellPrice, sellRsi: prevRsiSell,
           netPct: netPct, reason: reason, elapsed: elapsed,
           volSurge: entry.volSurge
         });
@@ -962,83 +995,92 @@ function backtestCoin(candles, params) {
       continue;
     }
 
+    // ===== Buy signal detection on COMPLETED candle (i-1봉 기준) =====
+    // 직전 완성봉(i-1)의 데이터로 신호 판단, 다음 봉(i+1) 시가에 진입
+    var si = i - 1; // signal index = 직전 완성봉
+    var sigRsiIdx = si - params.rsiPeriod;
+    var sigBBIdx = si - (params.bbPeriod - 1);
+    if (sigRsiIdx < 0 || sigRsiIdx >= rsiArr.length) continue;
+    if (sigBBIdx < 0 || sigBBIdx >= bb.mid.length) continue;
+
+    var sigRsi = rsiArr[sigRsiIdx];
+    var sigClose = closes[si];
+    var sigOpen = opens[si];
+    var sigBBLower = bb.lower[sigBBIdx];
+    var sigBBMid = bb.mid[sigBBIdx];
+    var sigHour = times[si].getHours();
+
     // Hour filter
     if (hourStart <= hourEnd) {
-      if (curHour < hourStart || curHour >= hourEnd) continue;
+      if (sigHour < hourStart || sigHour >= hourEnd) continue;
     } else {
-      if (curHour < hourStart && curHour >= hourEnd) continue;
+      if (sigHour < hourStart && sigHour >= hourEnd) continue;
     }
-
-    // ===== Buy signal detection (선별적 진입) =====
 
     // 1. RSI <= rsiBuy (oversold)
-    if (curRsi > params.rsiBuy) continue;
+    if (sigRsi > params.rsiBuy) continue;
 
     // 2. RSI 반등 강도: lookback 내 최저 RSI 대비 2 이상 반등해야 함
-    var rsiMin = curRsi;
-    for (var ri = 1; ri <= Math.min(params.lookback, 5) && (rsiIdx - ri) >= 0; ri++) {
-      if (rsiArr[rsiIdx - ri] < rsiMin) rsiMin = rsiArr[rsiIdx - ri];
+    var rsiMin = sigRsi;
+    for (var ri = 1; ri <= Math.min(params.lookback, 5) && (sigRsiIdx - ri) >= 0; ri++) {
+      if (rsiArr[sigRsiIdx - ri] < rsiMin) rsiMin = rsiArr[sigRsiIdx - ri];
     }
-    if (curRsi - rsiMin < 2) continue; // RSI 반등 강도 부족
+    if (sigRsi - rsiMin < 2) continue;
 
-    // 3. BB하단 접근/이탈 확인: 과거 lookbackN봉 이내에 BB하단 근처(bbProx%) 또는 이하 터치
+    // 3. BB하단 접근/이탈 확인
     var touchedBBLower = false;
-    for (var lb = 0; lb <= lookbackN && (i - lb) >= 0; lb++) {
-      var checkIdx = i - lb;
+    for (var lb = 0; lb <= lookbackN && (si - lb) >= 0; lb++) {
+      var checkIdx = si - lb;
       var checkBBIdx = checkIdx - (params.bbPeriod - 1);
       if (checkBBIdx < 0 || checkBBIdx >= bb.lower.length) continue;
-      var checkBBLow = bb.lower[checkBBIdx];
-      var proxThreshold = checkBBLow * (1 + bbProxPct); // BB하단 + 허용범위
-      // low가 BB하단 근처 이하이면 터치로 인정
+      var proxThreshold = bb.lower[checkBBIdx] * (1 + bbProxPct);
       if (lows[checkIdx] <= proxThreshold) { touchedBBLower = true; break; }
     }
     if (!touchedBBLower) continue;
 
-    // 4. 현재 종가가 BB하단 이상 (복귀 확인)
-    if (curClose < curBBLower) continue;
+    // 4. 종가가 BB하단 이상 (복귀 확인)
+    if (sigClose < sigBBLower) continue;
 
-    // 5. 양봉 확인: 종가 > 시가 (매수세 확인)
-    if (curClose <= curOpen) continue;
+    // 5. 양봉 확인
+    if (sigClose <= sigOpen) continue;
 
-    // 6. 연속하락 필터: 직전 4봉 연속 음봉이면 스킵 (낙하중 진입 방지, 3→4 완화)
-    if (i >= 4) {
+    // 6. 연속하락 필터 (4봉)
+    if (si >= 4) {
       var consecutiveDown = 0;
-      for (var cd = 1; cd <= 4 && (i - cd) >= 0; cd++) {
-        if (closes[i - cd] < opens[i - cd]) consecutiveDown++;
+      for (var cd = 1; cd <= 4 && (si - cd) >= 0; cd++) {
+        if (closes[si - cd] < opens[si - cd]) consecutiveDown++;
         else break;
       }
       if (consecutiveDown >= 4) continue;
     }
 
-    // 6.5. 추세 필터: BB중심선 기울기 확인 (급락 추세 회피)
-    if (bbIdx >= 3) {
-      var bbMidNow = bb.mid[bbIdx];
-      var bbMid3ago = bb.mid[bbIdx - 3];
-      var bbSlope = ((bbMidNow - bbMid3ago) / bbMid3ago) * 100;
-      if (bbSlope < -0.5) continue; // BB중심선이 3봉간 0.5%이상 하락 = 강한 하락추세
+    // 6.5. 추세 필터
+    if (sigBBIdx >= 3) {
+      var bbMidNow = bb.mid[sigBBIdx];
+      var bbMid3ago = bb.mid[sigBBIdx - 3];
+      if (((bbMidNow - bbMid3ago) / bbMid3ago) * 100 < -0.5) continue;
     }
 
-    // 7. Volume confirmation (optional)
+    // 7. Volume confirmation
     var volSurge = false;
-    if (i >= 20 && volAvg[i] > 0) {
-      volSurge = volumes[i] >= volAvg[i] * 1.5;
+    if (si >= 20 && volAvg[si] > 0) {
+      volSurge = volumes[si] >= volAvg[si] * 1.5;
     }
     if (useVolFilter && !volSurge) continue;
 
-    // ENTRY (슬리피지 반영: 시장가 매수 시 불리한 가격)
-    inPos = true;
-    var slippedPrice = curClose * (1 + SLIPPAGE);
-    entry = {
-      price: slippedPrice, time: curTimeMs, peakPct: 0,
-      rsi: curRsi, bbLower: curBBLower, bbMid: curBBMid,
-      volSurge: volSurge
-    };
+    // 신호 감지 → 다음 봉 시가에 매수 예약
+    pendingBuy = true;
+    pendingRsi = sigRsi;
+    pendingBBLower = sigBBLower;
+    pendingBBMid = sigBBMid;
+    pendingVolSurge = volSurge;
   }
 
   // Close open position
   if (inPos && entry) {
     var last = asc[asc.length - 1];
-    var lp = last.trade_price * (1 - SLIPPAGE);
+    var lastSlip = getDynSlippage(last.trade_price);
+    var lp = last.trade_price * (1 - lastSlip);
     var lt = times[times.length - 1].getTime();
     var g = ((lp - entry.price) / entry.price) * 100 - (FEE_ROUND * 100);
     trades.push({
@@ -1700,7 +1742,8 @@ function precompute(candles, rsiPeriod, bbPeriod, bbMult) {
 
 // Fast backtest using pre-computed indicators (v9: trailing stop + MDD)
 function fastBacktest(ind, params) {
-  var startIdx = Math.max(ind.rsiPeriod, ind.bbPeriod - 1) + 1;
+  // 신호: i-1봉(완성봉), 진입: i봉 시가 → startIdx +2
+  var startIdx = Math.max(ind.rsiPeriod, ind.bbPeriod - 1) + 2;
   var stopPct = -(params.stopLoss + FEE_ROUND * 100);
   var stopMs = params.timeLimit * 60000;
   var bbProxR = params.bbProx / 100;
@@ -1713,6 +1756,7 @@ function fastBacktest(ind, params) {
   var tfMs = (params.tf || 5) * 60000;
   var trades = 0, wins = 0, totalPct = 0;
   var inPos = false, entryPrice = 0, entryTime = 0, peakPct = 0;
+  var pendingBuy = false;
 
   // MDD tracking
   var cumPct = 0, cumPeak = 0, maxDD = 0;
@@ -1723,48 +1767,63 @@ function fastBacktest(ind, params) {
     if (rsiIdx < 0 || rsiIdx >= ind.rsiArr.length) continue;
     if (bbIdx < 0 || bbIdx >= ind.bb.mid.length) continue;
 
-    var curRsi = ind.rsiArr[rsiIdx];
     var curClose = ind.closes[i];
     var curHigh = ind.highs[i];
     var curLow = ind.lows[i];
     var curOpen = ind.opens[i];
-    var bbLow = ind.bb.lower[bbIdx];
-    var bbMid = ind.bb.mid[bbIdx];
     var curTimeMs = ind.times[i].getTime();
+    var dynSlip = getDynSlippage(curClose);
+
+    // 대기 중인 매수 실행 (직전봉 신호 → 현재봉 시가에 진입)
+    if (pendingBuy && !inPos) {
+      inPos = true;
+      entryPrice = curOpen * (1 + dynSlip);
+      entryTime = curTimeMs;
+      peakPct = 0;
+      pendingBuy = false;
+    }
 
     if (inPos) {
       var gpHigh = ((curHigh - entryPrice) / entryPrice) * 100;
       var gpLow = ((curLow - entryPrice) / entryPrice) * 100;
       var gp = ((curClose - entryPrice) / entryPrice) * 100;
       var elapsed = curTimeMs - entryTime;
-      if (gpHigh > peakPct) peakPct = gpHigh;
+      // 보수적 peakPct: 직전봉까지의 고점 + 현재봉 시가
+      var prevPeak = peakPct;
+      var openPct = ((curOpen - entryPrice) / entryPrice) * 100;
+      if (openPct > prevPeak) prevPeak = openPct;
+      if (gpHigh > peakPct) peakPct = gpHigh; // 봉 완료 후 갱신
 
-      var sellPrice = curClose * (1 - SLIPPAGE);
+      var sellSlip = getDynSlippage(entryPrice);
+      var sellPrice = curOpen * (1 - sellSlip);
       var sold = false;
 
-      // 1. Stop loss
+      // 1. Stop loss (봉 내 손절 우선)
       if (gpLow <= stopPct) { sellPrice = entryPrice * (1 + stopPct / 100); sold = true; }
-      // 2. Trailing stop
-      else if (peakPct >= trailActivate) {
-        var dropFromPeak = peakPct - gpHigh;
+      // 2. Trailing stop (직전봉까지 peakPct 기준, 시가 판단)
+      else if (prevPeak >= trailActivate) {
+        var dropFromPeak = prevPeak - openPct;
         if (dropFromPeak >= trailPct) {
-          var trailPrice = entryPrice * (1 + (peakPct - trailPct) / 100);
-          sellPrice = Math.min(curClose, trailPrice) * (1 - SLIPPAGE);
+          var tp = entryPrice * (1 + (prevPeak - trailPct) / 100);
+          sellPrice = Math.min(curOpen, tp) * (1 - sellSlip);
           sold = true;
         }
       }
-      // 3. RSI exit (수익시만)
-      if (!sold && elapsed >= tfMs && gp > 0 && curRsi >= params.rsiSell) { sellPrice = curClose * (1 - SLIPPAGE); sold = true; }
-      // 4. BB mid (수익시만)
-      if (!sold && elapsed >= tfMs && gp > 0 && curHigh >= bbMid) { sellPrice = Math.min(curClose, bbMid) * (1 - SLIPPAGE); sold = true; }
+      // 3. RSI exit (수익시만, 직전봉 RSI)
+      var prevRsi = rsiIdx - 1 >= 0 ? ind.rsiArr[rsiIdx - 1] : 0;
+      if (!sold && elapsed >= tfMs && gp > 0 && prevRsi >= params.rsiSell) { sellPrice = curOpen * (1 - sellSlip); sold = true; }
+      // 4. BB mid (수익시만, 직전봉 고가 vs BB중심)
+      var prevBI = (i - 1) - (ind.bbPeriod - 1);
+      if (!sold && elapsed >= tfMs && gp > 0 && prevBI >= 0 && prevBI < ind.bb.mid.length) {
+        if (ind.highs[i - 1] >= ind.bb.mid[prevBI]) { sellPrice = Math.min(curOpen, ind.bb.mid[prevBI]) * (1 - sellSlip); sold = true; }
+      }
       // 5. Timeout
-      if (!sold && elapsed >= stopMs) { sold = true; }
+      if (!sold && elapsed >= stopMs) { sellPrice = curOpen * (1 - sellSlip); sold = true; }
 
       if (sold) {
         var netPct = ((sellPrice - entryPrice) / entryPrice) * 100 - (FEE_ROUND * 100);
         trades++; totalPct += netPct;
         if (netPct > 0) wins++;
-        // MDD update
         cumPct += netPct;
         if (cumPct > cumPeak) cumPeak = cumPct;
         var dd = cumPeak - cumPct;
@@ -1774,67 +1833,71 @@ function fastBacktest(ind, params) {
       continue;
     }
 
-    // Hour filter
-    var curHour = ind.times[i].getHours();
-    if (hourStart <= hourEnd) { if (curHour < hourStart || curHour >= hourEnd) continue; }
-    else { if (curHour < hourStart && curHour >= hourEnd) continue; }
+    // ===== Buy signal on COMPLETED candle (i-1) =====
+    var si = i - 1;
+    var sigRI = si - ind.rsiPeriod;
+    var sigBI = si - (ind.bbPeriod - 1);
+    if (sigRI < 0 || sigRI >= ind.rsiArr.length) continue;
+    if (sigBI < 0 || sigBI >= ind.bb.mid.length) continue;
 
-    // RSI check
-    if (curRsi > params.rsiBuy) continue;
+    var sigRsi = ind.rsiArr[sigRI];
+    var sigClose = ind.closes[si];
+    var sigOpen = ind.opens[si];
+    var sigBBLow = ind.bb.lower[sigBI];
 
-    // RSI 반등 강도: lookback 내 최저 RSI 대비 2 이상 반등
-    var rsiMin = curRsi;
-    for (var ri = 1; ri <= Math.min(lookbackN, 5) && (rsiIdx - ri) >= 0; ri++) {
-      if (ind.rsiArr[rsiIdx - ri] < rsiMin) rsiMin = ind.rsiArr[rsiIdx - ri];
+    // Hour filter (신호봉 기준)
+    var sigHour = ind.times[si].getHours();
+    if (hourStart <= hourEnd) { if (sigHour < hourStart || sigHour >= hourEnd) continue; }
+    else { if (sigHour < hourStart && sigHour >= hourEnd) continue; }
+
+    if (sigRsi > params.rsiBuy) continue;
+
+    // RSI 반등 강도
+    var rsiMin = sigRsi;
+    for (var ri = 1; ri <= Math.min(lookbackN, 5) && (sigRI - ri) >= 0; ri++) {
+      if (ind.rsiArr[sigRI - ri] < rsiMin) rsiMin = ind.rsiArr[sigRI - ri];
     }
-    if (curRsi - rsiMin < 2) continue;
+    if (sigRsi - rsiMin < 2) continue;
 
     // BB proximity lookback
     var touched = false;
-    for (var lb = 0; lb <= lookbackN && (i - lb) >= 0; lb++) {
-      var ci2 = i - lb;
+    for (var lb = 0; lb <= lookbackN && (si - lb) >= 0; lb++) {
+      var ci2 = si - lb;
       var bi2 = ci2 - (ind.bbPeriod - 1);
       if (bi2 < 0 || bi2 >= ind.bb.lower.length) continue;
       if (ind.lows[ci2] <= ind.bb.lower[bi2] * (1 + bbProxR)) { touched = true; break; }
     }
     if (!touched) continue;
 
-    // Re-entry check
-    if (curClose < bbLow) continue;
-
-    // 양봉 확인
-    if (curClose <= curOpen) continue;
+    if (sigClose < sigBBLow) continue;
+    if (sigClose <= sigOpen) continue;
 
     // 연속하락 필터 (4봉)
-    if (i >= 4) {
+    if (si >= 4) {
       var cDown = 0;
-      for (var cd = 1; cd <= 4 && (i - cd) >= 0; cd++) {
-        if (ind.closes[i - cd] < ind.opens[i - cd]) cDown++; else break;
+      for (var cd = 1; cd <= 4 && (si - cd) >= 0; cd++) {
+        if (ind.closes[si - cd] < ind.opens[si - cd]) cDown++; else break;
       }
       if (cDown >= 4) continue;
     }
 
-    // 추세 필터: BB중심선 기울기
-    if (bbIdx >= 3) {
-      var bbMidNow = ind.bb.mid[bbIdx];
-      var bbMid3ago = ind.bb.mid[bbIdx - 3];
-      if (((bbMidNow - bbMid3ago) / bbMid3ago) * 100 < -0.5) continue;
+    // 추세 필터
+    if (sigBI >= 3) {
+      if (((ind.bb.mid[sigBI] - ind.bb.mid[sigBI - 3]) / ind.bb.mid[sigBI - 3]) * 100 < -0.5) continue;
     }
 
     // Volume filter
-    if (params.volFilter && i >= 20 && ind.volAvg[i] > 0) {
-      if (ind.volumes[i] < ind.volAvg[i] * 1.5) continue;
+    if (params.volFilter && si >= 20 && ind.volAvg[si] > 0) {
+      if (ind.volumes[si] < ind.volAvg[si] * 1.5) continue;
     }
 
-    inPos = true;
-    entryPrice = curClose * (1 + SLIPPAGE);
-    entryTime = curTimeMs;
-    peakPct = 0;
+    pendingBuy = true;
   }
 
   // Close open position
   if (inPos) {
-    var lp = ind.closes[ind.closes.length - 1] * (1 - SLIPPAGE);
+    var lastSlip = getDynSlippage(ind.closes[ind.closes.length - 1]);
+    var lp = ind.closes[ind.closes.length - 1] * (1 - lastSlip);
     var netPct = ((lp - entryPrice) / entryPrice) * 100 - (FEE_ROUND * 100);
     trades++; totalPct += netPct;
     if (netPct > 0) wins++;
@@ -2549,7 +2612,22 @@ async function monitorCycle() {
       }
       if (cooldowns[sym]) delete cooldowns[sym];
 
-      // ===== BUY SIGNAL CHECK =====
+      // ===== BUY SIGNAL CHECK (직전 완성봉 기준) =====
+      // 직전 완성봉(curIdx-1)의 확정된 데이터로 신호 판단
+      var sigIdx = curIdx - 1; // 직전 완성봉
+      if (sigIdx < params.bbPeriod + params.rsiPeriod) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">데이터 부족</span>';
+        continue;
+      }
+      var sigRsiIdx = sigIdx - params.rsiPeriod;
+      var sigBBIdx = sigIdx - (params.bbPeriod - 1);
+      if (sigRsiIdx < 0 || sigRsiIdx >= rsiArr.length || sigBBIdx < 0 || sigBBIdx >= bb.mid.length) continue;
+
+      var sigRsi = rsiArr[sigRsiIdx];
+      var sigClose = closes[sigIdx];
+      var sigOpen = asc[sigIdx] ? asc[sigIdx].opening_price || sigClose : sigClose;
+      var sigBBLow = bb.lower[sigBBIdx];
+
       // 0. 거래시간 필터
       var nowHour = new Date().getHours();
       var hStart = parseInt(document.getElementById('liveHourStart').value);
@@ -2558,81 +2636,82 @@ async function monitorCycle() {
       if (hStart <= hEnd) { if (nowHour < hStart || nowHour >= hEnd) { if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">거래시간 외</span>'; continue; } }
       else { if (nowHour < hStart && nowHour >= hEnd) { if (statusEl) statusEl.innerHTML = '<span style="color:var(--muted)">거래시간 외</span>'; continue; } }
 
-      // 1. RSI oversold
-      if (curRsi > params.rsiBuy) {
-        var rsiColor = curRsi <= params.rsiBuy + 5 ? 'var(--accent2)' : curRsi >= 60 ? 'var(--up)' : 'var(--muted)';
-        if (statusEl) statusEl.innerHTML = '<span style="color:' + rsiColor + '">RSI ' + curRsi.toFixed(1) + ' | BB ' + ((curPrice - curBBLow) / curBBLow * 100).toFixed(2) + '%</span>';
+      // 1. RSI oversold (직전 완성봉)
+      if (sigRsi > params.rsiBuy) {
+        var rsiColor = sigRsi <= params.rsiBuy + 5 ? 'var(--accent2)' : sigRsi >= 60 ? 'var(--up)' : 'var(--muted)';
+        if (statusEl) statusEl.innerHTML = '<span style="color:' + rsiColor + '">RSI ' + sigRsi.toFixed(1) + '(확정) | now ' + curRsi.toFixed(1) + '</span>';
         continue;
       }
 
-      // 2. RSI 반등 강도: lookback 내 최저 RSI 대비 2 이상 반등
-      var rsiMinLive = curRsi;
-      for (var rli = 1; rli <= Math.min(params.lookback, 5) && (rsiIdx - rli) >= 0; rli++) {
-        if (rsiArr[rsiIdx - rli] < rsiMinLive) rsiMinLive = rsiArr[rsiIdx - rli];
+      // 2. RSI 반등 강도 (직전 완성봉)
+      var rsiMinLive = sigRsi;
+      for (var rli = 1; rli <= Math.min(params.lookback, 5) && (sigRsiIdx - rli) >= 0; rli++) {
+        if (rsiArr[sigRsiIdx - rli] < rsiMinLive) rsiMinLive = rsiArr[sigRsiIdx - rli];
       }
-      if (curRsi - rsiMinLive < 2) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (반등부족)</span>';
+      if (sigRsi - rsiMinLive < 2) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (반등부족)</span>';
         continue;
       }
 
-      // 3. BB lower proximity/touch in lookback
+      // 3. BB lower proximity/touch in lookback (직전 완성봉 기준)
       var touchedBB = false;
-      for (var lb = 0; lb <= params.lookback && (curIdx - lb) >= 0; lb++) {
-        var ci2 = curIdx - lb;
+      for (var lb = 0; lb <= params.lookback && (sigIdx - lb) >= 0; lb++) {
+        var ci2 = sigIdx - lb;
         var bi2 = ci2 - (params.bbPeriod - 1);
         if (bi2 < 0 || bi2 >= bb.lower.length) continue;
         if (lows[ci2] <= bb.lower[bi2] * (1 + bbProxR)) { touchedBB = true; break; }
       }
       if (!touchedBB) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (BB미접근)</span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (BB미접근)</span>';
         continue;
       }
 
-      // 3.5. 추세 필터: BB중심선 기울기
-      if (bbIdx >= 3) {
-        var bbMidNowLive = bb.mid[bbIdx];
-        var bbMid3agoLive = bb.mid[bbIdx - 3];
+      // 3.5. 추세 필터
+      if (sigBBIdx >= 3) {
+        var bbMidNowLive = bb.mid[sigBBIdx];
+        var bbMid3agoLive = bb.mid[sigBBIdx - 3];
         if (((bbMidNowLive - bbMid3agoLive) / bbMid3agoLive) * 100 < -0.5) {
-          if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (하락추세)</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (하락추세)</span>';
           continue;
         }
       }
 
-      // 4. Re-entry
-      if (curPrice < curBBLow) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--down)">RSI ' + curRsi.toFixed(1) + ' BB이탈중</span>';
+      // 4. Re-entry (직전 완성봉 종가가 BB하단 이상)
+      if (sigClose < sigBBLow) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--down)">RSI ' + sigRsi.toFixed(1) + ' BB이탈중</span>';
         continue;
       }
 
-      // 5. 양봉 확인: 현재 봉 종가 > 시가
-      var curOpen2 = asc[curIdx] ? asc[curIdx].opening_price || 0 : 0;
-      if (curOpen2 > 0 && curPrice <= curOpen2) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (음봉)</span>';
+      // 5. 양봉 확인 (직전 완성봉)
+      if (sigClose <= sigOpen) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (음봉)</span>';
         continue;
       }
 
-      // 6. 연속하락 필터: 직전 4봉 연속 음봉이면 스킵
-      if (curIdx >= 4) {
+      // 6. 연속하락 필터 (직전 완성봉 기준 4봉)
+      if (sigIdx >= 4) {
         var consDown = 0;
-        for (var cd = 1; cd <= 4 && (curIdx - cd) >= 0; cd++) {
-          var cdClose = closes[curIdx - cd];
-          var cdOpen = asc[curIdx - cd] ? asc[curIdx - cd].opening_price || cdClose : cdClose;
+        for (var cd = 1; cd <= 4 && (sigIdx - cd) >= 0; cd++) {
+          var cdClose = closes[sigIdx - cd];
+          var cdOpen = asc[sigIdx - cd] ? asc[sigIdx - cd].opening_price || cdClose : cdClose;
           if (cdClose < cdOpen) consDown++; else break;
         }
         if (consDown >= 4) {
-          if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (연속하락)</span>';
+          if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (연속하락)</span>';
           continue;
         }
       }
 
-      // 7. Volume filter
-      var volSurge = volAvg > 0 && volumes[curIdx] >= volAvg * 1.5;
+      // 7. Volume filter (직전 완성봉)
+      var sigVolAvg = 0;
+      if (sigIdx >= 20) { for (var svi = sigIdx - 20; svi < sigIdx; svi++) sigVolAvg += volumes[svi]; sigVolAvg /= 20; }
+      var volSurge = sigVolAvg > 0 && volumes[sigIdx] >= sigVolAvg * 1.5;
       if (params.volFilter && !volSurge) {
-        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + curRsi.toFixed(1) + ' (거래량부족)</span>';
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--accent2)">RSI ' + sigRsi.toFixed(1) + ' (거래량부족)</span>';
         continue;
       }
 
-      // ===== BUY =====
+      // ===== BUY (현재가에 진입 - 신호는 직전 완성봉에서 확인됨) =====
       var buyPrice = curPrice;
       var buyVolume = 0;
       if (autoTradeOn) {
@@ -2642,15 +2721,15 @@ async function monitorCycle() {
         buyVolume = buyResult.volume;
         await loadBalance();
       }
-      livePositions[sym] = { price: buyPrice, time: Date.now(), peakPct: 0, rsi: curRsi, market: coin.market, volume: buyVolume, live: autoTradeOn };
+      livePositions[sym] = { price: buyPrice, time: Date.now(), peakPct: 0, rsi: sigRsi, market: coin.market, volume: buyVolume, live: autoTradeOn };
       savePositions();
-      addLog('buy', (autoTradeOn ? '[실매매] ' : '') + sym + ' BB+RSI 매수! RSI:' + curRsi.toFixed(1) + ' @ ' + fmtPrice(buyPrice) + (volSurge ? ' VOL+' : ''));
+      addLog('buy', (autoTradeOn ? '[실매매] ' : '') + sym + ' BB+RSI 매수! RSI:' + sigRsi.toFixed(1) + '(확정) @ ' + fmtPrice(buyPrice) + (volSurge ? ' VOL+' : ''));
       if (cardEl) {
         cardEl.classList.add('signal-active');
         var eb = cardEl.querySelector('.signal-badge-live'); if (eb) eb.remove();
         cardEl.insertAdjacentHTML('afterbegin', '<span class="signal-badge-live">보유중</span>');
       }
-      if (statusEl) statusEl.innerHTML = '<span style="color:var(--purple)">매수! RSI:' + curRsi.toFixed(1) + '</span>';
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--purple)">매수! RSI:' + sigRsi.toFixed(1) + '(확정)</span>';
       renderLivePositions();
 
     } catch (e) {
