@@ -1339,19 +1339,26 @@ function renderDivergencePanel() {
   el.innerHTML = '';
   strategies.forEach(function(s, si) {
     var bt = backtestBaseline[si] || { pnl: 0, trades: 0 };
-    var div = bt.pnl !== 0 ? Math.abs((s.totalPnl - bt.pnl) / Math.abs(bt.pnl)) : 0;
-    var isWarn = div > 0.2 && bt.trades > 0;
+    // 괴리 = 페이퍼가 백테스트보다 얼마나 나쁜지 (양수=나쁨, 음수=더좋음)
+    var diff = bt.pnl - s.totalPnl; // BT보다 나쁘면 양수
+    var divPct = bt.trades > 0 && bt.pnl !== 0 ? diff / Math.abs(bt.pnl) : 0;
+    // 페이퍼가 BT보다 더 좋으면 (diff < 0) → 정상, 경고 안함
+    // 페이퍼가 BT보다 더 나쁘면 (diff > 0, 20% 이상) → 경고
+    var isWarn = divPct > 0.2 && bt.trades > 0;
+    var isBetter = s.totalPnl > bt.pnl;
+    var displayDiv = Math.abs(divPct);
+    var statusText = isBetter ? '더좋음' : '더나쁨';
     var row = document.createElement('div');
     row.className = 'divergence-row' + (isWarn ? ' warning' : '');
     row.innerHTML =
       '<span class="div-name">' + s.name + '</span>'
       + '<span class="div-bt">BT: ' + formatPct(bt.pnl) + '</span>'
       + '<span class="div-paper">페이퍼: ' + formatPct(s.totalPnl) + '</span>'
-      + '<span class="div-gap ' + (isWarn ? 'warn' : 'ok') + '">괴리: ' + (div * 100).toFixed(0) + '%</span>';
+      + '<span class="div-gap ' + (isWarn ? 'warn' : 'ok') + '">' + statusText + ' ' + (displayDiv * 100).toFixed(0) + '%</span>';
     el.appendChild(row);
     if (isWarn && s.status === 'live') {
       s.status = 'paper'; s.promoted = false;
-      addLog('warn', '[괴리경고] ' + s.name + ' 비활성화 (' + (div * 100).toFixed(0) + '%)');
+      addLog('warn', '[괴리경고] ' + s.name + ' 비활성화 (BT보다 ' + (displayDiv * 100).toFixed(0) + '% 나쁨)');
     }
   });
 }
