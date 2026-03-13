@@ -1048,10 +1048,10 @@ function spawnPlushies(){
     return Math.abs(x - HOLE_POS.x) < (holeW/2 + wallT + margin)
         && Math.abs(z - HOLE_POS.z) < (holeD/2 + wallT + margin);
   }
-  // Helper: clamp position inside box walls
+  // Helper: clamp position inside box walls (0.45 margin for plushie radius)
   function clampInBox(x, z){
-    const mx = BOX_W/2 - 0.3;
-    const mz = BOX_D/2 - 0.3;
+    const mx = BOX_W/2 - 0.45;
+    const mz = BOX_D/2 - 0.45;
     return { x: Math.max(-mx, Math.min(mx, x)), z: Math.max(-mz, Math.min(mz, z)) };
   }
 
@@ -1100,12 +1100,15 @@ function spawnPlushies(){
   }
 
   // 2 plushies near the prize hole walls (outside, touchable by claw swing)
+  // Hole is flush to right wall, so place: 1=left side, 2=front side only
+  const nearHolePositions = [
+    { x: HOLE_POS.x - (holeW/2 + wallT + 0.35), z: HOLE_POS.z },                    // left of hole
+    { x: HOLE_POS.x + (Math.random()-0.5)*0.3,   z: HOLE_POS.z - (holeD/2 + wallT + 0.35) }  // front of hole
+  ];
   for(let i = 0; i < 2; i++){
     const type = PLUSHIE_TYPES[i];
-    // Place just outside the hole wall, clamped inside box
-    const side = i === 0 ? -1 : 1;
-    let x = HOLE_POS.x + side * (holeW/2 + wallT + 0.35);
-    let z = HOLE_POS.z + (Math.random()-0.5) * 0.3;
+    let x = nearHolePositions[i].x;
+    let z = nearHolePositions[i].z;
     const clampedH = clampInBox(x, z); x = clampedH.x; z = clampedH.z;
     const y = 0.28;
     const rx = (Math.random()-0.5) * 1.5;
