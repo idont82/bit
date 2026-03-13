@@ -227,6 +227,8 @@ tr:hover { background: rgba(168,85,247,0.04); }
     <label class="toggle"><input type="checkbox" id="autoTradeToggle" onchange="onAutoTradeToggle()"><span class="toggle-slider"></span></label>
   </div>
   <span class="sep">|</span>
+  <button class="ctrl-btn" onclick="runSimulation()">시뮬레이션</button>
+  <span class="sep">|</span>
   <button class="ctrl-btn" onclick="resetAllData()" style="color:var(--down)">초기화</button>
   <span class="sep">|</span>
   <button id="apiKeyBtn" class="ctrl-btn" onclick="openApiModal()">API Key</button>
@@ -277,6 +279,28 @@ tr:hover { background: rgba(168,85,247,0.04); }
 <div class="section">
   <div class="section-title">◆ DIVERGENCE MONITOR (백테스트 vs 페이퍼 vs 실매매)</div>
   <div id="divergencePanel" style="border:1px solid var(--border);border-radius:8px;overflow:hidden;"></div>
+</div>
+
+<!-- SIMULATION RESULT -->
+<div id="simArea" class="section" style="display:none">
+  <div class="section-title">◆ SIMULATION (과거 데이터 백테스트)</div>
+  <div id="simSummary" style="margin-bottom:12px;font-size:12px;color:var(--muted)"></div>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;">
+    <div style="flex:1;min-width:300px;">
+      <div style="font-size:11px;color:var(--purple);font-weight:700;margin-bottom:8px;">전략별 요약</div>
+      <div class="table-wrapper">
+        <table><thead><tr><th>전략</th><th>매매</th><th>승률</th><th>수익률</th><th>평균수익</th><th>평균손실</th></tr></thead>
+        <tbody id="simStratBody"></tbody></table>
+      </div>
+    </div>
+    <div style="flex:1;min-width:300px;">
+      <div style="font-size:11px;color:var(--purple);font-weight:700;margin-bottom:8px;">개별 매매</div>
+      <div class="table-wrapper" style="max-height:300px">
+        <table><thead><tr><th>전략</th><th>코인</th><th>시간</th><th>손익</th><th>사유</th></tr></thead>
+        <tbody id="simTradeBody"></tbody></table>
+      </div>
+    </div>
+  </div>
 </div>
 
 <!-- TRADE LOG -->
@@ -1642,6 +1666,160 @@ function updateApiStatus() {
   var btn = document.getElementById('apiKeyBtn');
   if (accessKey && secretKey) { btn.classList.add('connected'); btn.textContent = 'API ✓'; }
   else { btn.classList.remove('connected'); btn.textContent = 'API Key'; }
+}
+
+// ============================================================
+// SIMULATION: 과거 N시간 백테스트
+// ============================================================
+async function runSimulation() {
+  var hours = parseInt(prompt('몇 시간 전부터 시뮬레이션할까요?', '3')) || 3;
+  var coins = screenedCoins.length > 0 ? screenedCoins : [];
+
+  if (coins.length === 0) {
+    showToast('먼저 시스템을 시작하거나 스크리닝을 실행하세요', 'error');
+    return;
+  }
+
+  addLog('info', '=== ' + hours + '시간 시뮬레이션 시작 ===');
+  var progFill = document.getElementById('progressFill');
+  var progText = document.getElementById('progressText');
+  progFill.style.width = '0%';
+
+  // 임시 전략 초기화
+  var simStrategies = [
+    { name: 'RSI반전',   fn: stratRSIReversal },
+    { name: 'BB스퀴즈',  fn: stratBBSqueeze },
+    { name: '거래량급등', fn: stratVolSurge },
+    { name: 'EMA크로스', fn: stratEMACross },
+    { name: '핀바',      fn: stratPinBar },
+  ];
+
+  var allSimTrades = []; // {stratIdx, symbol, entryTime, exitTime, pnl, reason}
+
+  for (var ci = 0; ci < coins.length; ci++) {
+    var coin = coins[ci];
+    progText.textContent = coin.symbol + ' 시뮬레이션 중 (' + (ci + 1) + '/' + coins.length + ')';
+    progFill.style.width = ((ci + 1) / coins.length * 100) + '%';
+
+    try {
+      var needed = hours * 60;
+      var candles = await fetchHistoricalCandles(coin.market, 1, hours / 24 + 0.1);
+      if (!candles || candles.length < 60) continue;
+
+      // 시간 범위 필터
+      var cutoff = Date.now() - hours * 3600000;
+      candles = candles.filter(function(c) {
+        return new Date(c.candle_date_time_utc + 'Z').getTime() >= cutoff - 60 * 60000;
+      });
+      if (candles.length < 60) continue;
+
+      candles.reverse(); // oldest first
+      var closes = candles.map(function(c) { return c.trade_price; });
+      var opens = candles.map(function(c) { return c.opening_price; });
+      var highs = candles.map(function(c) { return c.high_price; });
+      var lows = candles.map(function(c) { return c.low_price; });
+      var volumes = candles.map(function(c) { return c.candle_acc_trade_volume; });
+      var times = candles.map(function(c) { return new Date(c.candle_date_time_kst || c.candle_date_time_utc).getTime(); });
+
+      for (var si = 0; si < simStrategies.length; si++) {
+        var strat = simStrategies[si];
+        var ind = strat.fn.getIndicators(closes, opens, highs, lows);
+        var pos = null;
+        var cooldownEnd = 0;
+
+        for (var i = 60; i < closes.length; i++) {
+          var candle = { open: opens[i], high: highs[i], low: lows[i], close: closes[i], volume: volumes[i], time: times[i] };
+
+          // 대기 중 진입
+          if (pos && pos.pending) {
+            pos.entryPrice = opens[i] * (1 + BASE_SLIPPAGE);
+            pos.entryTime = times[i];
+            pos.pending = false;
+          }
+
+          // 청산 체크
+          if (pos && !pos.pending) {
+            var exitResult = checkExit(pos, candle, times[i]);
+            var tpResult = strat.fn.checkTP(pos, closes, i, ind, volumes);
+            if (exitResult) {
+              var pnl = (exitResult.exitPrice - pos.entryPrice) / pos.entryPrice - FEE_ROUND;
+              allSimTrades.push({ stratIdx: si, symbol: coin.symbol, entryTime: pos.entryTime, exitTime: times[i], pnl: pnl, reason: exitResult.exitReason });
+              if (pnl < 0) cooldownEnd = times[i] + COOLDOWN_MS;
+              pos = null;
+            } else if (tpResult && tpResult.exit) {
+              var ep = tpResult.price * (1 - BASE_SLIPPAGE);
+              var pnl = (ep - pos.entryPrice) / pos.entryPrice - FEE_ROUND;
+              allSimTrades.push({ stratIdx: si, symbol: coin.symbol, entryTime: pos.entryTime, exitTime: times[i], pnl: pnl, reason: tpResult.reason });
+              pos = null;
+            }
+          }
+
+          // 매수 신호 (완성봉 i-1)
+          if (!pos && i < closes.length - 1 && times[i] >= cutoff) {
+            if (times[i] < cooldownEnd) continue;
+            var sig = strat.fn.checkBuy(closes, volumes, i - 1, ind);
+            if (sig && sig.signal) {
+              pos = { stratIdx: si, entryPrice: 0, entryTime: 0, peakPct: 0, pending: true };
+            }
+          }
+        }
+      }
+    } catch (e) { console.error('Sim err:', coin.symbol, e); }
+  }
+
+  // 결과 표시
+  progFill.style.width = '100%';
+  progText.textContent = '시뮬레이션 완료: ' + allSimTrades.length + '건';
+  renderSimulationResult(hours, allSimTrades, simStrategies);
+  addLog('success', '=== 시뮬레이션 완료: ' + allSimTrades.length + '건 ===');
+}
+
+function renderSimulationResult(hours, trades, simStrategies) {
+  document.getElementById('simArea').style.display = '';
+
+  // 전략별 요약
+  var summaryEl = document.getElementById('simSummary');
+  var totalPnl = trades.reduce(function(s, t) { return s + t.pnl; }, 0);
+  var wins = trades.filter(function(t) { return t.pnl > 0; }).length;
+  summaryEl.innerHTML = '과거 <strong>' + hours + '시간</strong> | '
+    + '<strong>' + trades.length + '</strong>건 매매 | '
+    + '승률 <strong>' + (trades.length > 0 ? (wins / trades.length * 100).toFixed(0) : '-') + '%</strong> | '
+    + '총수익 <span class="' + (totalPnl >= 0 ? 'up' : 'down') + '"><strong>' + formatPct(totalPnl) + '</strong></span>';
+
+  var stratEl = document.getElementById('simStratBody');
+  stratEl.innerHTML = '';
+  for (var si = 0; si < simStrategies.length; si++) {
+    var st = trades.filter(function(t) { return t.stratIdx === si; });
+    var sw = st.filter(function(t) { return t.pnl > 0; });
+    var sl = st.filter(function(t) { return t.pnl <= 0; });
+    var sPnl = st.reduce(function(s, t) { return s + t.pnl; }, 0);
+    var avgW = sw.length > 0 ? sw.reduce(function(s, t) { return s + t.pnl; }, 0) / sw.length : 0;
+    var avgL = sl.length > 0 ? sl.reduce(function(s, t) { return s + t.pnl; }, 0) / sl.length : 0;
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + simStrategies[si].name + '</td>'
+      + '<td class="mono">' + st.length + '</td>'
+      + '<td class="mono">' + (st.length > 0 ? (sw.length / st.length * 100).toFixed(0) + '%' : '-') + '</td>'
+      + '<td class="mono ' + (sPnl >= 0 ? 'up' : 'down') + '">' + formatPct(sPnl) + '</td>'
+      + '<td class="mono up">' + (avgW > 0 ? formatPct(avgW) : '-') + '</td>'
+      + '<td class="mono down">' + (avgL < 0 ? formatPct(avgL) : '-') + '</td>';
+    stratEl.appendChild(tr);
+  }
+
+  // 개별 매매
+  var tradeEl = document.getElementById('simTradeBody');
+  tradeEl.innerHTML = '';
+  trades.sort(function(a, b) { return b.exitTime - a.exitTime; });
+  trades.forEach(function(t) {
+    var d = new Date(t.exitTime);
+    var ts = ('0'+d.getHours()).slice(-2)+':'+('0'+d.getMinutes()).slice(-2);
+    var tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + simStrategies[t.stratIdx].name + '</td>'
+      + '<td>' + t.symbol + '</td>'
+      + '<td class="mono">' + ts + '</td>'
+      + '<td class="mono ' + (t.pnl >= 0 ? 'up' : 'down') + '">' + formatPct(t.pnl) + '</td>'
+      + '<td>' + t.reason + '</td>';
+    tradeEl.appendChild(tr);
+  });
 }
 
 async function resetAllData() {
