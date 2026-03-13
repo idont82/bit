@@ -788,11 +788,9 @@ async function runScreener() {
     }
 
     scored.sort(function(a, b) { return b.atrPct - a.atrPct; });
-    var top50pct = Math.max(Math.ceil(scored.length * 0.5), 5);
-    var volatile = scored.slice(0, top50pct);
-    volatile.sort(function(a, b) { return b.score - a.score; });
+    scored.sort(function(a, b) { return b.score - a.score; });
 
-    screenedCoins = volatile.slice(0, 10);
+    screenedCoins = scored.slice(0, 30);
     document.getElementById('coinCount').textContent = screenedCoins.length;
     progFill.style.width = '100%';
     progText.textContent = screenedCoins.length + '개 코인 선별 완료';
