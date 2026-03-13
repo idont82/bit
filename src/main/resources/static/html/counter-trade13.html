@@ -759,8 +759,7 @@ async function runScreener() {
       return true;
     });
     filtered.sort(function(a, b) { return (b.acc_trade_price_24h || 0) - (a.acc_trade_price_24h || 0); });
-    var top30pct = Math.max(Math.ceil(filtered.length * 0.3), 10);
-    var volFiltered = filtered.slice(0, top30pct);
+    var volFiltered = filtered.slice(0, 30);
 
     progText.textContent = 'ATR 변동성 분석 중...';
     var scored = [];
