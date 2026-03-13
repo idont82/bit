@@ -227,6 +227,8 @@ tr:hover { background: rgba(168,85,247,0.04); }
     <label class="toggle"><input type="checkbox" id="autoTradeToggle" onchange="onAutoTradeToggle()"><span class="toggle-slider"></span></label>
   </div>
   <span class="sep">|</span>
+  <button class="ctrl-btn" onclick="resetAllData()" style="color:var(--down)">초기화</button>
+  <span class="sep">|</span>
   <button id="apiKeyBtn" class="ctrl-btn" onclick="openApiModal()">API Key</button>
   <span id="balanceDisplay" class="mono" style="font-size:11px;color:var(--muted)"></span>
   <span style="flex:1"></span>
@@ -510,7 +512,7 @@ function calcATR(highs, lows, closes, period) {
 // UTILITY: IndexedDB
 // ============================================================
 var DB_NAME = 'ct13_trades';
-var DB_VERSION = 1;
+var DB_VERSION = 2;
 var _db = null;
 
 function openDB() {
@@ -526,6 +528,9 @@ function openDB() {
       if (!db.objectStoreNames.contains('live')) {
         var s = db.createObjectStore('live', { keyPath: 'id', autoIncrement: true });
         s.createIndex('time', 'exitTime'); s.createIndex('strategy', 'stratIdx');
+      }
+      if (!db.objectStoreNames.contains('state')) {
+        db.createObjectStore('state', { keyPath: 'key' });
       }
     };
     req.onsuccess = function(e) { _db = e.target.result; resolve(_db); };
@@ -553,6 +558,117 @@ async function purgeOldTrades(store, olderThan) {
     };
     tx.onerror = function(e) { reject(e.target.error); };
   });
+}
+
+async function saveState(key, value) {
+  var db = await openDB();
+  return new Promise(function(resolve, reject) {
+    var tx = db.transaction('state', 'readwrite');
+    tx.objectStore('state').put({ key: key, value: value, savedAt: Date.now() });
+    tx.oncomplete = resolve;
+    tx.onerror = function(e) { reject(e.target.error); };
+  });
+}
+async function loadState(key) {
+  var db = await openDB();
+  return new Promise(function(resolve, reject) {
+    var tx = db.transaction('state', 'readonly');
+    var req = tx.objectStore('state').get(key);
+    req.onsuccess = function(e) { resolve(e.target.result ? e.target.result.value : null); };
+    req.onerror = function(e) { reject(e.target.error); };
+  });
+}
+async function clearAllState() {
+  var db = await openDB();
+  return new Promise(function(resolve, reject) {
+    var tx = db.transaction(['state', 'paper', 'live'], 'readwrite');
+    tx.objectStore('state').clear();
+    tx.objectStore('paper').clear();
+    tx.objectStore('live').clear();
+    tx.oncomplete = resolve;
+    tx.onerror = function(e) { reject(e.target.error); };
+  });
+}
+
+// 전체 상태를 IndexedDB에 저장
+async function persistState() {
+  try {
+    var stratData = strategies.map(function(s) {
+      return { name: s.name, status: s.status, score: s.score, wins: s.wins, losses: s.losses,
+        totalPnl: s.totalPnl, consecLoss: s.consecLoss, trades: s.trades, promoted: s.promoted, lastPromoted: s.lastPromoted };
+    });
+    await saveState('strategies', stratData);
+    await saveState('paperPositions', paperPositions);
+    await saveState('livePositions', livePositions);
+    await saveState('backtestBaseline', backtestBaseline);
+    await saveState('counters', {
+      totalPaperTrades: totalPaperTrades, totalLiveTrades: totalLiveTrades,
+      dailyLivePnl: dailyLivePnl, dailyLiveTrades: dailyLiveTrades,
+      totalConsecLoss: totalConsecLoss, lastPromotionTime: lastPromotionTime,
+      initialCapital: initialCapital, dailyStartCapital: dailyStartCapital
+    });
+    await saveState('logEntries', logEntries.slice(0, 100));
+  } catch (e) { console.error('persistState err:', e); }
+}
+
+// IndexedDB에서 상태 복원
+async function restoreState() {
+  try {
+    var stratData = await loadState('strategies');
+    if (stratData && stratData.length === 5) {
+      initStrategies();
+      for (var i = 0; i < 5; i++) {
+        strategies[i].status = stratData[i].status;
+        strategies[i].score = stratData[i].score;
+        strategies[i].wins = stratData[i].wins;
+        strategies[i].losses = stratData[i].losses;
+        strategies[i].totalPnl = stratData[i].totalPnl;
+        strategies[i].consecLoss = stratData[i].consecLoss;
+        strategies[i].trades = stratData[i].trades;
+        strategies[i].promoted = stratData[i].promoted;
+        strategies[i].lastPromoted = stratData[i].lastPromoted;
+      }
+      addLog('info', '전략 상태 복원 완료 (' + stratData.reduce(function(s,x){return s+x.trades;},0) + '건 누적)');
+    } else {
+      return false; // 복원할 데이터 없음
+    }
+
+    var pp = await loadState('paperPositions');
+    if (pp) {
+      // 15분 이상 지난 포지션은 만료 처리
+      var now = Date.now();
+      for (var k in pp) {
+        if (now - pp[k].entryTime > MAX_HOLD_MIN * 60000 * 2) { delete pp[k]; }
+      }
+      paperPositions = pp;
+    }
+
+    var lp = await loadState('livePositions');
+    if (lp) livePositions = lp;
+
+    var bt = await loadState('backtestBaseline');
+    if (bt) backtestBaseline = bt;
+
+    var c = await loadState('counters');
+    if (c) {
+      totalPaperTrades = c.totalPaperTrades || 0;
+      totalLiveTrades = c.totalLiveTrades || 0;
+      dailyLivePnl = c.dailyLivePnl || 0;
+      dailyLiveTrades = c.dailyLiveTrades || 0;
+      totalConsecLoss = c.totalConsecLoss || 0;
+      lastPromotionTime = c.lastPromotionTime || 0;
+      initialCapital = c.initialCapital || 0;
+      dailyStartCapital = c.dailyStartCapital || 0;
+    }
+
+    var logs = await loadState('logEntries');
+    if (logs && logs.length > 0) logEntries = logs;
+
+    return true;
+  } catch (e) {
+    console.error('restoreState err:', e);
+    return false;
+  }
 }
 
 // ============================================================
@@ -1394,16 +1510,26 @@ async function startSystem() {
   await purgeOldTrades('paper', Date.now() - 7 * 86400000);
   await purgeOldTrades('live', Date.now() - 7 * 86400000);
 
-  // Init strategies
-  initStrategies();
+  // 기존 상태 복원 시도
+  var restored = await restoreState();
+  if (restored) {
+    addLog('success', '=== 이전 세션 상태 복원됨 ===');
+    renderTournamentBoard();
+    renderPositions();
+    renderLog();
+  } else {
+    initStrategies();
+  }
   renderTournamentBoard();
 
   // Load balance
   if (accessKey && secretKey) {
     try {
       await loadBalance();
-      initialCapital = krwBalance;
-      dailyStartCapital = krwBalance;
+      if (!restored || initialCapital <= 0) {
+        initialCapital = krwBalance;
+        dailyStartCapital = krwBalance;
+      }
       await checkOrphanedPositions();
     } catch (e) {}
   }
@@ -1415,8 +1541,12 @@ async function startSystem() {
     stopSystem(); return;
   }
 
-  // Backtest
-  await runInitialBacktest();
+  // Backtest (복원된 baseline이 없을 때만)
+  if (!restored || !backtestBaseline[0]) {
+    await runInitialBacktest();
+  } else {
+    addLog('info', '백테스트 기준선 복원됨 — 스킵');
+  }
 
   // Start loops
   addLog('info', '메인 루프 시작 (' + (MAIN_CYCLE_MS / 1000) + '초 주기)');
@@ -1439,6 +1569,7 @@ async function mainLoop() {
     renderPositions();
     renderDivergencePanel();
     updateStatsBar();
+    await persistState();
   } catch (e) {
     addLog('error', '루프 오류: ' + e.message);
   }
@@ -1516,10 +1647,58 @@ function updateApiStatus() {
   else { btn.classList.remove('connected'); btn.textContent = 'API Key'; }
 }
 
+async function resetAllData() {
+  if (!confirm('모든 매매 기록, 전략 상태, 백테스트 기준선을 초기화합니다.\n정말 초기화하시겠습니까?')) return;
+  if (systemRunning) stopSystem();
+  await openDB();
+  await clearAllState();
+  paperPositions = {};
+  livePositions = {};
+  backtestBaseline = {};
+  totalPaperTrades = 0;
+  totalLiveTrades = 0;
+  dailyLivePnl = 0;
+  dailyLiveTrades = 0;
+  totalConsecLoss = 0;
+  lastPromotionTime = 0;
+  logEntries = [];
+  initStrategies();
+  renderTournamentBoard();
+  renderPositions();
+  renderDivergencePanel();
+  renderLog();
+  updateStatsBar();
+  showToast('전체 초기화 완료', 'success');
+  addLog('info', '=== 전체 초기화 ===');
+}
+
 // Init
 (async function() {
   await loadKeys();
+  await openDB();
+  var restored = await restoreState();
+  if (restored) {
+    initStrategies();
+    var stratData = await loadState('strategies');
+    if (stratData && stratData.length === 5) {
+      for (var i = 0; i < 5; i++) {
+        strategies[i].status = stratData[i].status;
+        strategies[i].score = stratData[i].score;
+        strategies[i].wins = stratData[i].wins;
+        strategies[i].losses = stratData[i].losses;
+        strategies[i].totalPnl = stratData[i].totalPnl;
+        strategies[i].consecLoss = stratData[i].consecLoss;
+        strategies[i].trades = stratData[i].trades;
+        strategies[i].promoted = stratData[i].promoted;
+        strategies[i].lastPromoted = stratData[i].lastPromoted;
+      }
+    }
+  } else {
+    initStrategies();
+  }
   renderTournamentBoard();
+  renderLog();
+  updateStatsBar();
 })();
 </script>
 </body>
