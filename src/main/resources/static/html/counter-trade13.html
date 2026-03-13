@@ -315,11 +315,11 @@ var EXCLUDE_COINS = ['USDT','USDC','DAI','TUSD','BUSD','USDD','XAUT','TRX'];
 
 var MAX_POSITIONS = 2;
 var POSITION_PCT = 0.25;
-var STOP_LOSS_PCT = -0.005;
-var MAX_HOLD_MIN = 10;
-var TRAIL_ACTIVATE = 0.003;
-var TRAIL_PCT = 0.002;
-var COOLDOWN_MS = 3 * 60000;
+var STOP_LOSS_PCT = -0.007;
+var MAX_HOLD_MIN = 15;
+var TRAIL_ACTIVATE = 0.004;
+var TRAIL_PCT = 0.003;
+var COOLDOWN_MS = 10 * 60000;
 var DAILY_MDD = -0.03;
 var CAPITAL_FLOOR = -0.10;
 var PROMOTE_MIN_TRADES = 10;
@@ -772,10 +772,10 @@ var stratRSIReversal = {
   },
   checkTP: function(pos, closes, idx, ind) {
     var pct = (closes[idx] - pos.entryPrice) / pos.entryPrice;
-    if (pct >= 0.004) return { exit: true, price: pos.entryPrice * 1.004, reason: 'TP_0.4%' };
+    if (pct >= 0.008) return { exit: true, price: pos.entryPrice * 1.008, reason: 'TP_0.8%' };
     var rsi = ind.rsi7;
     var ri = idx - (closes.length - rsi.length);
-    if (ri >= 0 && rsi[ri] >= 50 && pct > 0) return { exit: true, price: closes[idx], reason: 'RSI≥50' };
+    if (ri >= 0 && rsi[ri] >= 55 && pct > 0.003) return { exit: true, price: closes[idx], reason: 'RSI≥55' };
     return null;
   }
 };
@@ -801,10 +801,10 @@ var stratBBSqueeze = {
   },
   checkTP: function(pos, closes, idx, ind) {
     var pct = (closes[idx] - pos.entryPrice) / pos.entryPrice;
-    if (pct >= 0.005) return { exit: true, price: pos.entryPrice * 1.005, reason: 'TP_0.5%' };
+    if (pct >= 0.01) return { exit: true, price: pos.entryPrice * 1.01, reason: 'TP_1.0%' };
     var bb = ind.bb20;
     var bi = idx - (closes.length - bb.mid.length);
-    if (bi >= 0 && pct > 0.001 && closes[idx] <= bb.mid[bi]) return { exit: true, price: closes[idx], reason: 'BB중심선' };
+    if (bi >= 0 && pct > 0.004 && closes[idx] <= bb.mid[bi]) return { exit: true, price: closes[idx], reason: 'BB중심선' };
     return null;
   }
 };
@@ -828,11 +828,11 @@ var stratVolSurge = {
   },
   checkTP: function(pos, closes, idx, ind, volumes) {
     var pct = (closes[idx] - pos.entryPrice) / pos.entryPrice;
-    if (pct >= 0.006) return { exit: true, price: pos.entryPrice * 1.006, reason: 'TP_0.6%' };
-    if (idx >= 20 && pct > 0 && volumes) {
+    if (pct >= 0.012) return { exit: true, price: pos.entryPrice * 1.012, reason: 'TP_1.2%' };
+    if (idx >= 20 && pct > 0.004 && volumes) {
       var volSum = 0;
       for (var j = idx - 20; j < idx; j++) volSum += volumes[j];
-      if (volumes[idx] < volSum / 20) return { exit: true, price: closes[idx], reason: '거래량감소' };
+      if (volumes[idx] < volSum / 20 * 0.5) return { exit: true, price: closes[idx], reason: '거래량감소' };
     }
     return null;
   }
@@ -852,17 +852,25 @@ var stratEMACross = {
     if (i5 < 1 || i13 < 1 || i55 < 0 || ri < 0) return null;
     var cross = e5[i5] > e13[i13] && e5[i5 - 1] <= e13[i13 - 1];
     if (!cross) return null;
-    if (rsi[ri] <= 40) return null;
+    if (rsi[ri] <= 45 || rsi[ri] >= 65) return null;
     if (closes[idx] <= e55[i55]) return null;
+    // EMA13 상승 추세 확인 (3봉 연속 상승)
+    if (i13 < 3) return null;
+    if (!(e13[i13] > e13[i13-1] && e13[i13-1] > e13[i13-2])) return null;
+    // 거래량 평균 이상 확인
+    if (idx >= 20) {
+      var vSum = 0; for (var vj = idx - 20; vj < idx; vj++) vSum += volumes[vj];
+      if (volumes[idx] < vSum / 20) return null;
+    }
     return { signal: true, reason: 'EMA골든크로스 RSI=' + rsi[ri].toFixed(0) };
   },
   checkTP: function(pos, closes, idx, ind) {
     var pct = (closes[idx] - pos.entryPrice) / pos.entryPrice;
-    if (pct >= 0.004) return { exit: true, price: pos.entryPrice * 1.004, reason: 'TP_0.4%' };
+    if (pct >= 0.008) return { exit: true, price: pos.entryPrice * 1.008, reason: 'TP_0.8%' };
     var e5 = ind.ema5, e13 = ind.ema13;
     var i5 = idx - (closes.length - e5.length);
     var i13 = idx - (closes.length - e13.length);
-    if (i5 >= 0 && i13 >= 0 && pct > 0 && e5[i5] < e13[i13]) return { exit: true, price: closes[idx], reason: 'EMA데드크로스' };
+    if (i5 >= 0 && i13 >= 0 && pct > 0.003 && e5[i5] < e13[i13]) return { exit: true, price: closes[idx], reason: 'EMA데드크로스' };
     return null;
   }
 };
@@ -888,8 +896,8 @@ var stratPinBar = {
   },
   checkTP: function(pos, closes, idx, ind) {
     var pct = (closes[idx] - pos.entryPrice) / pos.entryPrice;
-    if (pct >= 0.004) return { exit: true, price: pos.entryPrice * 1.004, reason: 'TP_0.4%' };
-    if (idx >= 2 && pct > 0 && ind.highs) {
+    if (pct >= 0.008) return { exit: true, price: pos.entryPrice * 1.008, reason: 'TP_0.8%' };
+    if (idx >= 2 && pct > 0.003 && ind.highs) {
       if (closes[idx] >= ind.highs[idx - 1]) return { exit: true, price: ind.highs[idx - 1], reason: '직전고가' };
     }
     return null;
