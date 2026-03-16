@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>서울 인형뽑기 성지 가이드</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'Segoe UI','Malgun Gothic',sans-serif;
+  background:#0a0a18;color:#e0e0f0;
+  min-height:100vh;
+}
+
+/* ── Header ── */
+header{
+  background:linear-gradient(135deg,#1a1040 0%,#2a1860 40%,#4a2080 100%);
+  padding:clamp(24px,5vw,48px) 20px;text-align:center;
+  position:relative;overflow:hidden;
+  border-bottom:3px solid #6a40cc;
+}
+header::before{
+  content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at 50% 120%,rgba(120,60,255,0.25),transparent 70%);
+  pointer-events:none;
+}
+header h1{
+  font-size:clamp(24px,5vw,42px);font-weight:800;
+  background:linear-gradient(90deg,#ff88cc,#88ccff,#ffcc44);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;
+  background-clip:text;
+  margin-bottom:8px;position:relative;
+}
+header p{
+  color:#bbaadd;font-size:clamp(13px,2.5vw,18px);
+  position:relative;
+}
+
+/* ── Play banner ── */
+.play-banner{
+  text-align:center;padding:16px;
+  background:linear-gradient(180deg,rgba(80,40,160,0.3),transparent);
+}
+.play-banner a{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:12px 28px;border-radius:50px;
+  background:linear-gradient(135deg,#e94560,#ff6b81);
+  color:#fff;text-decoration:none;font-weight:bold;
+  font-size:clamp(13px,2.8vw,17px);
+  box-shadow:0 4px 20px rgba(233,69,96,0.4);
+  transition:transform 0.2s,box-shadow 0.2s;
+}
+.play-banner a:hover{
+  transform:translateY(-2px);
+  box-shadow:0 6px 28px rgba(233,69,96,0.5);
+}
+
+/* ── Footer / Ad ── */
+.ad-footer{
+  max-width:900px;margin:24px auto 0;padding:0 16px 24px;
+  text-align:center;
+}
+.ad-footer .ad-label{
+  font-size:11px;color:#555;margin-bottom:6px;
+}
+
+/* ── Main ── */
+main{max-width:900px;margin:0 auto;padding:16px}
+
+/* ── Area cards grid ── */
+.area-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,260px),1fr));
+  gap:14px;
+}
+.area-card{
+  background:linear-gradient(145deg,#151530,#1a1a40);
+  border:1px solid #2a2a55;border-radius:16px;
+  padding:18px;cursor:pointer;
+  transition:transform 0.2s,border-color 0.2s,box-shadow 0.2s;
+}
+.area-card:hover{
+  transform:translateY(-3px);border-color:#5544aa;
+  box-shadow:0 6px 24px rgba(80,60,180,0.2);
+}
+.area-card.empty{opacity:0.45;cursor:default}
+.area-card.empty:hover{transform:none;border-color:#2a2a55;box-shadow:none}
+.area-card .card-top{
+  display:flex;align-items:center;gap:10px;margin-bottom:10px;
+}
+.area-card .card-emoji{font-size:clamp(28px,7vw,36px)}
+.area-card .card-title{
+  font-size:clamp(17px,3.5vw,22px);font-weight:700;color:#fff;
+}
+.area-card .card-station{
+  color:#8899bb;font-size:clamp(11px,2.5vw,13px);
+}
+.area-card .card-summary{
+  color:#9999bb;font-size:clamp(12px,2.5vw,14px);
+  margin-bottom:10px;line-height:1.5;
+}
+.area-card .card-stats{
+  display:flex;flex-wrap:wrap;gap:6px 12px;
+  font-size:clamp(11px,2.3vw,13px);color:#8899bb;
+  margin-bottom:10px;
+}
+.area-card .card-stats span{display:flex;align-items:center;gap:4px}
+.area-card .card-envs{
+  display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px;
+}
+.env-tag{
+  padding:2px 8px;border-radius:8px;font-size:11px;
+  background:rgba(100,100,200,0.12);color:#99aacc;
+  border:1px solid #2a2a55;
+}
+.area-card .card-tags{display:flex;gap:4px;flex-wrap:wrap}
+.spot-tag{
+  display:inline-block;padding:2px 9px;border-radius:10px;
+  font-size:11px;font-weight:600;
+}
+.tag-HOT{background:rgba(233,69,96,0.2);color:#ff6b81;border:1px solid rgba(233,69,96,0.3)}
+.tag-대형{background:rgba(68,136,255,0.2);color:#88bbff;border:1px solid rgba(68,136,255,0.3)}
+.tag-저렴{background:rgba(255,204,68,0.2);color:#ffdd66;border:1px solid rgba(255,204,68,0.3)}
+.tag-신규{background:rgba(68,187,68,0.2);color:#6bff6b;border:1px solid rgba(68,187,68,0.3)}
+
+/* ── Detail view ── */
+.detail-back{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:8px 16px;border-radius:10px;
+  background:rgba(40,40,80,0.5);border:1px solid #333366;
+  color:#99aacc;cursor:pointer;font-size:14px;
+  font-family:inherit;margin-bottom:16px;
+  transition:all 0.2s;
+}
+.detail-back:hover{background:rgba(60,60,120,0.5);color:#ccddff}
+.detail-header{
+  margin-bottom:20px;
+}
+.detail-header h2{
+  font-size:clamp(22px,5vw,32px);color:#fff;
+  display:flex;align-items:center;gap:10px;
+}
+.detail-header .sub{
+  color:#8899bb;font-size:clamp(13px,2.8vw,16px);
+  margin-top:4px;
+}
+
+/* Route section */
+.section-title{
+  font-size:clamp(15px,3vw,18px);font-weight:700;color:#ccddff;
+  margin:24px 0 12px;padding-bottom:8px;
+  border-bottom:1px solid #222244;
+  display:flex;align-items:center;gap:8px;
+}
+.route-steps{
+  list-style:none;padding:0;
+  counter-reset:step;
+}
+.route-steps li{
+  counter-increment:step;
+  padding:10px 12px 10px 42px;
+  position:relative;
+  font-size:clamp(13px,2.8vw,15px);color:#aabbcc;
+  border-left:2px solid #333366;
+  margin-left:14px;
+}
+.route-steps li:last-child{border-left-color:transparent}
+.route-steps li::before{
+  content:counter(step);
+  position:absolute;left:-13px;top:8px;
+  width:24px;height:24px;border-radius:50%;
+  background:linear-gradient(135deg,#4a2080,#6a40cc);
+  color:#fff;font-size:12px;font-weight:bold;
+  display:flex;align-items:center;justify-content:center;
+}
+.route-distance{
+  color:#88aacc;font-size:14px;margin:10px 0;
+  padding:8px 14px;background:rgba(40,60,120,0.2);
+  border-radius:10px;display:inline-block;
+}
+.map-container{
+  margin:14px 0;border-radius:12px;overflow:hidden;
+  border:1px solid #2a2a55;
+}
+.map-container iframe{
+  width:100%;height:300px;border:none;
+}
+.map-actions{
+  display:flex;gap:8px;margin-top:8px;flex-wrap:wrap;
+}
+.map-btn{
+  padding:8px 16px;border-radius:10px;
+  background:linear-gradient(135deg,#2a60cc,#4a80ee);
+  color:#fff;text-decoration:none;font-size:13px;font-weight:600;
+  transition:opacity 0.2s;display:inline-flex;align-items:center;gap:6px;
+}
+.map-btn:hover{opacity:0.85}
+.map-btn.secondary{
+  background:linear-gradient(135deg,#3a3a6a,#4a4a8a);
+}
+
+/* Spot cards */
+.spot-list{display:flex;flex-direction:column;gap:12px}
+.spot-card{
+  background:linear-gradient(145deg,#151530,#1a1a40);
+  border:1px solid #2a2a55;border-radius:14px;
+  padding:16px;transition:border-color 0.2s;
+}
+.spot-card:hover{border-color:#4a4a88}
+.spot-card.recommended{
+  border-color:#cc9933;
+  box-shadow:0 0 12px rgba(204,153,51,0.15);
+}
+.spot-top{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:8px;margin-bottom:8px;
+}
+.spot-name{
+  font-size:clamp(15px,3vw,18px);font-weight:700;color:#fff;
+}
+.spot-rec-badge{
+  padding:3px 10px;border-radius:8px;font-size:11px;font-weight:700;
+  background:rgba(255,200,50,0.15);color:#ffcc44;
+  border:1px solid rgba(255,200,50,0.3);
+  white-space:nowrap;
+}
+.spot-info{
+  display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;
+  font-size:clamp(12px,2.5vw,14px);color:#8899bb;
+  margin-bottom:8px;
+}
+.spot-info .label{color:#667799;font-weight:600}
+.spot-rating{
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:8px;
+}
+.spot-stars{color:#ffcc44;font-size:16px;letter-spacing:2px}
+.spot-rating-num{color:#99aacc;font-size:13px}
+.spot-comment{
+  color:#aabbcc;font-size:clamp(12px,2.5vw,14px);
+  line-height:1.6;padding:10px 12px;
+  background:rgba(40,40,80,0.3);border-radius:10px;
+  border-left:3px solid #4a2080;
+  margin-bottom:8px;
+}
+.spot-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Empty state */
+.empty-state{
+  text-align:center;padding:48px 20px;
+  color:#556677;font-size:clamp(14px,3vw,17px);
+  line-height:2;
+}
+.empty-state .big-emoji{font-size:48px;display:block;margin-bottom:12px}
+
+/* ── Footer ── */
+footer{
+  text-align:center;padding:24px;
+  color:#444466;font-size:12px;
+  border-top:1px solid #1a1a33;margin-top:32px;
+}
+
+/* ── Loading ── */
+.loading{
+  text-align:center;padding:40px;color:#667788;
+  font-size:14px;
+}
+.loading::after{
+  content:'';display:block;width:30px;height:30px;
+  border:3px solid #333;border-top-color:#6a40cc;
+  border-radius:50%;margin:12px auto 0;
+  animation:spin 0.8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎮 서울 인형뽑기 성지 가이드</h1>
+  <p>직접 다녀오고 추천하는 인형뽑기 명소</p>
+</header>
+
+<div class="play-banner">
+  <a href="claw-machine.html">
+    <span>🕹️</span> 온라인 인형뽑기 체험하기
+  </a>
+</div>
+
+<main>
+  <div id="listView"></div>
+  <div id="detailView" style="display:none"></div>
+</main>
+
+<footer>
+  <p>서울 인형뽑기 성지 가이드 &copy; 2026 | 정보는 참고용이며 실제와 다를 수 있습니다</p>
+</footer>
+
+<script>
+// ─── Data Layer ───
+let areasData = null;
+const detailCache = {};
+
+async function loadAreas(){
+  if(areasData) return areasData;
+  const res = await fetch('data/areas.json');
+  areasData = await res.json();
+  return areasData;
+}
+
+async function loadDetail(id){
+  if(detailCache[id]) return detailCache[id];
+  const res = await fetch(`data/${id}.json`);
+  const data = await res.json();
+  detailCache[id] = data;
+  return data;
+}
+
+// ─── Render: List View ───
+function renderListView(areas){
+  return `<div class="area-grid">${areas.map(a => {
+    const isEmpty = a.spotCount === 0;
+    return `
+      <div class="area-card${isEmpty?' empty':''}" ${isEmpty?'':`onclick="location.hash='${a.id}'"`}>
+        <div class="card-top">
+          <span class="card-emoji">${a.emoji}</span>
+          <div>
+            <div class="card-title">${a.name}</div>
+            <div class="card-station">${a.station} ${a.exit}</div>
+          </div>
+        </div>
+        <div class="card-summary">${a.summary}</div>
+        ${!isEmpty ? `
+        <div class="card-stats">
+          <span>🏪 ${a.spotCount}개 매장</span>
+          <span>🎰 ${a.totalMachines}대</span>
+          <span>📍 ${a.radius}</span>
+          <span>🚶 ${a.walkFromStation}</span>
+        </div>` : ''}
+        ${a.environment.length ? `
+        <div class="card-envs">
+          ${a.environment.map(e=>`<span class="env-tag">${e}</span>`).join('')}
+        </div>` : ''}
+        ${a.tags.length ? `
+        <div class="card-tags">
+          ${a.tags.map(t=>`<span class="spot-tag tag-${t}">${t}</span>`).join('')}
+        </div>` : ''}
+      </div>`;
+  }).join('')}</div>`;
+}
+
+// ─── Render: Stars ───
+function renderStars(rating){
+  const full = Math.floor(rating);
+  const half = rating % 1 >= 0.5;
+  let s = '★'.repeat(full);
+  if(half) s += '½';
+  s += '☆'.repeat(5 - full - (half?1:0));
+  return s;
+}
+
+// ─── Render: Detail View ───
+function renderDetailView(d){
+  const hasSpots = d.spots && d.spots.length > 0;
+  const hasRoute = d.route && d.route.steps && d.route.steps[0] !== '정보 준비 중입니다';
+
+  let html = `
+    <button class="detail-back" onclick="location.hash=''">← 목록으로</button>
+    <div class="detail-header">
+      <h2>${d.name}</h2>
+      <div class="sub">📍 ${d.station} ${d.exit}</div>
+    </div>`;
+
+  // Route section
+  html += `<div class="section-title">🗺️ 이동 경로</div>`;
+  if(hasRoute){
+    html += `
+      <ol class="route-steps">
+        ${d.route.steps.map(s=>`<li>${s}</li>`).join('')}
+      </ol>
+      <div class="route-distance">📏 ${d.route.totalDistance}</div>`;
+
+    if(d.route.naverMapUrl){
+      html += `
+        <div class="map-container">
+          <iframe src="${d.route.naverMapUrl}" allowfullscreen loading="lazy"></iframe>
+        </div>`;
+    }
+
+    html += `<div class="map-actions">`;
+    if(d.route.naverMapUrl){
+      html += `<a class="map-btn" href="${d.route.naverMapUrl}" target="_blank" rel="noopener">🗺️ 지도 크게 보기</a>`;
+    }
+    if(d.route.naverStreetViewUrl){
+      html += `<a class="map-btn secondary" href="${d.route.naverStreetViewUrl}" target="_blank" rel="noopener">👀 거리뷰 보기</a>`;
+    }
+    html += `</div>`;
+  } else {
+    html += `<div class="empty-state"><span class="big-emoji">🚧</span>경로 정보를 준비 중입니다</div>`;
+  }
+
+  // Street view section
+  if(d.route && d.route.naverStreetViewUrl){
+    html += `
+      <div class="section-title">👀 거리뷰</div>
+      <div class="map-container" id="streetViewContainer">
+        <iframe src="${d.route.naverStreetViewUrl}" allowfullscreen loading="lazy"></iframe>
+      </div>
+      <div class="map-actions">
+        <a class="map-btn" href="${d.route.naverStreetViewUrl}" target="_blank" rel="noopener">🔍 크게 보기</a>
+      </div>`;
+  }
+
+  // Spots section
+  html += `<div class="section-title">🏪 매장 정보 (${d.spots?.length || 0}곳)</div>`;
+  if(hasSpots){
+    html += `<div class="spot-list">${d.spots.map(sp => `
+      <div class="spot-card${sp.recommended?' recommended':''}">
+        <div class="spot-top">
+          <span class="spot-name">${sp.name}</span>
+          ${sp.recommended ? '<span class="spot-rec-badge">⭐ 추천</span>' : ''}
+        </div>
+        <div class="spot-info">
+          <div><span class="label">주소</span></div><div>${sp.address}</div>
+          <div><span class="label">뽑기 대수</span></div><div>${sp.machineCount}대</div>
+          <div><span class="label">가격대</span></div><div>${sp.priceRange}</div>
+          <div><span class="label">영업시간</span></div><div>${sp.hours}</div>
+        </div>
+        <div class="spot-rating">
+          <span class="spot-stars">${renderStars(sp.rating)}</span>
+          <span class="spot-rating-num">${sp.rating.toFixed(1)}</span>
+        </div>
+        <div class="spot-comment">"${sp.comment}"</div>
+        ${sp.naverStreetViewUrl ? `
+        <div class="spot-actions">
+          <a class="map-btn secondary" href="${sp.naverStreetViewUrl}" target="_blank" rel="noopener">👀 거리뷰</a>
+          <button class="map-btn secondary" onclick="loadSpotStreetView('${sp.naverStreetViewUrl}')">📍 여기서 보기</button>
+        </div>` : ''}
+      </div>`).join('')}</div>`;
+  } else {
+    html += `<div class="empty-state"><span class="big-emoji">🏗️</span>아직 매장 정보를 준비 중입니다<br>곧 업데이트 예정!</div>`;
+  }
+
+  return html;
+}
+
+// ─── Street View: load in page ───
+function loadSpotStreetView(url){
+  const container = document.getElementById('streetViewContainer');
+  if(container){
+    container.innerHTML = `<iframe src="${url}" allowfullscreen loading="lazy" style="width:100%;height:300px;border:none"></iframe>`;
+    container.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+}
+
+// ─── Router ───
+async function router(){
+  const hash = location.hash.slice(1);
+  const listView = document.getElementById('listView');
+  const detailView = document.getElementById('detailView');
+
+  if(!hash){
+    listView.innerHTML = '<div class="loading">불러오는 중...</div>';
+    listView.style.display = '';
+    detailView.style.display = 'none';
+    const data = await loadAreas();
+    listView.innerHTML = renderListView(data.areas);
+  } else {
+    detailView.innerHTML = '<div class="loading">불러오는 중...</div>';
+    listView.style.display = 'none';
+    detailView.style.display = '';
+    try {
+      const detail = await loadDetail(hash);
+      detailView.innerHTML = renderDetailView(detail);
+      window.scrollTo(0, 0);
+    } catch(e) {
+      detailView.innerHTML = '<div class="empty-state"><span class="big-emoji">❌</span>해당 지역 정보를 찾을 수 없습니다</div>';
+    }
+  }
+}
+
+window.addEventListener('hashchange', router);
+window.addEventListener('DOMContentLoaded', router);
+</script>
+
+<!-- 쿠팡 파트너스 배너 -->
+<div class="ad-footer">
+  <div class="ad-label">이 포스팅은 쿠팡 파트너스 활동의 일환으로 일정액의 수수료를 제공받습니다</div>
+  <script src="https://ads-partners.coupang.com/g.js"></script>
+	<script>
+		new PartnersCoupang.G({"id":881461,"template":"carousel","trackingCode":"AF7523287","width":"320","height":"140","tsource":""});
+	</script>
+</div>
+
+</body>
+</html>

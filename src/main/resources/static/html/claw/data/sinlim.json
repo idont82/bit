@@ -1,0 +1,13 @@
+{
+  "id": "sinlim",
+  "name": "신림",
+  "station": "신림역",
+  "exit": "2번 출구",
+  "route": {
+    "steps": ["정보 준비 중입니다"],
+    "totalDistance": "-",
+    "naverMapUrl": "",
+    "naverStreetViewUrl": ""
+  },
+  "spots": []
+}

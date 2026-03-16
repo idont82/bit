@@ -1,0 +1,13 @@
+{
+  "id": "jongro",
+  "name": "종로",
+  "station": "종로3가역",
+  "exit": "5번 출구",
+  "route": {
+    "steps": ["정보 준비 중입니다"],
+    "totalDistance": "-",
+    "naverMapUrl": "",
+    "naverStreetViewUrl": ""
+  },
+  "spots": []
+}

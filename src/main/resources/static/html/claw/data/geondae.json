@@ -1,0 +1,40 @@
+{
+  "id": "geondae",
+  "name": "건대",
+  "station": "건대입구역",
+  "exit": "6번 출구",
+  "route": {
+    "steps": [
+      "6번 출구 나와서 직진",
+      "커먼그라운드 방면 200m 직진",
+      "좌측 대형 뽑기 매장"
+    ],
+    "totalDistance": "도보 약 8분 (전체 순회)",
+    "naverMapUrl": "https://map.naver.com/v5/search/%EA%B1%B4%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0",
+    "naverStreetViewUrl": "https://map.naver.com/v5/search/%EA%B1%B4%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+  },
+  "spots": [
+    {
+      "name": "건대 뽑기랜드",
+      "address": "광진구 아차산로 200",
+      "machineCount": 40,
+      "priceRange": "1,000원 ~ 3,000원",
+      "rating": 4.0,
+      "comment": "대형 인형 전문, 포켓몬 쿠로미 라인업",
+      "recommended": true,
+      "hours": "11:00 ~ 22:00",
+      "naverStreetViewUrl": ""
+    },
+    {
+      "name": "건대 프라이즈존",
+      "address": "광진구 아차산로 212",
+      "machineCount": 20,
+      "priceRange": "1,000원 ~ 2,000원",
+      "rating": 3.5,
+      "comment": "먹자골목 옆이라 접근성 좋음",
+      "recommended": false,
+      "hours": "11:00 ~ 23:00",
+      "naverStreetViewUrl": ""
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "gangnam",
+  "name": "강남",
+  "station": "강남역",
+  "exit": "11번 출구",
+  "route": {
+    "steps": [
+      "11번 출구 지하상가 진입",
+      "직진 50m 좌측 첫번째 뽑기존",
+      "100m 더 가면 두번째 매장"
+    ],
+    "totalDistance": "도보 약 5분 (전체 순회)",
+    "naverMapUrl": "https://map.naver.com/v5/search/%EA%B0%95%EB%82%A8%EC%97%AD%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0",
+    "naverStreetViewUrl": "https://map.naver.com/v5/search/%EA%B0%95%EB%82%A8%EC%97%AD%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+  },
+  "spots": [
+    {
+      "name": "강남 지하상가 뽑기존 A",
+      "address": "강남구 강남대로 지하 396",
+      "machineCount": 30,
+      "priceRange": "500원 ~ 1,000원",
+      "rating": 4.0,
+      "comment": "500원짜리 많아서 가성비 최고, 비 올 때 추천",
+      "recommended": true,
+      "hours": "10:00 ~ 22:00",
+      "naverStreetViewUrl": ""
+    },
+    {
+      "name": "강남 지하상가 뽑기존 B",
+      "address": "강남구 강남대로 지하 402",
+      "machineCount": 20,
+      "priceRange": "1,000원",
+      "rating": 3.5,
+      "comment": "치이카와, 스폰지밥 라인업 특화",
+      "recommended": false,
+      "hours": "10:00 ~ 22:00",
+      "naverStreetViewUrl": ""
+    }
+  ]
+}

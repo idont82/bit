@@ -1,0 +1,13 @@
+{
+  "id": "yeonsinnae",
+  "name": "연신내",
+  "station": "연신내역",
+  "exit": "3번 출구",
+  "route": {
+    "steps": ["정보 준비 중입니다"],
+    "totalDistance": "-",
+    "naverMapUrl": "",
+    "naverStreetViewUrl": ""
+  },
+  "spots": []
+}

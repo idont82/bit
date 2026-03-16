@@ -1,0 +1,52 @@
+{
+  "id": "hongdae",
+  "name": "홍대 거리",
+  "station": "상수역",
+  "exit": "1번 출구",
+  "route": {
+    "steps": [
+      "9번 출구로 나와서 좌회전",
+      "어울마당로 방면 직진 100m",
+      "첫번째 뽑기 매장(뽑기천국) 도착",
+      "계속 직진하면 추가 매장 2곳"
+    ],
+    "totalDistance": "도보 약 10분 (전체 순회)",
+    "naverMapUrl": "https://map.naver.com/p/search/%ED%99%8D%EB%8C%80%20%EC%98%A4%EB%9D%BD%EC%8B%A4?c=16.33,0,0,0,dh",
+    "naverStreetViewUrl": "https://map.naver.com/v5/search/%ED%99%8D%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+  },
+  "spots": [
+    {
+      "name": "뽑기천국 홍대점",
+      "address": "마포구 어울마당로 42",
+      "machineCount": 35,
+      "priceRange": "1,000원 ~ 2,000원",
+      "rating": 4.5,
+      "comment": "집게 세기 괜찮고 산리오 라인업 최고",
+      "recommended": true,
+      "hours": "24시간",
+      "naverStreetViewUrl": "https://map.naver.com/v5/search/%ED%99%8D%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+    },
+    {
+      "name": "홍대 뽑기월드",
+      "address": "마포구 와우산로 21",
+      "machineCount": 25,
+      "priceRange": "1,000원 ~ 2,000원",
+      "rating": 4.0,
+      "comment": "포켓몬 기계 많고 대형 인형 있음",
+      "recommended": false,
+      "hours": "11:00 ~ 23:00",
+      "naverStreetViewUrl": ""
+    },
+    {
+      "name": "뽑기의 신 홍대",
+      "address": "마포구 어울마당로 58",
+      "machineCount": 20,
+      "priceRange": "1,000원",
+      "rating": 3.5,
+      "comment": "규모는 작지만 1000원 기계만 있어서 가성비 좋음",
+      "recommended": false,
+      "hours": "10:00 ~ 22:00",
+      "naverStreetViewUrl": ""
+    }
+  ]
+}

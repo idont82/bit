@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>인형뽑기 게임</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  background: #1a1a2e;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  overflow: hidden;
+  touch-action: none;
+  font-family: 'Segoe UI', sans-serif;
+  -webkit-user-select: none;
+  user-select: none;
+}
+#gameCanvas {
+  border: 3px solid #e94560;
+  border-radius: 12px;
+  background: #16213e;
+}
+#controls {
+  display: flex;
+  gap: 16px;
+  margin-top: 16px;
+  width: 90vw;
+  max-width: 420px;
+  justify-content: center;
+}
+.btn {
+  flex: 1;
+  padding: 18px 0;
+  font-size: 22px;
+  font-weight: bold;
+  border: none;
+  border-radius: 14px;
+  color: #fff;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.btn:active { transform: scale(0.93); }
+#btnLeft { background: linear-gradient(135deg, #0f3460, #533483); }
+#btnRight { background: linear-gradient(135deg, #533483, #0f3460); }
+#btnGrab { background: linear-gradient(135deg, #e94560, #c23616); font-size: 20px; }
+#hud {
+  color: #eee;
+  font-size: 16px;
+  margin-bottom: 8px;
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+#hud span { background: rgba(255,255,255,0.1); padding: 6px 14px; border-radius: 8px; }
+#message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 36px;
+  font-weight: bold;
+  color: #fff;
+  text-shadow: 0 0 20px #e94560;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.3s;
+  z-index: 10;
+}
+</style>
+</head>
+<body>
+
+<div id="hud">
+  <span>🪙 코인: <b id="coins">3</b></span>
+  <span>🧸 획득: <b id="score">0</b></span>
+</div>
+<canvas id="gameCanvas"></canvas>
+<div id="controls">
+  <button class="btn" id="btnLeft">◀ 왼쪽</button>
+  <button class="btn" id="btnGrab">🪝 뽑기!</button>
+  <button class="btn" id="btnRight">오른쪽 ▶</button>
+</div>
+<div id="message"></div>
+
+<script>
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+// 캔버스 크기 설정
+function resizeCanvas() {
+  const maxW = Math.min(window.innerWidth * 0.92, 420);
+  const maxH = Math.min(window.innerHeight * 0.62, 560);
+  canvas.width = maxW;
+  canvas.height = maxH;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+
+// 게임 상태
+const STATE = { IDLE: 0, MOVING: 1, DROPPING: 2, GRABBING: 3, RISING: 4, RETURNING: 5 };
+let state = STATE.IDLE;
+let coins = 3;
+let score = 0;
+let moveDir = 0; // -1 left, 0 stop, 1 right
+
+// 크레인
+const crane = {
+  x: 0,
+  y: 40,
+  width: 50,
+  ropeY: 40,
+  speed: 3,
+  dropSpeed: 2.5,
+  grabbed: null,
+  clawOpen: 1, // 0=closed, 1=open
+};
+
+// 인형 종류
+const DOLL_TYPES = [
+  { emoji: '🐻', name: '곰돌이', color: '#8B6914', size: 32 },
+  { emoji: '🐰', name: '토끼', color: '#FFB6C1', size: 30 },
+  { emoji: '🐱', name: '고양이', color: '#FFA500', size: 30 },
+  { emoji: '🐶', name: '강아지', color: '#D2691E', size: 30 },
+  { emoji: '🐸', name: '개구리', color: '#32CD32', size: 28 },
+  { emoji: '🦊', name: '여우', color: '#FF6347', size: 30 },
+  { emoji: '🐧', name: '펭귄', color: '#4169E1', size: 30 },
+  { emoji: '🐼', name: '판다', color: '#333', size: 32 },
+  { emoji: '🦁', name: '사자', color: '#DAA520', size: 32 },
+  { emoji: '🐷', name: '돼지', color: '#FFB6C1', size: 28 },
+  { emoji: '⭐', name: '별', color: '#FFD700', size: 26 },
+  { emoji: '💎', name: '다이아', color: '#00CED1', size: 26 },
+];
+
+// 인형 배열
+let dolls = [];
+
+function spawnDolls() {
+  dolls = [];
+  const floorY = canvas.height - 30;
+  const count = 8 + Math.floor(Math.random() * 4);
+  for (let i = 0; i < count; i++) {
+    const type = DOLL_TYPES[Math.floor(Math.random() * DOLL_TYPES.length)];
+    const size = type.size + Math.random() * 6 - 3;
+    dolls.push({
+      x: 30 + Math.random() * (canvas.width - 60),
+      y: floorY - size / 2 - Math.random() * 40,
+      size,
+      type,
+      grabbed: false,
+      removed: false,
+    });
+  }
+}
+
+crane.x = canvas.width / 2;
+spawnDolls();
+
+// 메시지
+function showMessage(text, duration = 1500) {
+  const el = document.getElementById('message');
+  el.textContent = text;
+  el.style.opacity = 1;
+  setTimeout(() => { el.style.opacity = 0; }, duration);
+}
+
+function updateHUD() {
+  document.getElementById('coins').textContent = coins;
+  document.getElementById('score').textContent = score;
+}
+
+// 뽑기 시도
+function startGrab() {
+  if (state !== STATE.IDLE || coins <= 0) {
+    if (coins <= 0) showMessage('코인이 없습니다! 🪙');
+    return;
+  }
+  coins--;
+  updateHUD();
+  state = STATE.DROPPING;
+  crane.clawOpen = 1;
+  crane.grabbed = null;
+}
+
+// 충돌 검사
+function checkGrab() {
+  const clawX = crane.x;
+  const clawY = crane.ropeY + 30;
+  let closest = null;
+  let closestDist = 30;
+
+  for (const d of dolls) {
+    if (d.removed) continue;
+    const dist = Math.hypot(d.x - clawX, d.y - clawY);
+    if (dist < closestDist) {
+      closestDist = dist;
+      closest = d;
+    }
+  }
+
+  if (closest) {
+    // 성공 확률 60~80%
+    const luck = 0.6 + Math.random() * 0.2;
+    if (Math.random() < luck) {
+      crane.grabbed = closest;
+      closest.grabbed = true;
+    }
+  }
+}
+
+// 파티클
+let particles = [];
+function spawnParticles(x, y) {
+  for (let i = 0; i < 20; i++) {
+    particles.push({
+      x, y,
+      vx: (Math.random() - 0.5) * 6,
+      vy: -Math.random() * 5 - 2,
+      life: 40 + Math.random() * 20,
+      color: ['#FFD700', '#FF6B6B', '#4ECDC4', '#A8E6CF', '#FF69B4'][Math.floor(Math.random() * 5)],
+      size: 3 + Math.random() * 4,
+    });
+  }
+}
+
+// 게임 루프
+function update() {
+  const W = canvas.width;
+  const H = canvas.height;
+  const floorY = H - 30;
+
+  // 크레인 이동
+  if (state === STATE.IDLE && moveDir !== 0) {
+    crane.x += moveDir * crane.speed;
+    crane.x = Math.max(30, Math.min(W - 30, crane.x));
+  }
+
+  // 내려가기
+  if (state === STATE.DROPPING) {
+    crane.ropeY += crane.dropSpeed;
+    if (crane.ropeY + 30 >= floorY) {
+      state = STATE.GRABBING;
+      crane.clawOpen = 0;
+      checkGrab();
+      setTimeout(() => { state = STATE.RISING; }, 400);
+    }
+  }
+
+  // 올라가기
+  if (state === STATE.RISING) {
+    crane.ropeY -= crane.dropSpeed * 0.8;
+    // 잡은 인형 따라 올리기
+    if (crane.grabbed) {
+      crane.grabbed.x = crane.x;
+      crane.grabbed.y = crane.ropeY + 30;
+      // 중간에 놓칠 확률 5%
+      if (crane.ropeY < floorY - 60 && Math.random() < 0.003) {
+        crane.grabbed.grabbed = false;
+        crane.grabbed = null;
+      }
+    }
+    if (crane.ropeY <= 40) {
+      crane.ropeY = 40;
+      state = STATE.RETURNING;
+    }
+  }
+
+  // 구멍으로 이동
+  if (state === STATE.RETURNING) {
+    const exitX = W - 40;
+    const dx = exitX - crane.x;
+    if (Math.abs(dx) > 2) {
+      crane.x += Math.sign(dx) * crane.speed * 1.2;
+      if (crane.grabbed) {
+        crane.grabbed.x = crane.x;
+        crane.grabbed.y = crane.ropeY + 30;
+      }
+    } else {
+      // 도착
+      if (crane.grabbed) {
+        crane.grabbed.removed = true;
+        score++;
+        updateHUD();
+        spawnParticles(crane.x, crane.ropeY + 30);
+        showMessage(`${crane.grabbed.type.emoji} ${crane.grabbed.type.name} 뽑기 성공!`);
+        crane.grabbed = null;
+      } else {
+        showMessage('아쉽다... 😢');
+      }
+      crane.clawOpen = 1;
+      // 원위치 복귀
+      state = STATE.IDLE;
+
+      // 인형 부족하면 리필
+      const remaining = dolls.filter(d => !d.removed).length;
+      if (remaining < 4) spawnDolls();
+
+      // 코인 없으면 리필
+      if (coins <= 0) {
+        setTimeout(() => {
+          coins = 3;
+          updateHUD();
+          showMessage('🪙 코인 3개 충전!');
+        }, 1500);
+      }
+    }
+  }
+
+  // 파티클 업데이트
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.15;
+    p.life--;
+  });
+  particles = particles.filter(p => p.life > 0);
+}
+
+function draw() {
+  const W = canvas.width;
+  const H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  // 배경 - 기계 내부
+  const grad = ctx.createLinearGradient(0, 0, 0, H);
+  grad.addColorStop(0, '#0f3460');
+  grad.addColorStop(1, '#16213e');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, W, H);
+
+  // 상단 레일
+  ctx.fillStyle = '#533483';
+  ctx.fillRect(0, 20, W, 12);
+  // 레일 하이라이트
+  ctx.fillStyle = '#7c5cbf';
+  ctx.fillRect(0, 20, W, 4);
+
+  // 출구 구멍
+  ctx.fillStyle = '#0a0a1a';
+  ctx.beginPath();
+  ctx.roundRect(W - 60, H - 80, 55, 80, [10, 10, 0, 0]);
+  ctx.fill();
+  ctx.fillStyle = '#e94560';
+  ctx.font = '12px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.fillText('EXIT', W - 33, H - 60);
+  ctx.fillText('▼', W - 33, H - 45);
+
+  // 바닥
+  ctx.fillStyle = '#1a1a3e';
+  ctx.fillRect(0, H - 30, W, 30);
+  // 바닥 패턴
+  for (let i = 0; i < W; i += 20) {
+    ctx.fillStyle = i % 40 === 0 ? '#222255' : '#1a1a3e';
+    ctx.fillRect(i, H - 30, 20, 30);
+  }
+
+  // 인형 그리기
+  for (const d of dolls) {
+    if (d.removed) continue;
+    ctx.font = `${d.size}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    // 그림자
+    ctx.shadowColor = 'rgba(0,0,0,0.4)';
+    ctx.shadowBlur = 6;
+    ctx.shadowOffsetY = 3;
+    ctx.fillText(d.type.emoji, d.x, d.y);
+    ctx.shadowColor = 'transparent';
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+  }
+
+  // 줄
+  ctx.strokeStyle = '#aaa';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(crane.x, 32);
+  ctx.lineTo(crane.x, crane.ropeY + 10);
+  ctx.stroke();
+
+  // 크레인 본체
+  ctx.fillStyle = '#e94560';
+  ctx.beginPath();
+  ctx.roundRect(crane.x - 18, 18, 36, 18, 4);
+  ctx.fill();
+  // 작은 볼트
+  ctx.fillStyle = '#333';
+  ctx.beginPath();
+  ctx.arc(crane.x - 8, 27, 3, 0, Math.PI * 2);
+  ctx.arc(crane.x + 8, 27, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 집게
+  const clawY = crane.ropeY + 10;
+  const openAngle = crane.clawOpen * 0.5;
+  ctx.strokeStyle = '#ddd';
+  ctx.lineWidth = 3;
+  ctx.lineCap = 'round';
+
+  // 왼쪽 집게
+  ctx.beginPath();
+  ctx.moveTo(crane.x, clawY);
+  ctx.lineTo(crane.x - 12 - openAngle * 15, clawY + 20);
+  ctx.stroke();
+
+  // 오른쪽 집게
+  ctx.beginPath();
+  ctx.moveTo(crane.x, clawY);
+  ctx.lineTo(crane.x + 12 + openAngle * 15, clawY + 20);
+  ctx.stroke();
+
+  // 집게 끝 볼
+  ctx.fillStyle = '#e94560';
+  ctx.beginPath();
+  ctx.arc(crane.x - 12 - openAngle * 15, clawY + 20, 4, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(crane.x + 12 + openAngle * 15, clawY + 20, 4, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 파티클
+  for (const p of particles) {
+    ctx.globalAlpha = p.life / 60;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+
+  // 조작 안내 (처음만)
+  if (state === STATE.IDLE && coins === 3 && score === 0) {
+    ctx.fillStyle = 'rgba(255,255,255,0.6)';
+    ctx.font = '14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('← 버튼으로 이동, 뽑기 버튼을 누르세요! →', W / 2, H / 2 - 20);
+  }
+}
+
+function gameLoop() {
+  update();
+  draw();
+  requestAnimationFrame(gameLoop);
+}
+gameLoop();
+
+// 터치/마우스 컨트롤
+const btnLeft = document.getElementById('btnLeft');
+const btnRight = document.getElementById('btnRight');
+const btnGrab = document.getElementById('btnGrab');
+
+function addHold(el, dir) {
+  const start = () => { moveDir = dir; };
+  const stop = () => { if (moveDir === dir) moveDir = 0; };
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); start(); });
+  el.addEventListener('touchend', (e) => { e.preventDefault(); stop(); });
+  el.addEventListener('touchcancel', stop);
+  el.addEventListener('mousedown', start);
+  el.addEventListener('mouseup', stop);
+  el.addEventListener('mouseleave', stop);
+}
+
+addHold(btnLeft, -1);
+addHold(btnRight, 1);
+
+btnGrab.addEventListener('touchstart', (e) => { e.preventDefault(); startGrab(); });
+btnGrab.addEventListener('mousedown', startGrab);
+
+// 키보드 지원 (PC 테스트용)
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowLeft') moveDir = -1;
+  if (e.key === 'ArrowRight') moveDir = 1;
+  if (e.key === ' ' || e.key === 'Enter') startGrab();
+});
+document.addEventListener('keyup', (e) => {
+  if (e.key === 'ArrowLeft' && moveDir === -1) moveDir = 0;
+  if (e.key === 'ArrowRight' && moveDir === 1) moveDir = 0;
+});
+
+// 캔버스 터치로 좌우 이동 (캔버스 절반 기준)
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  const touch = e.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  const x = touch.clientX - rect.left;
+  if (x < canvas.width / 2) moveDir = -1;
+  else moveDir = 1;
+});
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (e.touches.length === 0) moveDir = 0;
+});
+</script>
+</body>
+</html>

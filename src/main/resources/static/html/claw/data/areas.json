@@ -1,0 +1,88 @@
+{
+  "areas": [
+    {
+      "id": "hongdae",
+      "name": "홍대",
+      "emoji": "🏆",
+      "station": "상수역",
+      "exit": "1번 출구",
+      "summary": "서울 인형뽑기의 메카, 13 개 뽑기방 밀집",
+      "spotCount": 13,
+      "radius": "반경 300m",
+      "walkFromStation": "도보 3분",
+      "totalMachines": 80,
+      "environment": ["실내", "24시간", "먹거리 근처"],
+      "tags": ["HOT", "대형"]
+    },
+    {
+      "id": "gangnam",
+      "name": "강남",
+      "emoji": "🌟",
+      "station": "강남역",
+      "exit": "11번 출구",
+      "summary": "지하상가 중심 가성비 뽑기존",
+      "spotCount": 2,
+      "radius": "반경 200m",
+      "walkFromStation": "도보 1분",
+      "totalMachines": 50,
+      "environment": ["실내", "지하상가"],
+      "tags": ["HOT"]
+    },
+    {
+      "id": "geondae",
+      "name": "건대",
+      "emoji": "🎪",
+      "station": "건대입구역",
+      "exit": "6번 출구",
+      "summary": "커먼그라운드 주변 대형 뽑기 매장",
+      "spotCount": 2,
+      "radius": "반경 400m",
+      "walkFromStation": "도보 5분",
+      "totalMachines": 60,
+      "environment": ["실내", "먹거리 근처"],
+      "tags": ["대형"]
+    },
+    {
+      "id": "yeonsinnae",
+      "name": "연신내",
+      "emoji": "🎯",
+      "station": "연신내역",
+      "exit": "3번 출구",
+      "summary": "준비 중",
+      "spotCount": 0,
+      "radius": "-",
+      "walkFromStation": "-",
+      "totalMachines": 0,
+      "environment": [],
+      "tags": []
+    },
+    {
+      "id": "jongro",
+      "name": "종로",
+      "emoji": "🏛️",
+      "station": "종로3가역",
+      "exit": "5번 출구",
+      "summary": "준비 중",
+      "spotCount": 0,
+      "radius": "-",
+      "walkFromStation": "-",
+      "totalMachines": 0,
+      "environment": [],
+      "tags": []
+    },
+    {
+      "id": "sinlim",
+      "name": "신림",
+      "emoji": "🎮",
+      "station": "신림역",
+      "exit": "2번 출구",
+      "summary": "준비 중",
+      "spotCount": 0,
+      "radius": "-",
+      "walkFromStation": "-",
+      "totalMachines": 0,
+      "environment": [],
+      "tags": []
+    }
+  ]
+}
