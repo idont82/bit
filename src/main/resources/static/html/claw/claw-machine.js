@@ -425,8 +425,8 @@ const PLUSHIE_THEMES = {
     {name:'하늘곰', bodyColor:0xAADDFF, bellyColor:0xDDEEFF, accentColor:0x88BBEE, char:'sky', ribbonColor:0xFFCC44}
   ],
   hangyodon: [
-    {name:'한교동', bodyColor:0x77CCBB, bellyColor:0xAADDCC, accentColor:0x55AA99, char:'hangyodon', lipColor:0xEE7788}
-  ]
+    {name:'한교동', bodyColor:0x56C2C2, bellyColor:0xAADDCC, accentColor:0x00AEEF, char:'hangyodon', lipColor:0xF9A7B0}
+  ],
 };
 let currentTheme = 'shinchan';
 let PLUSHIE_TYPES = PLUSHIE_THEMES[currentTheme];
@@ -791,56 +791,74 @@ function createPlushie(type, position, rotation){
   // ══════════════════════════════════════
   } else {
     if(t.char==='hangyodon'){
-      // 한교동 — 반어인 (민트색 물고기+사람)
+      // 한교동 — (민트색 반어인)
       const bodyGeo = new THREE.SphereGeometry(s*1.1,16,12); bodyGeo.scale(1,1.15,0.9);
       const bodyMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.88});
       const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
+
       const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.7,12,10), new THREE.MeshStandardMaterial({color:t.bellyColor, roughness:0.92}));
       belly.position.set(0,-s*0.1,s*0.5); belly.scale.set(1,1.1,0.5); g.add(belly);
-      // Big head
-      const head = new THREE.Mesh(new THREE.SphereGeometry(s*0.95,16,12), new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.88}));
-      head.position.y=s*1.6; head.castShadow=true; g.add(head);
-      // BIG droopy eyes (signature)
-      const eyeWGeo=new THREE.SphereGeometry(s*0.25,10,10);
-      const eyeWMat=new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.3});
-      const pupGeo2=new THREE.SphereGeometry(s*0.12,8,8);
-      const pupMat2=new THREE.MeshStandardMaterial({color:0x111111, roughness:0.3});
-      [-1,1].forEach(side=>{
-        const ew=new THREE.Mesh(eyeWGeo,eyeWMat); ew.position.set(side*s*0.35,s*1.7,s*0.6); ew.scale.set(1,1.1,0.6); g.add(ew);
-        const pu=new THREE.Mesh(pupGeo2,pupMat2); pu.position.set(side*s*0.35,s*1.65,s*0.78); g.add(pu);
-        // Droopy eyelid
-        const lidGeo=new THREE.SphereGeometry(s*0.22,8,6,0,Math.PI*2,0,Math.PI*0.4);
-        const lid=new THREE.Mesh(lidGeo, new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.88}));
-        lid.position.set(side*s*0.35,s*1.82,s*0.58); lid.rotation.x=0.25; g.add(lid);
+
+      // Scales (U marks on chest)
+      const scaleMat = new THREE.MeshStandardMaterial({color:0x44AAAA, roughness:0.5});
+      [[-0.2,0.1,0.9],[0.2,0.1,0.9],[0,-0.2,0.9]].forEach(p=>{
+         const sc = new THREE.Mesh(new THREE.TorusGeometry(s*0.1, s*0.02, 8, 8, Math.PI), scaleMat);
+         sc.position.set(p[0]*s, p[1]*s, p[2]*s); sc.rotation.x = -Math.PI/2; g.add(sc);
       });
-      // Eye highlights
-      const hlGeo2=new THREE.SphereGeometry(s*0.05,6,6);
-      const hlMat2=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:0.5});
-      [-1,1].forEach(side=>{ const h=new THREE.Mesh(hlGeo2,hlMat2); h.position.set(side*s*0.28,s*1.72,s*0.82); g.add(h); });
-      // BIG thick lips (signature!)
+
+      // Big Head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(s*1.1,16,12), bodyMat);
+      head.position.y=s*1.6; head.castShadow=true; g.add(head);
+
+      // BIG white eyes (round)
+      const eyeWGeo=new THREE.SphereGeometry(s*0.35,12,12);
+      const eyeWMat=new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.2});
+      const pupGeo2=new THREE.SphereGeometry(s*0.08,8,8);
+      const pupMat2=new THREE.MeshStandardMaterial({color:0x111111, roughness:0.1});
+      [-1,1].forEach(side=>{
+        const ew=new THREE.Mesh(eyeWGeo,eyeWMat); ew.position.set(side*s*0.4,s*1.8,s*0.95); ew.scale.set(1,1.1,0.5); g.add(ew);
+        const pu=new THREE.Mesh(pupGeo2,pupMat2); pu.position.set(side*s*0.4,s*1.8,s*1.15); g.add(pu);
+      });
+
+      // BIG thick pink lips (one piece wide)
       const lipMat=new THREE.MeshStandardMaterial({color:t.lipColor, roughness:0.6});
-      const upperLip=new THREE.Mesh(new THREE.SphereGeometry(s*0.25,10,8),lipMat);
-      upperLip.position.set(0,s*1.38,s*0.78); upperLip.scale.set(1.3,0.4,0.7); g.add(upperLip);
-      const lowerLip=new THREE.Mesh(new THREE.SphereGeometry(s*0.28,10,8),lipMat);
-      lowerLip.position.set(0,s*1.28,s*0.75); lowerLip.scale.set(1.2,0.45,0.7); g.add(lowerLip);
+      const lipMain=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.35, s*0.6, 12, 12), lipMat);
+      lipMain.position.set(0,s*1.2,s*1.0); lipMain.rotation.z=Math.PI/2; lipMain.scale.set(0.6,1.4,0.6); g.add(lipMain);
+
+      // Side fins (Ears)
+      const sideFinGeo = new THREE.SphereGeometry(s*0.25, 12, 8); sideFinGeo.scale(1,1.5,0.4);
+      const sideFinMat = new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.7});
+      [-1,1].forEach(side=>{
+        const sf = new THREE.Mesh(sideFinGeo, sideFinMat);
+        sf.position.set(side*s*1.15, s*1.6, s*0.3); sf.rotation.z = side*0.2; g.add(sf);
+      });
+
+      // Dorsal fin (3-bump wave)
+      const dorsalBase = new THREE.Group();
+      [0, 0.25, 0.5].forEach((z, i)=>{
+          const bump = new THREE.Mesh(new THREE.SphereGeometry(s*(0.25-i*0.05), 10, 8), sideFinMat);
+          bump.position.set(0, s*(0.4-i*0.1), -z*s); bump.scale.y=1.5;
+          dorsalBase.add(bump);
+      });
+      dorsalBase.position.set(0, s*2.5, s*0.2); dorsalBase.rotation.x = -0.2; g.add(dorsalBase);
+
       // Stubby fin-arms
       [-1,1].forEach(side=>{
-        const fin=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.12,s*0.2,6,8), new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.88}));
-        fin.position.set(side*s*1.0,s*0.2,0); fin.rotation.z=side*0.7; g.add(fin);
+        const fin=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.15,s*0.3,6,8), bodyMat);
+        fin.position.set(side*s*1.1,s*0.2,0); fin.rotation.z=side*0.8; g.add(fin);
       });
+
       // Short legs
       [-1,1].forEach(side=>{
-        const l=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.15,s*0.15,6,8), new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.88}));
-        l.position.set(side*s*0.35,-s*0.95,s*0.1); g.add(l);
+        const l=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.18,s*0.15,6,8), bodyMat);
+        l.position.set(side*s*0.4,-s*1.0,s*0.1); g.add(l);
       });
-      // Fish tail
-      const tailFin=new THREE.Mesh(new THREE.PlaneGeometry(s*0.6,s*0.5), new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.85, side:THREE.DoubleSide}));
-      tailFin.position.set(0,s*0.1,-s*0.9); tailFin.rotation.y=Math.PI/2; g.add(tailFin);
-      // Small dorsal fin on head
-      const dorsal=new THREE.Mesh(new THREE.ConeGeometry(s*0.12,s*0.3,4), new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.85}));
-      dorsal.position.set(0,s*2.35,-s*0.15); dorsal.rotation.x=-0.3; g.add(dorsal);
 
-     }
+      // Small Tail
+      const tail = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 8, 8), sideFinMat);
+      tail.position.set(0, -s*0.3, -s*0.8); tail.scale.set(0.5,1,1.2); g.add(tail);
+    }
+
   }
   
   // Apply position and random rotation
