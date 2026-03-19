@@ -257,13 +257,17 @@ body{
 .coll-item{
   background:linear-gradient(180deg,#1a2a55,#0e1a3a);
   border:1px solid #335;border-radius:10px;
-  padding:8px 6px;width:calc(50% - 3px);
-  display:flex;flex-direction:column;align-items:center;gap:3px;
-  position:relative;transition:border-color 0.2s;
+  padding:12px 6px;width:calc(50% - 3px);
+  display:flex;flex-direction:column;align-items:center;gap:6px;
+  position:relative;transition:border-color 0.2s, transform 0.2s;
 }
-.coll-item:hover{border-color:#5599ff}
-.coll-item .coll-icon{font-size:28px}
-.coll-item .coll-name{color:#ccd;font-size:11px;text-align:center}
+.coll-item:hover{border-color:#5599ff; transform:translateY(-3px); background:linear-gradient(180deg,#1e3266,#122144);}
+.plushie-3d-canvas{
+  width:80px; height:80px; 
+  background:radial-gradient(circle, rgba(85,153,255,0.15) 0%, transparent 70%);
+  border-radius:50%; cursor: grab;
+}
+.coll-item .coll-name{color:#fff;font-size:12px;font-weight:bold;text-align:center;text-shadow:0 1px 2px #000;}
 .coll-item .coll-theme{color:#668;font-size:9px}
 .coll-item .coll-count{color:#ff0;font-size:10px;font-weight:bold}
 .coll-item .coll-del{

@@ -427,6 +427,9 @@ const PLUSHIE_THEMES = {
   hangyodon: [
     {name:'한교동', bodyColor:0x56C2C2, bellyColor:0xAADDCC, accentColor:0x00AEEF, char:'hangyodon', lipColor:0xF9A7B0}
   ],
+  doraemon: [
+    {name:'도라에몽', bodyColor:0x2288EE, bellyColor:0xFFFFFF, accentColor:0xEE2222, char:'doraemon', bellColor:0xFFDD00}
+  ],
 };
 let currentTheme = 'shinchan';
 let PLUSHIE_TYPES = PLUSHIE_THEMES[currentTheme];
@@ -859,6 +862,90 @@ function createPlushie(type, position, rotation){
       tail.position.set(0, -s*0.3, -s*0.8); tail.scale.set(0.5,1,1.2); g.add(tail);
     }
 
+    if(t.char==='doraemon'){
+      // 도라에몽 — (파란색 고양이형 로봇)
+      const bodyGeo = new THREE.SphereGeometry(s*1.0, 16, 12); bodyGeo.scale(1, 1.1, 0.9);
+      const bodyMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.7});
+      const whiteMat = new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.6});
+      
+      const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
+      
+      // White Belly (Pushed further out to prevent clipping)
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.82, 12, 10), whiteMat);
+      belly.position.set(0, -s*0.1, s*0.4); belly.scale.set(1, 1, 0.5); g.add(belly);
+      
+      // Pocket line (Half circle - Pushed further out)
+      const pocket = new THREE.Mesh(new THREE.TorusGeometry(s*0.38, s*0.02, 8, 12, Math.PI), new THREE.MeshStandardMaterial({color:0x888888}));
+      pocket.position.set(0, 0, s*0.92); pocket.rotation.x = -0.1; g.add(pocket);
+
+      // Red Tail (Back)
+      const tail = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 10, 8), new THREE.MeshStandardMaterial({color:t.accentColor}));
+      tail.position.set(0, -s*0.4, -s*0.9); g.add(tail);
+
+      // Big Head
+      const head = new THREE.Mesh(new THREE.SphereGeometry(s*1.25, 16, 12), bodyMat);
+      head.position.y = s*1.7; head.castShadow=true; g.add(head);
+
+      // Large White Face Mask (Pushed further out to prevent clipping)
+      const faceMask = new THREE.Mesh(new THREE.SphereGeometry(s*1.18, 16, 12), whiteMat);
+      faceMask.position.set(0, s*1.6, s*0.3); faceMask.scale.set(1.05, 1.0, 0.75); g.add(faceMask);
+
+      // BIG Oval Eyes (Pushed further out)
+      const eyeGeo = new THREE.SphereGeometry(s*0.35, 12, 12); eyeGeo.scale(0.85, 1.1, 0.4);
+      [-1,1].forEach(side=>{
+        const eye = new THREE.Mesh(eyeGeo, whiteMat);
+        eye.position.set(side*s*0.3, s*2.25, s*1.05); g.add(eye);
+        const pup = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 8, 8), new THREE.MeshStandardMaterial({color:0x111111}));
+        pup.position.set(side*s*0.2, s*2.25, s*1.42); g.add(pup);
+      });
+
+      // Smaller Red Nose (Pushed further out)
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(s*0.12, 10, 10), new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.4}));
+      nose.position.set(0, s*1.95, s*1.42); g.add(nose);
+
+      // Nose-to-Mouth Line
+      const whiskerMat = new THREE.MeshStandardMaterial({color:0x333333});
+      const line = new THREE.Mesh(new THREE.BoxGeometry(s*0.02, s*0.5, s*0.02), whiskerMat);
+      line.position.set(0, s*1.62, s*1.38); g.add(line);
+
+      // Smiling Mouth (Lowered and pushed out)
+      const mouthGeo = new THREE.SphereGeometry(s*0.55, 12, 10, 0, Math.PI*2, Math.PI*0.5, Math.PI*0.5);
+      const mouth = new THREE.Mesh(mouthGeo, new THREE.MeshStandardMaterial({color:0xAA3322}));
+      mouth.position.set(0, s*1.35, s*1.25); mouth.rotation.x = Math.PI; mouth.scale.set(1, 0.7, 0.35); g.add(mouth);
+
+      // Whiskers (Pushed further out)
+      [-1,1].forEach(side=>{
+        [0.1, 0, -0.1].forEach((yOff, i)=>{
+           const w = new THREE.Mesh(new THREE.BoxGeometry(s*0.6, s*0.015, s*0.015), whiskerMat);
+           w.position.set(side*s*0.75, s*1.75 + yOff*s, s*1.3);
+           w.rotation.z = side * (0.2 - i*0.2); g.add(w);
+        });
+      });
+
+      // Collar & Bell
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(s*0.92, s*0.08, 8, 20), new THREE.MeshStandardMaterial({color:t.accentColor}));
+      collar.position.y = s*0.82; collar.rotation.x = Math.PI/2; g.add(collar);
+      
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 12, 10), new THREE.MeshStandardMaterial({color:t.bellColor, metalness:0.6, roughness:0.2}));
+      bell.position.set(0, s*0.65, s*0.98); g.add(bell);
+
+      // Arms & Hands
+      [-1,1].forEach(side=>{
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.22, s*0.35, 6, 8), bodyMat);
+        arm.position.set(side*s*1.1, s*0.2, 0); arm.rotation.z = side*0.7; g.add(arm);
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(s*0.28, 12, 10), whiteMat);
+        hand.position.set(side*s*1.35, -s*0.15, 0.1); g.add(hand);
+      });
+
+      // Legs & Feet
+      [-1,1].forEach(side=>{
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.28, s*0.15, 6, 8), bodyMat);
+        leg.position.set(side*s*0.42, -s*0.9, 0); g.add(leg);
+        const foot = new THREE.Mesh(new THREE.SphereGeometry(s*0.35, 12, 10), whiteMat);
+        foot.position.set(side*s*0.45, -s*1.35, 0.15); foot.scale.set(1, 0.6, 1.2); g.add(foot);
+      });
+    }
+
   }
   
   // Apply position and random rotation
@@ -986,9 +1073,10 @@ const CHAR_ICONS = {
   cinna:'☁️', mocha:'🧁', cappuccino:'☕', espresso:'🫘', milk:'🥛', chiffon:'🍰',
   trex:'🦖', trice:'🦕', brachi:'🦒', stego:'🦎', ptera:'🦅', baby:'🥚',
   honey:'🍯', polar:'🐻‍❄️', brown:'🐻', panda:'🐼', strawberry:'🍓', sky:'☁️',
-  hangyodon:'🐟', sayuri:'🐙', kingyo:'🐠', otamaro:'🦎', keroppi:'🐸', tuxedosam:'🐧'
+  hangyodon:'🐟', sayuri:'🐙', kingyo:'🐠', otamaro:'🦎', keroppi:'🐸', tuxedosam:'🐧',
+  doraemon:'🐱', dorami:'🎀', nobita:'👓', shizuka:'👧', suneo:'🎤', gian:'🥊'
 };
-const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', bear:'곰돌이', hangyodon:'한교동'};
+const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', bear:'곰돌이', hangyodon:'한교동', doraemon:'도라에몽'};
 
 function saveCollection(){
   localStorage.setItem(COLL_KEY, JSON.stringify(collection));
@@ -1007,6 +1095,51 @@ function removeFromCollection(idx){
   else { collection.splice(idx, 1); }
   saveCollection();
 }
+function initCollection3D(container, char, themeId) {
+  const theme = PLUSHIE_THEMES[themeId];
+  if(!theme) return;
+  const t = theme.find(p => p.char === char);
+  if(!t) return;
+
+  // 컨테이너 크기가 0인 경우를 대비한 안전장치
+  const w = container.clientWidth || 80;
+  const h = container.clientHeight || 80;
+  
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
+  camera.position.set(0, 0.7, 2.8); // 카메라를 훨씬 더 가깝게
+  camera.lookAt(0, 0.6, 0);
+
+  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setSize(w, h);
+  renderer.setPixelRatio(window.devicePixelRatio);
+  container.appendChild(renderer.domElement);
+
+  const ambient = new THREE.AmbientLight(0xffffff, 1.2); // 조명 추가 강화
+  scene.add(ambient);
+  const direct = new THREE.DirectionalLight(0xffffff, 0.8);
+  direct.position.set(1, 2, 3);
+  scene.add(direct);
+
+  // 인형 생성
+  const plushie = createPlushie(t, new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0, 0));
+  plushie.scale.set(1.2, 1.2, 1.2); // 크기 대폭 확대
+  scene.add(plushie);
+
+  let reqId;
+  function animate() {
+    if (!container.parentElement || !document.body.contains(container)) {
+       renderer.dispose();
+       cancelAnimationFrame(reqId);
+       return; 
+    }
+    reqId = requestAnimationFrame(animate);
+    plushie.rotation.y += 0.02;
+    renderer.render(scene, camera);
+  }
+  animate();
+}
+
 function renderCollection(){
   const list = document.getElementById('collectionList');
   const badge = document.getElementById('collBadge');
@@ -1020,12 +1153,18 @@ function renderCollection(){
   list.innerHTML = collection.map((c, i) => `
     <div class="coll-item">
       <button class="coll-del" data-idx="${i}">&times;</button>
-      <span class="coll-icon">${CHAR_ICONS[c.char] || '🧸'}</span>
+      <div class="plushie-3d-canvas" data-char="${c.char}" data-theme="${c.theme}"></div>
       <span class="coll-name">${c.name}</span>
       <span class="coll-theme">${THEME_NAMES[c.theme] || ''}</span>
       <span class="coll-count">x${c.count}</span>
     </div>
   `).join('');
+  
+  // 3D 프리뷰 초기화
+  list.querySelectorAll('.plushie-3d-canvas').forEach(container => {
+    initCollection3D(container, container.dataset.char, container.dataset.theme);
+  });
+
   list.querySelectorAll('.coll-del').forEach(btn => {
     btn.addEventListener('click', e => {
       e.stopPropagation();
