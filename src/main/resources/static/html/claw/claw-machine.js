@@ -393,12 +393,8 @@ scene.add(plushieGroup);
 
 const PLUSHIE_THEMES = {
   shinchan: [
-    {name:'짱구', skinColor:0xFFD4A0, shirtColor:0xFF3333, pantsColor:0xFFDD00, hairColor:0x111111, char:'shin'},
-    {name:'철수', skinColor:0xFFDDB0, shirtColor:0x3366CC, pantsColor:0x444444, hairColor:0x111111, char:'kazama'},
-    {name:'유리', skinColor:0xFFDDBB, shirtColor:0xFF88AA, pantsColor:0xFF6699, hairColor:0x553311, char:'nene'},
-    {name:'훈이', skinColor:0xFFD4A0, shirtColor:0x44AA44, pantsColor:0x8B6914, hairColor:0x111111, char:'masao'},
-    {name:'맹구', skinColor:0xFFDDB0, shirtColor:0x9966CC, pantsColor:0x555555, hairColor:0x111111, char:'bo'},
-    {name:'흰둥이', skinColor:0xFFFFFF, shirtColor:0xFFFFFF, pantsColor:0xFFFFFF, hairColor:0xFFFFFF, char:'shiro'}
+    {name:'짱구', skinColor:0xFFD4A0, shirtColor:0xFF2233, pantsColor:0xFFFF33, hairColor:0x111111, char:'shin'},
+    {name:'짱아', skinColor:0xFFD4A0, shirtColor:0xFFFF33, pantsColor:0xFFFF33, hairColor:0xCC6622, char:'himawari'}
   ],
   cinnamoroll: [
     {name:'시나모롤', bodyColor:0xFFFFFF, bellyColor:0xFFFFFF, accentColor:0x88CCFF, char:'cinna', ribbonColor:0xFF88BB},
@@ -416,13 +412,8 @@ const PLUSHIE_THEMES = {
     {name:'프테라', bodyColor:0x8866CC, bellyColor:0xBBAAdd, accentColor:0x664488, char:'ptera', spineColor:0x553377},
     {name:'아기공룡', bodyColor:0x66CC88, bellyColor:0xAAEEBB, accentColor:0x44AA66, char:'baby', spineColor:0x339955}
   ],
-  bear: [
-    {name:'꿀곰', bodyColor:0xC4883C, bellyColor:0xE0B868, accentColor:0xE8A0A0, char:'honey', ribbonColor:0xE94560},
-    {name:'백곰', bodyColor:0xF0F0F0, bellyColor:0xFFFFFF, accentColor:0xFFBBBB, char:'polar', ribbonColor:0x88CCFF},
-    {name:'갈곰', bodyColor:0x7A5230, bellyColor:0xB0885A, accentColor:0xAA7755, char:'brown', ribbonColor:0x44CC44},
-    {name:'팬더', bodyColor:0xEEEEEE, bellyColor:0xFFFFFF, accentColor:0x222222, char:'panda', ribbonColor:0xFF4488},
-    {name:'딸기곰', bodyColor:0xFFAAAA, bellyColor:0xFFDDDD, accentColor:0xFF6688, char:'strawberry', ribbonColor:0xFF3366},
-    {name:'하늘곰', bodyColor:0xAADDFF, bellyColor:0xDDEEFF, accentColor:0x88BBEE, char:'sky', ribbonColor:0xFFCC44}
+  maenggu: [
+    {name:'맹구', skinColor:0xFFD4A0, shirtColor:0xFFEE33, pantsColor:0x5599FF, hairColor:0x111111, char:'maenggu'}
   ],
   hangyodon: [
     {name:'한교동', bodyColor:0x56C2C2, bellyColor:0xAADDCC, accentColor:0x00AEEF, char:'hangyodon', lipColor:0xF9A7B0}
@@ -499,82 +490,221 @@ function createPlushie(type, position, rotation){
     const tail = new THREE.Mesh(new THREE.SphereGeometry(s*0.2,8,6), new THREE.MeshStandardMaterial({color:0xFAFAFA, roughness:0.92}));
     tail.position.set(0,s*0.2,-s*0.8); g.add(tail);
 
-  } else if(['shin','kazama','nene','masao','bo'].includes(t.char)){
-    // ── Human characters (짱구/철수/유리/훈이/맹구) ──
-    const bodyGeo = new THREE.SphereGeometry(s*1.0, 16, 12); bodyGeo.scale(1,1.15,0.85);
-    const body = new THREE.Mesh(bodyGeo, new THREE.MeshStandardMaterial({color:t.shirtColor, roughness:0.9}));
-    body.castShadow=true; g.add(body);
-    const pantsGeo = new THREE.SphereGeometry(s*0.85, 12, 10); pantsGeo.scale(1.1,0.6,0.85);
-    const pants = new THREE.Mesh(pantsGeo, new THREE.MeshStandardMaterial({color:t.pantsColor, roughness:0.9}));
-    pants.position.y=-s*0.85; g.add(pants);
-    const headGeo = new THREE.SphereGeometry(s*0.9, 16, 12);
-    const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({color:t.skinColor, roughness:0.85}));
-    head.position.y=s*1.6; head.castShadow=true; g.add(head);
+  } else if(t.char === 'shin' || t.char === 'himawari' || t.char === 'maenggu'){
+    // ── 짱구 가족 & 친구들 (Shin-chan, Himawari, Bo-chan) ──
+    const skinMat = new THREE.MeshStandardMaterial({color:t.skinColor, roughness:0.8});
+    const shirtMat = new THREE.MeshStandardMaterial({color:t.shirtColor, roughness:0.9});
+    const pantsMat = new THREE.MeshStandardMaterial({color:t.pantsColor, roughness:0.9});
+    const hairMat = new THREE.MeshStandardMaterial({color:0x050505, roughness:0.9});
+    const whiteMat = new THREE.MeshStandardMaterial({color:0xFFFFFF});
+    const blackMat = new THREE.MeshStandardMaterial({color:0x111111});
 
-    // Eyes
-    const eyeWGeo = new THREE.SphereGeometry(s*0.18,8,8);
-    const eyeWMat = new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.5});
-    const pupGeo = new THREE.SphereGeometry(s*0.09,8,8);
-    const pupMat = new THREE.MeshStandardMaterial({color:0x111111, roughness:0.3});
+    // Body
+    const bodyGeo = new THREE.SphereGeometry(s*1.0, 16, 12); bodyGeo.scale(1, 1.15, 0.85);
+    const body = new THREE.Mesh(bodyGeo, shirtMat); body.castShadow=true; g.add(body);
+    
+    if(t.char==='shin' || t.char==='maenggu'){
+      const pantsGeo = new THREE.SphereGeometry(s*0.85, 12, 10); pantsGeo.scale(1.1, 0.6, 0.85);
+      const pants = new THREE.Mesh(pantsGeo, pantsMat); pants.position.y=-s*0.85; g.add(pants);
+    }
+
+    // Head Group
+    const headGroup = new THREE.Group();
+    headGroup.position.y = s*1.6;
+    g.add(headGroup);
+
+    const headBase = new THREE.Mesh(new THREE.SphereGeometry(s*0.9, 16, 12), skinMat);
+    headBase.scale.set(1.1, 0.95, 1.05); headGroup.add(headBase);
+    const cheek = new THREE.Mesh(new THREE.SphereGeometry(s*0.65, 12, 12), skinMat);
+    cheek.position.set(-s*0.55, -s*0.1, s*0.1); cheek.scale.set(1.25, 0.85, 1.1); headGroup.add(cheek);
+
+    // Ears
     [-1,1].forEach(side=>{
-      const ew=new THREE.Mesh(eyeWGeo,eyeWMat); ew.position.set(side*s*0.3,s*1.7,s*0.65); ew.scale.set(1,1.2,0.6); g.add(ew);
-      const p=new THREE.Mesh(pupGeo,pupMat); p.position.set(side*s*0.3,s*1.68,s*0.78); g.add(p);
+      const ear = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 10, 8), skinMat);
+      ear.position.set(side*s*0.95, 0, -s*0.1); ear.scale.set(0.6, 1, 0.8); headGroup.add(ear);
     });
-    const hlGeo=new THREE.SphereGeometry(s*0.04,6,6);
-    const hlMat=new THREE.MeshStandardMaterial({color:0xffffff,emissive:0xffffff,emissiveIntensity:0.5});
-    [-1,1].forEach(side=>{ const h=new THREE.Mesh(hlGeo,hlMat); h.position.set(side*s*0.25,s*1.74,s*0.82); g.add(h); });
-    const mouth=new THREE.Mesh(new THREE.TorusGeometry(s*0.12,s*0.025,6,10,Math.PI), new THREE.MeshStandardMaterial({color:0x222222, roughness:0.5}));
-    mouth.position.set(0,s*1.4,s*0.78); mouth.rotation.x=Math.PI*0.1; g.add(mouth);
-    const blGeo=new THREE.SphereGeometry(s*0.13,8,6);
-    const blMat=new THREE.MeshStandardMaterial({color:0xFF9999,transparent:true,opacity:0.35,roughness:1});
-    [-1,1].forEach(side=>{ const b=new THREE.Mesh(blGeo,blMat); b.position.set(side*s*0.5,s*1.48,s*0.55); g.add(b); });
-    // Arms/Hands
-    const armGeo=new THREE.CapsuleGeometry(s*0.15,s*0.35,6,8);
-    const armMat=new THREE.MeshStandardMaterial({color:t.skinColor,roughness:0.88});
-    const handGeo=new THREE.SphereGeometry(s*0.13,8,6);
+
+    if(t.char==='shin'){
+      // 짱구는 하단 Character-specific features 섹션에서 정교하게 모델링함
+    } else if(t.char==='maenggu'){
+      // 맹구 (Bo-chan): 길쭉한 타원형 얼굴
+      headBase.scale.set(1.0, 1.35, 1.0);
+      cheek.visible = false; // 맹구는 볼 돌출 없음
+      
+      // 맹구 눈 (작은 점눈)
+      [-1,1].forEach(side=>{
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.08, 8, 8), blackMat);
+        eye.position.set(side*s*0.25, s*0.2, s*0.85); headGroup.add(eye);
+      });
+      
+      // 맹구 시그니처 콧물 (Runny nose)
+      const snotGeo = new THREE.CapsuleGeometry(s*0.06, s*0.4, 4, 8);
+      const snotMat = new THREE.MeshStandardMaterial({color:0xFFFFFF, transparent:true, opacity:0.85});
+      const snot = new THREE.Mesh(snotGeo, snotMat);
+      snot.position.set(0, -s*0.2, s*0.92); headGroup.add(snot);
+      
+      // 맹구 머리카락 (풍성하게 채우기)
+      // 머리 전체를 감싸는 베이스 캡
+      const hairBaseM = new THREE.Mesh(new THREE.SphereGeometry(s*0.95, 16, 12), hairMat);
+      hairBaseM.position.set(0, s*0.45, -s*0.1); 
+      hairBaseM.scale.set(1.05, 1.0, 1.0); headGroup.add(hairBaseM);
+
+      // 원작 느낌의 가지런한 앞머리 (이마로 내려오는 삼각형 조각들)
+      for(let i=0; i<5; i++){
+        const spike = new THREE.Mesh(new THREE.ConeGeometry(s*0.15, s*0.35, 4), hairMat);
+        const ang = (i / 4) * 1.2 - 0.6; // 이마 중앙 위주로 배치
+        spike.position.set(Math.sin(ang)*s*0.6, s*0.95, Math.cos(ang)*s*0.75); 
+        spike.rotation.x = Math.PI + 0.3; // 아래를 향하도록 회전
+        spike.rotation.z = -ang * 0.5;
+        headGroup.add(spike);
+      }
+    } else {
+      // 짱아 머리 & 눈
+      g.scale.set(0.85, 0.85, 0.85);
+      const himaHairMat = new THREE.MeshStandardMaterial({color:t.hairColor, roughness:0.8});
+      const hb = new THREE.Mesh(new THREE.SphereGeometry(s*0.85, 12, 12), himaHairMat);
+      hb.position.set(0, s*0.25, -s*0.1); headGroup.add(hb);
+      for(let i=0; i<4; i++) {
+        const curl = new THREE.Mesh(new THREE.TorusGeometry(s*0.15, s*0.06, 8, 12), himaHairMat);
+        curl.position.set((i-1.5)*s*0.35, s*0.8, s*0.25); curl.rotation.x = Math.PI/2; headGroup.add(curl);
+      }
+      const bib = new THREE.Mesh(new THREE.SphereGeometry(s*0.55, 12, 12), whiteMat);
+      bib.position.set(0, -s*0.8, s*0.75); bib.scale.set(1.15, 1, 0.3); headGroup.add(bib);
+      [-1,1].forEach(side=>{
+        const ew = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 12, 12), whiteMat);
+        ew.position.set(side*s*0.35, s*0.15, s*0.75); ew.scale.set(1, 1.1, 0.4); headGroup.add(ew);
+        const p = new THREE.Mesh(new THREE.SphereGeometry(s*0.15, 8, 8), blackMat);
+        p.position.set(side*s*0.35, s*0.12, s*0.9); headGroup.add(p);
+      });
+    }
+
+    // Mouth
+    if(t.char !== 'shin' && t.char !== 'maenggu'){
+      const mouth = new THREE.Mesh(new THREE.TorusGeometry(s*0.12, s*0.025, 6, 10, Math.PI), blackMat);
+      mouth.position.set(0, -s*0.2, s*0.85); mouth.rotation.x = Math.PI*0.1; headGroup.add(mouth);
+    } else if(t.char === 'maenggu'){
+      const mouth = new THREE.Mesh(new THREE.TorusGeometry(s*0.08, s*0.02, 6, 10, Math.PI), blackMat);
+      mouth.position.set(0, -s*0.4, s*0.85); mouth.rotation.x = Math.PI; headGroup.add(mouth);
+    }
+
+    // Common Shoes/Socks
     [-1,1].forEach(side=>{
-      const a=new THREE.Mesh(armGeo,armMat); a.position.set(side*s*1.05,s*0.2,0); a.rotation.z=side*0.5; a.castShadow=true; g.add(a);
-      const h=new THREE.Mesh(handGeo,armMat); h.position.set(side*s*1.25,-s*0.05,s*0.05); g.add(h);
-    });
-    // Legs/Shoes
-    const legGeo=new THREE.CapsuleGeometry(s*0.17,s*0.25,6,8);
-    const shoeGeo=new THREE.SphereGeometry(s*0.18,8,6);
-    const shoeMat=new THREE.MeshStandardMaterial({color:0x333333,roughness:0.8});
-    [-1,1].forEach(side=>{
-      const l=new THREE.Mesh(legGeo,armMat); l.position.set(side*s*0.4,-s*1.2,s*0.05); l.castShadow=true; g.add(l);
-      const sh=new THREE.Mesh(shoeGeo,shoeMat); sh.position.set(side*s*0.4,-s*1.45,s*0.15); sh.scale.set(1,0.6,1.3); g.add(sh);
+       const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.15, s*0.22, 4, 8), new THREE.MeshStandardMaterial({color:(t.char==='shin'||t.char==='maenggu')?0xFFEE33:0xFFFFFF}));
+       shoe.position.set(side*s*0.45, -s*1.45, s*0.1); shoe.rotation.x = Math.PI/2; g.add(shoe);
+       const sock = new THREE.Mesh(new THREE.CylinderGeometry(s*0.16, s*0.16, s*0.15), whiteMat);
+       sock.position.set(side*s*0.45, -s*1.25, 0); g.add(sock);
     });
 
     // Character-specific features
     if(t.char==='shin'){
-      const browGeo=new THREE.BoxGeometry(s*0.35,s*0.12,s*0.12);
-      const browMat=new THREE.MeshStandardMaterial({color:0x111111,roughness:0.7});
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(browGeo,browMat); b.position.set(side*s*0.3,s*1.88,s*0.55); b.rotation.z=side*(-0.08); g.add(b); });
-      const hairMat=new THREE.MeshStandardMaterial({color:0x111111,roughness:0.9});
-      const hair=new THREE.Mesh(new THREE.SphereGeometry(s*0.65,12,8),hairMat); hair.position.set(0,s*2.2,-s*0.1); hair.scale.set(1.3,0.7,1.0); g.add(hair);
-      for(let i=0;i<5;i++){ const sp=new THREE.Mesh(new THREE.ConeGeometry(s*0.1,s*0.25,5),hairMat); const a=(i/5)*Math.PI-Math.PI*0.5; sp.position.set(Math.cos(a)*s*0.4,s*2.45,Math.sin(a)*s*0.15-s*0.1); sp.rotation.z=Math.cos(a)*0.3; g.add(sp); }
-    } else if(t.char==='kazama'){
-      const hairMat=new THREE.MeshStandardMaterial({color:0x0A0A2A,roughness:0.85});
-      const hair=new THREE.Mesh(new THREE.SphereGeometry(s*0.92,14,10),hairMat); hair.position.set(0,s*1.72,-s*0.08); hair.scale.set(1,0.95,1); g.add(hair);
-      const bang=new THREE.Mesh(new THREE.SphereGeometry(s*0.5,10,8),hairMat); bang.position.set(0,s*2.1,s*0.35); bang.scale.set(1.5,0.4,0.6); g.add(bang);
-      const browMat=new THREE.MeshStandardMaterial({color:0x0A0A2A,roughness:0.7});
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(s*0.22,s*0.06,s*0.08),browMat); b.position.set(side*s*0.3,s*1.88,s*0.6); g.add(b); });
-    } else if(t.char==='nene'){
-      const hairMat=new THREE.MeshStandardMaterial({color:t.hairColor,roughness:0.85});
-      const hair=new THREE.Mesh(new THREE.SphereGeometry(s*0.92,14,10),hairMat); hair.position.set(0,s*1.72,-s*0.05); hair.scale.set(1,0.9,1); g.add(hair);
-      [-1,1].forEach(side=>{ const pt=new THREE.Mesh(new THREE.SphereGeometry(s*0.35,10,8),hairMat); pt.position.set(side*s*0.85,s*1.9,-s*0.1); pt.scale.set(0.9,1.2,0.9); g.add(pt);
-        const tie=new THREE.Mesh(new THREE.TorusGeometry(s*0.12,s*0.04,6,10),new THREE.MeshStandardMaterial({color:0xFF4488,roughness:0.6})); tie.position.set(side*s*0.7,s*2.0,-s*0.05); tie.rotation.y=side*0.3; g.add(tie); });
-      const bang=new THREE.Mesh(new THREE.SphereGeometry(s*0.55,10,8),hairMat); bang.position.set(0,s*2.05,s*0.35); bang.scale.set(1.3,0.35,0.5); g.add(bang);
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(s*0.18,s*0.04,s*0.06),new THREE.MeshStandardMaterial({color:t.hairColor,roughness:0.7})); b.position.set(side*s*0.3,s*1.88,s*0.6); g.add(b); });
-    } else if(t.char==='masao'){
-      const hairMat=new THREE.MeshStandardMaterial({color:0x1A1A1A,roughness:0.9});
-      const hair=new THREE.Mesh(new THREE.SphereGeometry(s*0.92,14,10),hairMat); hair.position.set(0,s*1.72,-s*0.05); hair.scale.set(1,0.85,0.95); g.add(hair);
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(s*0.18,s*0.05,s*0.06),new THREE.MeshStandardMaterial({color:0x1A1A1A,roughness:0.7})); b.position.set(side*s*0.28,s*1.86,s*0.6); g.add(b); });
-    } else if(t.char==='bo'){
-      const hairMat=new THREE.MeshStandardMaterial({color:0x1A1A1A,roughness:0.9});
-      const hair=new THREE.Mesh(new THREE.SphereGeometry(s*0.92,14,10),hairMat); hair.position.set(0,s*1.72,-s*0.05); hair.scale.set(1,0.85,0.95); g.add(hair);
-      const bigNose=new THREE.Mesh(new THREE.SphereGeometry(s*0.18,10,8),new THREE.MeshStandardMaterial({color:0xFFBB88,roughness:0.7})); bigNose.position.set(0,s*1.52,s*0.82); g.add(bigNose);
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(new THREE.BoxGeometry(s*0.2,s*0.04,s*0.06),new THREE.MeshStandardMaterial({color:0x1A1A1A,roughness:0.7})); b.position.set(side*s*0.28,s*1.85,s*0.58); b.rotation.z=side*0.15; g.add(b); });
+      // 돌출된 볼 제거 및 얼굴 베이스 자체를 통통한 타원형으로 조정
+      headBase.scale.set(1.25, 1.0, 1.05);
+
+      // 밤톨 머리 (얼굴형에 맞춰 자연스럽게 배치)
+      const hairBaseExtra = new THREE.Mesh(new THREE.SphereGeometry(s*1.05, 16, 12), hairMat); 
+      hairBaseExtra.position.set(0, s*0.25, -s*0.1); 
+      hairBaseExtra.scale.set(1.05, 0.9, 1.0); headGroup.add(hairBaseExtra);
+
+      const hairFrontExtra = new THREE.Mesh(new THREE.SphereGeometry(s*1.05, 16, 12, 0, Math.PI*2, 0, Math.PI*0.35), hairMat);
+      hairFrontExtra.position.set(0, s*0.2, s*0.1); 
+      hairFrontExtra.rotation.x = -0.45; headGroup.add(hairFrontExtra);
+
+      // BIG Expressive Eyes (중앙 정렬 최적화)
+      const eyeWGeo2 = new THREE.SphereGeometry(s*0.35, 12, 12);
+      const eyeWMat2 = new THREE.MeshStandardMaterial({color:0xFFFFFF});
+      const pupGeo2 = new THREE.SphereGeometry(s*0.16, 8, 8);
+      const pupMat2 = new THREE.MeshStandardMaterial({color:0x111111});
+      [-1,1].forEach(side=>{
+        const ew=new THREE.Mesh(eyeWGeo2, eyeWMat2); 
+        ew.position.set(side*s*0.35, s*0.1, s*0.9); 
+        ew.scale.set(1, 1.15, 0.4); headGroup.add(ew);
+        
+        const p=new THREE.Mesh(pupGeo2, pupMat2); 
+        p.position.set(side*s*0.35, s*0.05, s*1.05); 
+        headGroup.add(p);
+      });
+
+      // VERY Thick Signature Eyebrows
+      const browGeo=new THREE.CapsuleGeometry(s*0.18, s*0.45, 6, 8); 
+      const browMat=new THREE.MeshStandardMaterial({color:0x050505});
+      [-1,1].forEach(side=>{ 
+        const b=new THREE.Mesh(browGeo, browMat); 
+        b.position.set(side*s*0.4, s*0.6, s*0.9); 
+        b.rotation.z=side*(-0.1) + Math.PI/2; headGroup.add(b); 
+      });
+
+      // Mouth (정중앙에 배치하여 깔끔하게 변경)
+      const mouthGeo = new THREE.SphereGeometry(s*0.15, 12, 10);
+      const mouthMat = new THREE.MeshStandardMaterial({color:0x442222}); 
+      const mouth = new THREE.Mesh(mouthGeo, mouthMat);
+      mouth.position.set(0, -s*0.3, s*1.05); 
+      mouth.scale.set(0.7, 1.2, 0.4); 
+      headGroup.add(mouth);
+
+      // Ears
+      const earGeo = new THREE.SphereGeometry(s*0.22, 10, 8);
+      [-1,1].forEach(side=>{
+        const ear = new THREE.Mesh(earGeo, skinMat);
+        ear.position.set(side*s*1.2, -s*0.05, -s*0.1);
+        ear.scale.set(0.6, 1, 0.8); headGroup.add(ear);
+      });
+    } else if(t.char==='himawari'){
+      // 짱아 (Himawari)
+      const skinMat = new THREE.MeshStandardMaterial({color:t.skinColor, roughness:0.8});
+      const shirtMat = new THREE.MeshStandardMaterial({color:t.shirtColor, roughness:0.9});
+      const hairMat = new THREE.MeshStandardMaterial({color:t.hairColor, roughness:0.8});
+      const whiteMat = new THREE.MeshStandardMaterial({color:0xFFFFFF});
+      const blackMat = new THREE.MeshStandardMaterial({color:0x111111});
+
+      g.scale.set(0.85, 0.85, 0.85);
+      const bodyGeo = new THREE.SphereGeometry(s*1.1, 16, 12);
+      const body = new THREE.Mesh(bodyGeo, shirtMat); body.castShadow=true; g.add(body);
+      
+      const headGroupHima = new THREE.Group();
+      headGroupHima.position.y = s*1.6; g.add(headGroupHima);
+      
+      const headBaseHima = new THREE.Mesh(new THREE.SphereGeometry(s*0.9, 16, 12), skinMat);
+      headBaseHima.scale.set(1.1, 0.95, 1.05); headGroupHima.add(headBaseHima);
+      const cheekHima = new THREE.Mesh(new THREE.SphereGeometry(s*0.6, 12, 12), skinMat);
+      cheekHima.position.set(-s*0.5, -s*0.05, s*0.1); cheekHima.scale.set(1.25, 0.85, 1.1); headGroupHima.add(cheekHima);
+
+      // Ears
+      const earGeoHima = new THREE.SphereGeometry(s*0.18, 10, 8);
+      [-1,1].forEach(side=>{
+        const ear = new THREE.Mesh(earGeoHima, skinMat);
+        ear.position.set(side*s*0.9, 0, -s*0.1); ear.scale.set(0.6, 1, 0.8); headGroupHima.add(ear);
+      });
+
+      // Bib
+      const bib = new THREE.Mesh(new THREE.SphereGeometry(s*0.55, 12, 12), whiteMat);
+      bib.position.set(0, -s*0.8, s*0.75); bib.scale.set(1.15, 1, 0.3); headGroup.add(bib);
+
+      // Curly Hair
+      const hb = new THREE.Mesh(new THREE.SphereGeometry(s*0.85, 12, 12), hairMat);
+      hb.position.set(0, s*0.25, -s*0.1); headGroup.add(hb);
+      for(let i=0; i<4; i++) {
+        const curl = new THREE.Mesh(new THREE.TorusGeometry(s*0.15, s*0.06, 8, 12), hairMat);
+        curl.position.set((i-1.5)*s*0.35, s*0.8, s*0.25); curl.rotation.x = Math.PI/2; headGroup.add(curl);
+      }
+
+      // Eyes
+      const eyeWGeo = new THREE.SphereGeometry(s*0.3, 12, 12);
+      [-1,1].forEach(side=>{
+        const ew = new THREE.Mesh(eyeWGeo, whiteMat);
+        ew.position.set(side*s*0.35, s*0.15, s*0.75); ew.scale.set(1, 1.1, 0.4); headGroup.add(ew);
+        const p = new THREE.Mesh(new THREE.SphereGeometry(s*0.15, 8, 8), blackMat);
+        p.position.set(side*s*0.35, s*0.12, s*0.9); headGroup.add(p);
+      });
+      
+      // Common Mouth
+      const mouth = new THREE.Mesh(new THREE.TorusGeometry(s*0.12, s*0.025, 6, 10, Math.PI), blackMat);
+      mouth.position.set(0, -s*0.2, s*0.85); mouth.rotation.x = Math.PI*0.1; headGroup.add(mouth);
+
+      // Shoes
+      [-1,1].forEach(side=>{
+         const shoe = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.15, s*0.22, 4, 8), whiteMat);
+         shoe.position.set(side*s*0.45, -s*1.45, s*0.1); shoe.rotation.x = Math.PI/2; g.add(shoe);
+      });
     }
 
   // ══════════════════════════════════════
@@ -870,79 +1000,76 @@ function createPlushie(type, position, rotation){
       
       const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
       
-      // White Belly (Pushed further out to prevent clipping)
+      // White Belly
       const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.82, 12, 10), whiteMat);
-      belly.position.set(0, -s*0.1, s*0.4); belly.scale.set(1, 1, 0.5); g.add(belly);
+      belly.position.set(0, -s*0.1, s*0.42); belly.scale.set(1, 1, 0.5); g.add(belly);
       
-      // Pocket line (Half circle - Pushed further out)
+      // Pocket line
       const pocket = new THREE.Mesh(new THREE.TorusGeometry(s*0.38, s*0.02, 8, 12, Math.PI), new THREE.MeshStandardMaterial({color:0x888888}));
-      pocket.position.set(0, 0, s*0.92); pocket.rotation.x = -0.1; g.add(pocket);
-
-      // Red Tail (Back)
-      const tail = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 10, 8), new THREE.MeshStandardMaterial({color:t.accentColor}));
-      tail.position.set(0, -s*0.4, -s*0.9); g.add(tail);
+      pocket.position.set(0, 0, s*0.95); pocket.rotation.x = -0.1; g.add(pocket);
 
       // Big Head
       const head = new THREE.Mesh(new THREE.SphereGeometry(s*1.25, 16, 12), bodyMat);
       head.position.y = s*1.7; head.castShadow=true; g.add(head);
 
-      // Large White Face Mask (Pushed further out to prevent clipping)
-      const faceMask = new THREE.Mesh(new THREE.SphereGeometry(s*1.18, 16, 12), whiteMat);
-      faceMask.position.set(0, s*1.6, s*0.3); faceMask.scale.set(1.05, 1.0, 0.75); g.add(faceMask);
+      // Large White Face Mask (앞으로 확실히 당겨서 파란색과 분리)
+      const faceMask = new THREE.Mesh(new THREE.SphereGeometry(s*1.15, 16, 12), whiteMat);
+      faceMask.position.set(0, s*1.65, s*0.35); faceMask.scale.set(1.05, 1.0, 0.85); g.add(faceMask);
 
-      // BIG Oval Eyes (Pushed further out)
+      // BIG Oval Eyes
       const eyeGeo = new THREE.SphereGeometry(s*0.35, 12, 12); eyeGeo.scale(0.85, 1.1, 0.4);
       [-1,1].forEach(side=>{
         const eye = new THREE.Mesh(eyeGeo, whiteMat);
-        eye.position.set(side*s*0.3, s*2.25, s*1.05); g.add(eye);
+        eye.position.set(side*s*0.3, s*2.3, s*1.2); g.add(eye);
         const pup = new THREE.Mesh(new THREE.SphereGeometry(s*0.06, 8, 8), new THREE.MeshStandardMaterial({color:0x111111}));
-        pup.position.set(side*s*0.2, s*2.25, s*1.42); g.add(pup);
+        pup.position.set(side*s*0.22, s*2.3, s*1.6); g.add(pup);
       });
 
-      // Smaller Red Nose (Pushed further out)
-      const nose = new THREE.Mesh(new THREE.SphereGeometry(s*0.12, 10, 10), new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.4}));
-      nose.position.set(0, s*1.95, s*1.42); g.add(nose);
+      // Red Nose
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(s*0.13, 10, 10), new THREE.MeshStandardMaterial({color:t.accentColor, roughness:0.4}));
+      nose.position.set(0, s*2.0, s*1.6); g.add(nose);
 
       // Nose-to-Mouth Line
       const whiskerMat = new THREE.MeshStandardMaterial({color:0x333333});
-      const line = new THREE.Mesh(new THREE.BoxGeometry(s*0.02, s*0.5, s*0.02), whiskerMat);
-      line.position.set(0, s*1.62, s*1.38); g.add(line);
+      const line = new THREE.Mesh(new THREE.BoxGeometry(s*0.02, s*0.45, s*0.02), whiskerMat);
+      line.position.set(0, s*1.7, s*1.55); g.add(line);
 
-      // Smiling Mouth (Lowered and pushed out)
-      const mouthGeo = new THREE.SphereGeometry(s*0.55, 12, 10, 0, Math.PI*2, Math.PI*0.5, Math.PI*0.5);
+      // Smiling Mouth (반대로 뒤집힌 모양 수정 및 웃는 모양으로)
+      const mouthGeo = new THREE.SphereGeometry(s*0.5, 12, 10, 0, Math.PI*2, 0, Math.PI*0.5);
       const mouth = new THREE.Mesh(mouthGeo, new THREE.MeshStandardMaterial({color:0xAA3322}));
-      mouth.position.set(0, s*1.35, s*1.25); mouth.rotation.x = Math.PI; mouth.scale.set(1, 0.7, 0.35); g.add(mouth);
+      mouth.position.set(0, s*1.6, s*1.45); 
+      mouth.rotation.x = Math.PI * 0.5; // 방향 회전
+      mouth.scale.set(1, 0.7, 0.4); g.add(mouth);
 
-      // Whiskers (Pushed further out)
+      // Whiskers (앞으로 확실히 노출)
       [-1,1].forEach(side=>{
-        [0.1, 0, -0.1].forEach((yOff, i)=>{
-           const w = new THREE.Mesh(new THREE.BoxGeometry(s*0.6, s*0.015, s*0.015), whiskerMat);
-           w.position.set(side*s*0.75, s*1.75 + yOff*s, s*1.3);
-           w.rotation.z = side * (0.2 - i*0.2); g.add(w);
+        [0.12, 0, -0.12].forEach((yOff, i)=>{
+           const w = new THREE.Mesh(new THREE.BoxGeometry(s*0.6, s*0.02, s*0.02), whiskerMat);
+           w.position.set(side*s*0.8, s*1.8 + yOff*s, s*1.5);
+           w.rotation.z = side * (0.25 - i*0.25); g.add(w);
         });
       });
 
       // Collar & Bell
-      const collar = new THREE.Mesh(new THREE.TorusGeometry(s*0.92, s*0.08, 8, 20), new THREE.MeshStandardMaterial({color:t.accentColor}));
-      collar.position.y = s*0.82; collar.rotation.x = Math.PI/2; g.add(collar);
-      
-      const bell = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 12, 10), new THREE.MeshStandardMaterial({color:t.bellColor, metalness:0.6, roughness:0.2}));
-      bell.position.set(0, s*0.65, s*0.98); g.add(bell);
+      const collar = new THREE.Mesh(new THREE.TorusGeometry(s*0.95, s*0.08, 8, 20), new THREE.MeshStandardMaterial({color:t.accentColor}));
+      collar.position.y = s*0.85; collar.rotation.x = Math.PI/2; g.add(collar);
+      const bell = new THREE.Mesh(new THREE.SphereGeometry(s*0.22, 12, 10), new THREE.MeshStandardMaterial({color:t.bellColor, metalness:0.7, roughness:0.2}));
+      bell.position.set(0, s*0.7, s*1.05); g.add(bell);
 
       // Arms & Hands
       [-1,1].forEach(side=>{
         const arm = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.22, s*0.35, 6, 8), bodyMat);
         arm.position.set(side*s*1.1, s*0.2, 0); arm.rotation.z = side*0.7; g.add(arm);
-        const hand = new THREE.Mesh(new THREE.SphereGeometry(s*0.28, 12, 10), whiteMat);
-        hand.position.set(side*s*1.35, -s*0.15, 0.1); g.add(hand);
+        const hand = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 12, 10), whiteMat);
+        hand.position.set(side*s*1.38, -s*0.15, 0.12); g.add(hand);
       });
 
       // Legs & Feet
       [-1,1].forEach(side=>{
         const leg = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.28, s*0.15, 6, 8), bodyMat);
-        leg.position.set(side*s*0.42, -s*0.9, 0); g.add(leg);
-        const foot = new THREE.Mesh(new THREE.SphereGeometry(s*0.35, 12, 10), whiteMat);
-        foot.position.set(side*s*0.45, -s*1.35, 0.15); foot.scale.set(1, 0.6, 1.2); g.add(foot);
+        leg.position.set(side*s*0.45, -s*0.95, 0); g.add(leg);
+        const foot = new THREE.Mesh(new THREE.SphereGeometry(s*0.38, 12, 10), whiteMat);
+        foot.position.set(side*s*0.48, -s*1.4, 0.15); foot.scale.set(1, 0.6, 1.2); g.add(foot);
       });
     }
 
@@ -1069,14 +1196,14 @@ const COLL_KEY = 'clawMachineCollection_v2';
 let collection = JSON.parse(localStorage.getItem(COLL_KEY) || '[]');
 
 const CHAR_ICONS = {
-  shin:'🖍️', kazama:'📘', nene:'🎀', masao:'🌿', bo:'🟣', shiro:'🐶',
+  shin:'🖍️', kazama:'📘', nene:'🎀', masao:'🌿', bo:'🤧', shiro:'🐶', maenggu:'🤧',
   cinna:'☁️', mocha:'🧁', cappuccino:'☕', espresso:'🫘', milk:'🥛', chiffon:'🍰',
   trex:'🦖', trice:'🦕', brachi:'🦒', stego:'🦎', ptera:'🦅', baby:'🥚',
   honey:'🍯', polar:'🐻‍❄️', brown:'🐻', panda:'🐼', strawberry:'🍓', sky:'☁️',
   hangyodon:'🐟', sayuri:'🐙', kingyo:'🐠', otamaro:'🦎', keroppi:'🐸', tuxedosam:'🐧',
   doraemon:'🐱', dorami:'🎀', nobita:'👓', shizuka:'👧', suneo:'🎤', gian:'🥊'
 };
-const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', bear:'곰돌이', hangyodon:'한교동', doraemon:'도라에몽'};
+const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', maenggu:'맹구', hangyodon:'한교동', doraemon:'도라에몽'};
 
 function saveCollection(){
   localStorage.setItem(COLL_KEY, JSON.stringify(collection));
@@ -1095,49 +1222,53 @@ function removeFromCollection(idx){
   else { collection.splice(idx, 1); }
   saveCollection();
 }
-function initCollection3D(container, char, themeId) {
-  const theme = PLUSHIE_THEMES[themeId];
-  if(!theme) return;
-  const t = theme.find(p => p.char === char);
-  if(!t) return;
+// ─── Collection Thumbnail System (최적화: WebGL 컨텍스트 고갈 방지) ───
+const thumbnailCache = {};
+let thumbnailRenderer = null;
 
-  // 컨테이너 크기가 0인 경우를 대비한 안전장치
-  const w = container.clientWidth || 80;
-  const h = container.clientHeight || 80;
-  
+function getPlushieThumbnail(char, themeId) {
+  const key = `${themeId}_${char}`;
+  if (thumbnailCache[key]) return thumbnailCache[key];
+
+  // 공유 렌더러가 없으면 생성
+  if (!thumbnailRenderer) {
+    thumbnailRenderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    thumbnailRenderer.setSize(120, 120);
+  }
+
+  const theme = PLUSHIE_THEMES[themeId];
+  if(!theme) return '';
+  const t = theme.find(p => p.char === char);
+  if(!t) return '';
+
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(45, w / h, 0.1, 100);
-  camera.position.set(0, 0.7, 2.8); // 카메라를 훨씬 더 가깝게
+  const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
+  camera.position.set(0, 0.7, 2.8);
   camera.lookAt(0, 0.6, 0);
 
-  const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-  renderer.setSize(w, h);
-  renderer.setPixelRatio(window.devicePixelRatio);
-  container.appendChild(renderer.domElement);
+  scene.add(new THREE.AmbientLight(0xffffff, 1.2));
+  const dl = new THREE.DirectionalLight(0xffffff, 0.8);
+  dl.position.set(1, 2, 3);
+  scene.add(dl);
 
-  const ambient = new THREE.AmbientLight(0xffffff, 1.2); // 조명 추가 강화
-  scene.add(ambient);
-  const direct = new THREE.DirectionalLight(0xffffff, 0.8);
-  direct.position.set(1, 2, 3);
-  scene.add(direct);
-
-  // 인형 생성
-  const plushie = createPlushie(t, new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0, 0));
-  plushie.scale.set(1.2, 1.2, 1.2); // 크기 대폭 확대
+  const plushie = createPlushie(t, new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0.3, 0)); // 약간 사선으로 렌더링
+  plushie.scale.set(1.2, 1.2, 1.2);
   scene.add(plushie);
 
-  let reqId;
-  function animate() {
-    if (!container.parentElement || !document.body.contains(container)) {
-       renderer.dispose();
-       cancelAnimationFrame(reqId);
-       return; 
+  thumbnailRenderer.render(scene, camera);
+  const dataUrl = thumbnailRenderer.domElement.toDataURL();
+  
+  // 메모리 정리
+  plushie.traverse(obj => {
+    if(obj.geometry) obj.geometry.dispose();
+    if(obj.material) {
+      if(Array.isArray(obj.material)) obj.material.forEach(m => m.dispose());
+      else obj.material.dispose();
     }
-    reqId = requestAnimationFrame(animate);
-    plushie.rotation.y += 0.02;
-    renderer.render(scene, camera);
-  }
-  animate();
+  });
+
+  thumbnailCache[key] = dataUrl;
+  return dataUrl;
 }
 
 function renderCollection(){
@@ -1146,24 +1277,26 @@ function renderCollection(){
   const total = collection.reduce((s,c) => s + c.count, 0);
   badge.textContent = total;
   badge.style.display = total > 0 ? 'inline' : 'none';
+  
   if(collection.length === 0){
     list.innerHTML = '<div id="collectionEmpty">아직 뽑은 인형이 없어요!<br>🎮 게임을 시작해보세요</div>';
     return;
   }
-  list.innerHTML = collection.map((c, i) => `
-    <div class="coll-item">
-      <button class="coll-del" data-idx="${i}">&times;</button>
-      <div class="plushie-3d-canvas" data-char="${c.char}" data-theme="${c.theme}"></div>
-      <span class="coll-name">${c.name}</span>
-      <span class="coll-theme">${THEME_NAMES[c.theme] || ''}</span>
-      <span class="coll-count">x${c.count}</span>
-    </div>
-  `).join('');
-  
-  // 3D 프리뷰 초기화
-  list.querySelectorAll('.plushie-3d-canvas').forEach(container => {
-    initCollection3D(container, container.dataset.char, container.dataset.theme);
-  });
+
+  list.innerHTML = collection.map((c, i) => {
+    const imgUrl = getPlushieThumbnail(c.char, c.theme);
+    return `
+      <div class="coll-item">
+        <button class="coll-del" data-idx="${i}">&times;</button>
+        <div class="plushie-3d-canvas">
+          <img src="${imgUrl}" style="width:100%; height:100%; object-fit:contain;" />
+        </div>
+        <span class="coll-name">${c.name}</span>
+        <span class="coll-theme">${THEME_NAMES[c.theme] || ''}</span>
+        <span class="coll-count">x${c.count}</span>
+      </div>
+    `;
+  }).join('');
 
   list.querySelectorAll('.coll-del').forEach(btn => {
     btn.addEventListener('click', e => {
