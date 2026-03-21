@@ -731,27 +731,27 @@ function createPlushie(type, position, rotation){
     headBaseC.scale.set(1.3, 0.85, 1.0); headBaseC.castShadow=true; headGroupC.add(headBaseC);
 
     // Cute face features
-    // Blue Oval Eyes (시나모롤의 상징!)
+    // Blue Oval Eyes (앞으로 전진 배치)
     const eyeMatC = new THREE.MeshStandardMaterial({color:t.char==='cinna'?0x55AAFF:0x442211, roughness:0.3});
     [-1,1].forEach(side=>{
       const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.15, 12, 12), eyeMatC);
-      eye.position.set(side*s*0.45, s*0.05, s*0.82);
-      eye.scale.set(1, 1.2, 0.4); // 세로형 타원
+      eye.position.set(side*s*0.45, s*0.05, s*0.95); // 0.82 -> 0.95로 전진
+      eye.scale.set(1, 1.2, 0.4); 
       headGroupC.add(eye);
     });
 
-    // Pink Blush
+    // Pink Blush (앞으로 전진 배치)
     const blushMatC = new THREE.MeshStandardMaterial({color:0xFFAACC, transparent:true, opacity:0.5});
     [-1,1].forEach(side=>{
       const blush = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 12, 8), blushMatC);
-      blush.position.set(side*s*0.7, -s*0.1, s*0.75);
+      blush.position.set(side*s*0.7, -s*0.1, s*0.85); // 0.75 -> 0.85로 전진
       blush.scale.set(1, 0.6, 0.3);
       headGroupC.add(blush);
     });
 
-    // Mouth ('w' shape logic)
+    // Mouth (앞으로 전진 배치)
     const mouthGroup = new THREE.Group();
-    mouthGroup.position.set(0, -s*0.1, s*0.9);
+    mouthGroup.position.set(0, -s*0.1, s*1.0); // 0.9 -> 1.0으로 전진
     const mMatC = new THREE.MeshStandardMaterial({color:0x885533, roughness:0.5});
     [-1,1].forEach(side=>{
       const lip = new THREE.Mesh(new THREE.TorusGeometry(s*0.08, s*0.02, 8, 12, Math.PI), mMatC);
