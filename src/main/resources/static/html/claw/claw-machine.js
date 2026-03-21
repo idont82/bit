@@ -713,67 +713,91 @@ function createPlushie(type, position, rotation){
   } else if(['cinna','mocha','cappuccino','espresso','milk','chiffon'].includes(t.char)){
     // Round fluffy body
     const bodyGeo = new THREE.SphereGeometry(s*1.1, 16, 12);
-    bodyGeo.scale(1, 1.0, 0.9);
+    bodyGeo.scale(1, 0.9, 0.9); // 몸통을 살짝 낮게
     const bodyMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.92});
     const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
+    
     // Belly
     const bellyGeo = new THREE.SphereGeometry(s*0.7, 12, 10);
     const belly = new THREE.Mesh(bellyGeo, new THREE.MeshStandardMaterial({color:t.bellyColor, roughness:0.95}));
     belly.position.set(0, -s*0.1, s*0.5); belly.scale.set(1,1,0.5); g.add(belly);
-    // Big round head
-    const headGeo = new THREE.SphereGeometry(s*0.95, 16, 12);
-    const head = new THREE.Mesh(headGeo, new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.9}));
-    head.position.y = s*1.6; head.castShadow=true; g.add(head);
-    // Cute face
-    addCuteFace(s*1.55, s*0.7, 0.1, true);
-    // Tiny nose
-    const nose = new THREE.Mesh(new THREE.SphereGeometry(s*0.06,6,6), new THREE.MeshStandardMaterial({color:0xFFAAAA,roughness:0.7}));
-    nose.position.set(0, s*1.52, s*0.85); g.add(nose);
-    // Short arms
-    const armGeo = new THREE.CapsuleGeometry(s*0.16, s*0.25, 6, 8);
-    const armMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.92});
-    [-1,1].forEach(side=>{ const a=new THREE.Mesh(armGeo,armMat); a.position.set(side*s*1.0,s*0.1,0); a.rotation.z=side*0.6; g.add(a); });
-    // Short legs
-    const legGeo = new THREE.CapsuleGeometry(s*0.18, s*0.15, 6, 8);
-    [-1,1].forEach(side=>{ const l=new THREE.Mesh(legGeo,armMat); l.position.set(side*s*0.4,-s*0.95,s*0.1); g.add(l); });
+    
+    // Wide and flat head (원작의 납작한 호빵 모양)
+    const headGroupC = new THREE.Group();
+    headGroupC.position.y = s*1.5;
+    g.add(headGroupC);
 
-    // Character-specific
-    if(t.char==='cinna'){
-      // Cinnamoroll: long floppy ears, blue eyes, curly tail
-      const earGeo = new THREE.CapsuleGeometry(s*0.15, s*0.8, 6, 10);
-      const earMat = new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.92});
-      [-1,1].forEach(side=>{
-        const ear = new THREE.Mesh(earGeo, earMat);
-        ear.position.set(side*s*0.4, s*2.4, -s*0.15);
-        ear.rotation.z = side*0.5;
-        ear.rotation.x = -0.3;
-        g.add(ear);
-        // Blue tip
-        const tip = new THREE.Mesh(new THREE.SphereGeometry(s*0.14,8,6), new THREE.MeshStandardMaterial({color:0x88CCFF, roughness:0.9}));
-        tip.position.set(side*s*0.75, s*2.85, -s*0.35);
-        g.add(tip);
-      });
-      // Curly tail
-      const tailGeo = new THREE.TorusGeometry(s*0.2, s*0.08, 6, 12, Math.PI*1.5);
-      const tail = new THREE.Mesh(tailGeo, new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.92}));
-      tail.position.set(0, s*0.1, -s*0.85); tail.rotation.y=Math.PI/2; g.add(tail);
-    } else if(t.char==='mocha'){
-      // Mocha: round ears, brown
-      const earGeo = new THREE.SphereGeometry(s*0.3, 10, 8);
-      [-1,1].forEach(side=>{ const e=new THREE.Mesh(earGeo, new THREE.MeshStandardMaterial({color:t.bodyColor,roughness:0.9})); e.position.set(side*s*0.55,s*2.3,0); g.add(e);
-        const ei=new THREE.Mesh(new THREE.SphereGeometry(s*0.17,8,6), new THREE.MeshStandardMaterial({color:t.bellyColor,roughness:0.95})); ei.position.set(side*s*0.55,s*2.3,s*0.12); g.add(ei); });
-    } else {
-      // Other Sanrio friends: simple round ears with accent
-      const earGeo = new THREE.SphereGeometry(s*0.25, 10, 8);
-      [-1,1].forEach(side=>{ const e=new THREE.Mesh(earGeo, new THREE.MeshStandardMaterial({color:t.bodyColor,roughness:0.9})); e.position.set(side*s*0.55,s*2.3,0); g.add(e); });
-    }
-    // Ribbon bow
-    if(t.ribbonColor){
+    const headBaseC = new THREE.Mesh(new THREE.SphereGeometry(s*1.0, 16, 12), bodyMat);
+    headBaseC.scale.set(1.3, 0.85, 1.0); headBaseC.castShadow=true; headGroupC.add(headBaseC);
+
+    // Cute face features
+    // Blue Oval Eyes (시나모롤의 상징!)
+    const eyeMatC = new THREE.MeshStandardMaterial({color:t.char==='cinna'?0x55AAFF:0x442211, roughness:0.3});
+    [-1,1].forEach(side=>{
+      const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.15, 12, 12), eyeMatC);
+      eye.position.set(side*s*0.45, s*0.05, s*0.82);
+      eye.scale.set(1, 1.2, 0.4); // 세로형 타원
+      headGroupC.add(eye);
+    });
+
+    // Pink Blush
+    const blushMatC = new THREE.MeshStandardMaterial({color:0xFFAACC, transparent:true, opacity:0.5});
+    [-1,1].forEach(side=>{
+      const blush = new THREE.Mesh(new THREE.SphereGeometry(s*0.2, 12, 8), blushMatC);
+      blush.position.set(side*s*0.7, -s*0.1, s*0.75);
+      blush.scale.set(1, 0.6, 0.3);
+      headGroupC.add(blush);
+    });
+
+    // Mouth ('w' shape logic)
+    const mouthGroup = new THREE.Group();
+    mouthGroup.position.set(0, -s*0.1, s*0.9);
+    const mMatC = new THREE.MeshStandardMaterial({color:0x885533, roughness:0.5});
+    [-1,1].forEach(side=>{
+      const lip = new THREE.Mesh(new THREE.TorusGeometry(s*0.08, s*0.02, 8, 12, Math.PI), mMatC);
+      lip.position.x = side*s*0.075;
+      lip.rotation.x = Math.PI;
+      mouthGroup.add(lip);
+    });
+    headGroupC.add(mouthGroup);
+
+    // Signature Floppy Ears (원작의 크고 납작한 귀!)
+    const earGeoC = new THREE.CapsuleGeometry(s*0.2, s*1.2, 8, 12);
+    [-1,1].forEach(side=>{
+      const ear = new THREE.Mesh(earGeoC, bodyMat);
+      ear.position.set(side*s*0.8, s*0.1, 0);
+      ear.rotation.z = side * (Math.PI * 0.45); // 옆으로 쭉 뻗게
+      ear.rotation.y = -side * 0.2;
+      ear.scale.set(1.5, 1, 0.5); // 귀를 납작하게
+      headGroupC.add(ear);
+    });
+
+    // Short limbs
+    const armMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.92});
+    [-1,1].forEach(side=>{ 
+      const a=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.18, s*0.25, 6, 8), armMat); 
+      a.position.set(side*s*0.8, s*0.1, s*0.3); 
+      a.rotation.z=side*0.4; a.rotation.x=0.5; g.add(a); 
+    });
+    [-1,1].forEach(side=>{ 
+      const l=new THREE.Mesh(new THREE.CapsuleGeometry(s*0.2, s*0.15, 6, 8), armMat); 
+      l.position.set(side*s*0.45, -s*0.9, s*0.1); g.add(l); 
+    });
+
+    // Cinnamon Roll Tail (돌돌 말린 꼬리)
+    const tailGeoC = new THREE.TorusGeometry(s*0.25, s*0.1, 8, 16, Math.PI*1.8);
+    const tail = new THREE.Mesh(tailGeoC, bodyMat);
+    tail.position.set(0, -s*0.2, -s*0.8);
+    tail.rotation.y = Math.PI/2;
+    g.add(tail);
+
+    // Ribbon (Other characters)
+    if(t.char!=='cinna' && t.ribbonColor){
       const bowMat = new THREE.MeshStandardMaterial({color:t.ribbonColor, roughness:0.5});
       const bowGeo = new THREE.SphereGeometry(s*0.12, 6, 6); bowGeo.scale(1.6,0.9,0.7);
-      [-1,1].forEach(side=>{ const b=new THREE.Mesh(bowGeo.clone(),bowMat); b.position.set(side*s*0.15,s*2.4,s*0.3); g.add(b); });
+      [-1,1].forEach(side=>{ const b=new THREE.Mesh(bowGeo.clone(),bowMat); b.position.set(side*s*0.15,s*0.8,s*0.3); headGroupC.add(b); });
       const knot = new THREE.Mesh(new THREE.SphereGeometry(s*0.06,6,6), bowMat);
-      knot.position.set(0,s*2.4,s*0.35); g.add(knot);
+      knot.position.set(0,s*0.8,s*0.35); headGroupC.add(knot);
     }
 
   // ══════════════════════════════════════
