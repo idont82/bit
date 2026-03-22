@@ -251,6 +251,19 @@ main{max-width:900px;margin:0 auto;padding:16px}
   color:#556677;font-size:clamp(14px,3vw,17px);
   line-height:2;
 }
+.map-container img{
+  width:100%;height:auto;display:block;
+  border-radius:12px;
+}
+.size-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:4px 10px;border-radius:8px;
+  background:rgba(255,255,255,0.05);font-size:13px;font-weight:600;
+}
+.size-대형{color:#ffcc44;border:1px solid rgba(255,204,68,0.3)}
+.size-중형{color:#88ccff;border:1px solid rgba(136,204,255,0.3)}
+.size-소형{color:#aaddaa;border:1px solid rgba(170,221,170,0.3)}
+
 .empty-state .big-emoji{font-size:48px;display:block;margin-bottom:12px}
 
 /* ── Footer ── */
@@ -380,35 +393,23 @@ function renderDetailView(d){
       </ol>
       <div class="route-distance">📏 ${d.route.totalDistance}</div>`;
 
-    if(d.route.naverMapUrl){
+    if(d.route.mapImage){
+      html += `
+        <div class="map-container">
+          <img src="${d.route.mapImage}" alt="${d.name} 지도" loading="lazy">
+        </div>`;
+    } else if(d.route.naverMapUrl){
       html += `
         <div class="map-container">
           <iframe src="${d.route.naverMapUrl}" allowfullscreen loading="lazy"></iframe>
+        </div>
+        <div class="map-actions">
+          <a class="map-btn" href="${d.route.naverMapUrl}" target="_blank" rel="noopener">🗺️ 지도 크게 보기</a>
+          ${d.route.naverStreetViewUrl ? `<a class="map-btn secondary" href="${d.route.naverStreetViewUrl}" target="_blank" rel="noopener">👀 거리뷰 보기</a>` : ''}
         </div>`;
     }
-
-    html += `<div class="map-actions">`;
-    if(d.route.naverMapUrl){
-      html += `<a class="map-btn" href="${d.route.naverMapUrl}" target="_blank" rel="noopener">🗺️ 지도 크게 보기</a>`;
-    }
-    if(d.route.naverStreetViewUrl){
-      html += `<a class="map-btn secondary" href="${d.route.naverStreetViewUrl}" target="_blank" rel="noopener">👀 거리뷰 보기</a>`;
-    }
-    html += `</div>`;
   } else {
     html += `<div class="empty-state"><span class="big-emoji">🚧</span>경로 정보를 준비 중입니다</div>`;
-  }
-
-  // Street view section
-  if(d.route && d.route.naverStreetViewUrl){
-    html += `
-      <div class="section-title">👀 거리뷰</div>
-      <div class="map-container" id="streetViewContainer">
-        <iframe src="${d.route.naverStreetViewUrl}" allowfullscreen loading="lazy"></iframe>
-      </div>
-      <div class="map-actions">
-        <a class="map-btn" href="${d.route.naverStreetViewUrl}" target="_blank" rel="noopener">🔍 크게 보기</a>
-      </div>`;
   }
 
   // Spots section
@@ -421,10 +422,16 @@ function renderDetailView(d){
           ${sp.recommended ? '<span class="spot-rec-badge">⭐ 추천</span>' : ''}
         </div>
         <div class="spot-info">
-          <div><span class="label">주소</span></div><div>${sp.address}</div>
-          <div><span class="label">뽑기 대수</span></div><div>${sp.machineCount}대</div>
-          <div><span class="label">가격대</span></div><div>${sp.priceRange}</div>
-          <div><span class="label">영업시간</span></div><div>${sp.hours}</div>
+          ${sp.size ? `
+            <div><span class="label">규모</span></div>
+            <div>
+              <span class="size-tag size-${sp.size}">
+                ${sp.size === '대형' ? '🏢' : sp.size === '중형' ? '🏠' : '🏪'} ${sp.size}
+              </span>
+            </div>` : ''}
+          ${sp.machineCount ? `<div><span class="label">뽑기 대수</span></div><div>${sp.machineCount}대</div>` : ''}
+          ${sp.priceRange ? `<div><span class="label">가격대</span></div><div>${sp.priceRange}</div>` : ''}
+          ${sp.hours ? `<div><span class="label">영업시간</span></div><div>${sp.hours}</div>` : ''}
         </div>
         <div class="spot-rating">
           <span class="spot-stars">${renderStars(sp.rating)}</span>

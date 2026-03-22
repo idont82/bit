@@ -2,12 +2,58 @@
   "id": "sinlim",
   "name": "신림",
   "station": "신림역",
-  "exit": "2번 출구",
+  "exit": "3번 / 4번 출구",
   "route": {
-    "steps": ["정보 준비 중입니다"],
-    "totalDistance": "-",
-    "naverMapUrl": "",
+    "steps": [
+      "신림역 3번 또는 4번 출구로 나와 순대타운 방향 먹자골목으로 이동하세요.",
+      "골목 초입에 위치한 '짱오락실 신림점'은 필수 방문 코스입니다.",
+      "이후 신림역 5번 출구 쪽으로 이동하여 '별빛거리' 입구에 진입합니다.",
+      "별빛거리를 따라 걷다 보면 나오는 '팝 플레이'와 감성적인 뽑기방들을 투어하세요."
+    ],
+    "totalDistance": "약 450m",
+    "naverMapUrl": "https://map.naver.com/v5/search/신림역%20인형뽑기",
     "naverStreetViewUrl": ""
   },
-  "spots": []
+  "spots": [
+    {
+      "name": "짱오락실 신림점",
+      "address": "관악구 신림로59길 12",
+      "machineCount": 40,
+      "priceRange": "1,000원 ~ 2,000원",
+      "hours": "24시간",
+      "rating": 4.6,
+      "comment": "신림역 성지의 핵심. 대형 인형부터 소형 키링까지 기계 종류가 압도적임.",
+      "recommended": true
+    },
+    {
+      "name": "팝 플레이 (POP play)",
+      "address": "관악구 신림동 별빛거리 내",
+      "machineCount": 15,
+      "priceRange": "1,000원",
+      "hours": "11:00 ~ 24:00",
+      "rating": 4.5,
+      "comment": "별빛거리의 힙한 매장. 최근 유행하는 가방 고리 인형과 캐릭터 키링이 많음.",
+      "recommended": true
+    },
+    {
+      "name": "신림 별빛거리 무인뽑기방",
+      "address": "관악구 신림로 별빛거리 일대",
+      "machineCount": 10,
+      "priceRange": "1,000원",
+      "hours": "24시간",
+      "rating": 4.2,
+      "comment": "별빛거리를 따라 늘어선 무인 매장들. 밤늦게 여유롭게 즐기기 좋음.",
+      "recommended": false
+    },
+    {
+      "name": "신림역 먹자골목 뽑기샵",
+      "address": "관악구 신림로59길 일대",
+      "machineCount": 8,
+      "priceRange": "1,000원",
+      "hours": "24시간",
+      "rating": 4.0,
+      "comment": "유동인구가 많은 먹자골목 내 위치. 가볍게 즐기기 좋은 기계들 위주.",
+      "recommended": false
+    }
+  ]
 }

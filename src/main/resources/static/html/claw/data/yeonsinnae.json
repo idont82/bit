@@ -2,12 +2,58 @@
   "id": "yeonsinnae",
   "name": "연신내",
   "station": "연신내역",
-  "exit": "3번 출구",
+  "exit": "6번 출구",
   "route": {
-    "steps": ["정보 준비 중입니다"],
-    "totalDistance": "-",
-    "naverMapUrl": "",
+    "steps": [
+      "연신내역 6번 출구로 나와서 로데오거리 방향으로 약 50m 직진하세요.",
+      "파리바게뜨 골목으로 좌회전하여 로데오 메인 거리로 진입합니다.",
+      "약 100m 지점에 위치한 연신내 최대 매장 '짱구게임장'을 먼저 방문하세요.",
+      "로데오거리를 따라 '슈퍼토이'와 '가챠샵' 등 개성 있는 매장들을 차례로 탐방합니다."
+    ],
+    "totalDistance": "약 350m",
+    "naverMapUrl": "https://map.naver.com/v5/search/연신내역%20인형뽑기",
     "naverStreetViewUrl": ""
   },
-  "spots": []
+  "spots": [
+    {
+      "name": "짱구게임장 연신내점",
+      "address": "은평구 연서로29길 14-1",
+      "machineCount": 45,
+      "priceRange": "1,000원 ~ 2,000원",
+      "hours": "10:00 ~ 02:00 (금/토 24시간)",
+      "rating": 4.7,
+      "comment": "연신내의 랜드마크. 1~2층 규모로 수십 대의 뽑기 기계와 게임 구비. 세팅이 다양함.",
+      "recommended": true
+    },
+    {
+      "name": "슈퍼토이 (Super Toy)",
+      "address": "은평구 연서로29길 8",
+      "machineCount": 20,
+      "priceRange": "1,000원",
+      "hours": "24시간",
+      "rating": 4.5,
+      "comment": "정품 캐릭터 인형과 퀄리티 높은 피규어 뽑기에 특화된 곳. 매장이 깔끔함.",
+      "recommended": true
+    },
+    {
+      "name": "가챠샵 연신내점",
+      "address": "은평구 연서로27길 16-10",
+      "machineCount": 15,
+      "priceRange": "1,000원 ~ 3,000원",
+      "hours": "11:00 ~ 22:00",
+      "rating": 4.3,
+      "comment": "인형뿐만 아니라 다양한 캡슐 토이와 랜덤 박스가 가득함. 매니아층 추천.",
+      "recommended": false
+    },
+    {
+      "name": "연신내 로데오 무인뽑기방",
+      "address": "은평구 갈현동 400-3 일대",
+      "machineCount": 10,
+      "priceRange": "1,000원",
+      "hours": "24시간",
+      "rating": 4.0,
+      "comment": "로데오거리 곳곳에 위치한 무인 매장들. 밤늦게 조용히 즐기기 좋으며 키링이 많음.",
+      "recommended": false
+    }
+  ]
 }

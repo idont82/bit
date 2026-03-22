@@ -399,10 +399,7 @@ const PLUSHIE_THEMES = {
   cinnamoroll: [
     {name:'시나모롤', bodyColor:0xFFFFFF, bellyColor:0xFFFFFF, accentColor:0x88CCFF, char:'cinna', ribbonColor:0xFF88BB},
     {name:'모카', bodyColor:0xC89664, bellyColor:0xE8C8A0, accentColor:0x885533, char:'mocha', ribbonColor:0xFF6688},
-    {name:'카푸치노', bodyColor:0xFFF0DD, bellyColor:0xFFFFFF, accentColor:0xDDAA88, char:'cappuccino', ribbonColor:0x88DDFF},
-    {name:'에스프레소', bodyColor:0x8B5E3C, bellyColor:0xC49A6C, accentColor:0x553322, char:'espresso', ribbonColor:0xFFCC44},
-    {name:'밀크', bodyColor:0xFFF8F0, bellyColor:0xFFFFFF, accentColor:0xFFBBDD, char:'milk', ribbonColor:0xFFAACC},
-    {name:'시폰', bodyColor:0xFFE8DD, bellyColor:0xFFF5EE, accentColor:0xFFAAAA, char:'chiffon', ribbonColor:0xAADDFF}
+    {name:'에스프레소', bodyColor:0x8B5E3C, bellyColor:0xC49A6C, accentColor:0x553322, char:'espresso', ribbonColor:0xFFCC44}
   ],
   dino: [
     {name:'티라노', bodyColor:0x44AA44, bellyColor:0xAADD88, accentColor:0x338833, char:'trex', spineColor:0x226622},
@@ -420,6 +417,10 @@ const PLUSHIE_THEMES = {
   ],
   doraemon: [
     {name:'도라에몽', bodyColor:0x2288EE, bellyColor:0xFFFFFF, accentColor:0xEE2222, char:'doraemon', bellColor:0xFFDD00}
+  ],
+  loopy: [
+    {name:'루피', bodyColor:0xFF99AA, bellyColor:0xFFFFFF, accentColor:0x882255, char:'loopy'},
+    {name:'뽀로로', bodyColor:0x2266EE, bellyColor:0xFFFFFF, accentColor:0xFF9900, char:'pororo', helmetColor:0xFFEE33}
   ],
 };
 let currentTheme = 'shinchan';
@@ -1097,6 +1098,155 @@ function createPlushie(type, position, rotation){
       });
     }
 
+    if(t.char==='loopy'){
+      // 루피 (Zanmang Loopy) — 핑크색 수달형 캐릭터
+      const bodyGeo = new THREE.SphereGeometry(s*1.1, 16, 12); bodyGeo.scale(1, 1.0, 0.9);
+      const bodyMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.85});
+      const whiteMat = new THREE.MeshStandardMaterial({color:0xFFFFFF, roughness:0.6});
+      const noseMat = new THREE.MeshStandardMaterial({color:0x551133, roughness:0.3}); // 진보라색 코
+      const blackMat = new THREE.MeshStandardMaterial({color:0x111111});
+      
+      const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
+      
+      // White Belly
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.75, 12, 10), whiteMat);
+      belly.position.set(0, -s*0.1, s*0.45); belly.scale.set(1, 1.1, 0.5); g.add(belly);
+
+      // Head Group
+      const headGroupL = new THREE.Group();
+      headGroupL.position.y = s*1.6;
+      g.add(headGroupL);
+
+      const headBase = new THREE.Mesh(new THREE.SphereGeometry(s*1.1, 16, 12), bodyMat);
+      headBase.scale.set(1.15, 0.95, 1.05); headBase.castShadow=true; headGroupL.add(headBase);
+
+      // Tiny Ears
+      [-1,1].forEach(side=>{
+        const ear = new THREE.Mesh(new THREE.SphereGeometry(s*0.18, 10, 8), bodyMat);
+        ear.position.set(side*s*0.85, s*0.75, 0); headGroupL.add(ear);
+        const earIn = new THREE.Mesh(new THREE.SphereGeometry(s*0.1, 8, 6), new THREE.MeshStandardMaterial({color:0xCC8899}));
+        earIn.position.set(side*s*0.85, s*0.75, s*0.1); headGroupL.add(earIn);
+      });
+
+      // Hair Spikes (사진 속 그 안테나! V자 모양)
+      const hairColor = 0xE94560;
+      const spike1 = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.03, s*0.4, 4, 8), new THREE.MeshStandardMaterial({color:hairColor}));
+      spike1.position.set(s*0.05, s*1.1, 0); spike1.rotation.z = -0.3; headGroupL.add(spike1);
+      const spike2 = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.03, s*0.3, 4, 8), new THREE.MeshStandardMaterial({color:hairColor}));
+      spike2.position.set(-s*0.05, s*1.05, 0); spike2.rotation.z = 0.5; headGroupL.add(spike2);
+
+      // Eyes (확실히 앞으로 전진 배치)
+      [-1,1].forEach(side=>{
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.1, 8, 8), blackMat);
+        eye.position.set(side*s*0.35, s*0.15, s*1.2); headGroupL.add(eye);
+      });
+
+      // Large Purple Nose (확실히 앞으로 전진 배치)
+      const nose = new THREE.Mesh(new THREE.SphereGeometry(s*0.22, 12, 10), noseMat);
+      nose.position.set(0, -s*0.1, s*1.35); nose.scale.set(1.2, 0.9, 0.8); headGroupL.add(nose);
+
+      // Mouth & Teeth (확실히 앞으로 전진 배치)
+      const mouthGroupL = new THREE.Group();
+      mouthGroupL.position.set(0, -s*0.4, s*1.2);
+      const lipL = new THREE.Mesh(new THREE.TorusGeometry(s*0.15, s*0.02, 8, 12, Math.PI), blackMat);
+      lipL.rotation.x = Math.PI; mouthGroupL.add(lipL);
+      // Two front teeth
+      [-1,1].forEach(side=>{
+        const tooth = new THREE.Mesh(new THREE.BoxGeometry(s*0.08, s*0.1, s*0.02), whiteMat);
+        tooth.position.set(side*s*0.05, -s*0.05, s*0.03); mouthGroupL.add(tooth);
+      });
+      headGroupL.add(mouthGroupL);
+
+      // Tail (짧고 둥근 꼬리)
+      const tailL = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 10, 8), bodyMat);
+      tailL.position.set(0, -s*0.4, -s*0.8); g.add(tailL);
+
+      // Arms
+      [-1,1].forEach(side=>{
+        const arm = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.15, s*0.2, 6, 8), bodyMat);
+        arm.position.set(side*s*1.0, s*0.1, 0.1); arm.rotation.z = side*0.5; g.add(arm);
+      });
+
+      // Legs
+      [-1,1].forEach(side=>{
+        const leg = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.18, s*0.15, 6, 8), bodyMat);
+        leg.position.set(side*s*0.45, -s*0.9, 0); g.add(leg);
+      });
+    }
+
+    if(t.char === 'pororo'){
+      // 뽀로로 (Pororo) — 정교화 모델
+      const bodyGeo = new THREE.SphereGeometry(s*1.0, 16, 12); bodyGeo.scale(1, 1.1, 0.9);
+      const bodyMat = new THREE.MeshStandardMaterial({color:t.bodyColor, roughness:0.7});
+      const whiteMat = new THREE.MeshStandardMaterial({color:0xFFFFFF});
+      const helmetMat = new THREE.MeshStandardMaterial({color:t.helmetColor, roughness:0.5});
+      const orangeMat = new THREE.MeshStandardMaterial({color:t.accentColor});
+      
+      const body = new THREE.Mesh(bodyGeo, bodyMat); body.castShadow=true; g.add(body);
+      const belly = new THREE.Mesh(new THREE.SphereGeometry(s*0.8, 12, 10), whiteMat);
+      belly.position.set(0, -s*0.1, s*0.45); belly.scale.set(1, 1, 0.5); g.add(belly);
+
+      // Head Group
+      const headGroupP = new THREE.Group();
+      headGroupP.position.y = s*1.6; g.add(headGroupP);
+
+      // Blue Head Base
+      const headBase = new THREE.Mesh(new THREE.SphereGeometry(s*1.1, 16, 12), bodyMat);
+      headBase.castShadow = true; headGroupP.add(headBase);
+
+      // Wide White Face Area (얼굴 전면을 덮는 하얀색 마스크)
+      const faceArea = new THREE.Mesh(new THREE.SphereGeometry(s*1.08, 16, 12, 0, Math.PI*2, Math.PI*0.15, Math.PI*0.7));
+      faceArea.material = whiteMat;
+      faceArea.position.set(0, -s*0.05, s*0.1); headGroupP.add(faceArea);
+
+      // Yellow Helmet with Visor
+      const helmet = new THREE.Mesh(new THREE.SphereGeometry(s*1.15, 16, 12, 0, Math.PI*2, 0, Math.PI*0.55), helmetMat);
+      helmet.rotation.x = -0.2; headGroupP.add(helmet);
+      // Visor (챙)
+      const visor = new THREE.Mesh(new THREE.SphereGeometry(s*1.16, 16, 12, 0, Math.PI*0.8, 0, Math.PI*0.2), helmetMat);
+      visor.position.set(0, s*0.45, s*0.2); visor.rotation.x = -0.5; visor.rotation.y = -Math.PI*0.4; headGroupP.add(visor);
+
+      // Helmet Wings
+      [-1,1].forEach(side=>{
+        const wing = new THREE.Mesh(new THREE.SphereGeometry(s*0.35, 10, 8), helmetMat);
+        wing.position.set(side*s*1.0, s*0.1, 0); wing.scale.set(0.5, 1, 1); headGroupP.add(wing);
+      });
+
+      // Signature Orange Goggles (더 굵고 선명하게)
+      const goggleMat = new THREE.MeshStandardMaterial({color:0xFF8800, metalness:0.2, roughness:0.5});
+      [-1,1].forEach(side=>{
+        const frame = new THREE.Mesh(new THREE.TorusGeometry(s*0.35, s*0.08, 10, 20), goggleMat);
+        frame.position.set(side*s*0.4, s*0.2, s*0.95); headGroupP.add(frame);
+        const glass = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 12, 10), new THREE.MeshStandardMaterial({color:0xffffff}));
+        glass.position.set(side*s*0.4, s*0.2, s*0.92); glass.scale.z = 0.2; headGroupP.add(glass);
+      });
+      // Goggle Bridge
+      const bridge = new THREE.Mesh(new THREE.BoxGeometry(s*0.2, s*0.08, s*0.05), goggleMat);
+      bridge.position.set(0, s*0.2, s*1.0); headGroupP.add(bridge);
+
+      // Eyes (작은 점눈)
+      [-1,1].forEach(side=>{
+        const eye = new THREE.Mesh(new THREE.SphereGeometry(s*0.08, 8, 8), new THREE.MeshStandardMaterial({color:0x111111}));
+        eye.position.set(side*s*0.4, s*0.2, s*1.12); headGroupP.add(eye);
+      });
+
+      // Round Orange Beak (부리)
+      const beak = new THREE.Mesh(new THREE.SphereGeometry(s*0.28, 12, 10), orangeMat);
+      beak.position.set(0, -s*0.2, s*1.05); beak.scale.set(1.2, 0.8, 1); headGroupP.add(beak);
+
+      // Arms (Wings)
+      [-1,1].forEach(side=>{
+        const wing = new THREE.Mesh(new THREE.CapsuleGeometry(s*0.18, s*0.3, 6, 8), bodyMat);
+        wing.position.set(side*s*1.05, s*0.2, 0); wing.rotation.z = side*1.2; g.add(wing);
+      });
+
+      // Orange Feet
+      [-1,1].forEach(side=>{
+        const foot = new THREE.Mesh(new THREE.SphereGeometry(s*0.3, 10, 8), orangeMat);
+        foot.position.set(side*s*0.4, -s*1.3, s*0.2); foot.scale.set(1, 0.4, 1.5); g.add(foot);
+      });
+    }
+
   }
   
   // Apply position and random rotation
@@ -1156,13 +1306,13 @@ function spawnPlushies(){
     plushieGroup.add(p);
   }
 
-  // Layer 2: stacked on top, slightly fewer
-  const layer2Count = 10;
+  // Layer 2: stacked on top
+  const layer2Count = currentTheme === 'dino' ? 20 : 10; // 공룡은 2층도 빽빽하게
   for(let i = 0; i < layer2Count; i++){
     const typeIdx = (i+3) % PLUSHIE_TYPES.length;
     const type = PLUSHIE_TYPES[typeIdx];
-    let x = playCX + (Math.random()-0.5) * playSpanX * 0.7;
-    let z = (Math.random()-0.5) * BOX_D * 0.55;
+    let x = playCX + (Math.random()-0.5) * playSpanX * 0.8;
+    let z = (Math.random()-0.5) * BOX_D * 0.6;
     if(isInHole(x, z)){
       x = playMinX + Math.random() * playSpanX * 0.5;
       z = -BOX_D*0.3 + Math.random() * BOX_D * 0.3;
@@ -1175,6 +1325,34 @@ function spawnPlushies(){
     const p = createPlushie(type, new THREE.Vector3(x, y, z), {x:rx, y:ry, z:rz});
     plushies.push(p);
     plushieGroup.add(p);
+  }
+
+  // Layer 3 & 4: Massive mountain for 'dino' theme
+  if(currentTheme === 'dino'){
+    // 3층 (더 많이)
+    const layer3Count = 12;
+    for(let i = 0; i < layer3Count; i++){
+      const type = PLUSHIE_TYPES[i % PLUSHIE_TYPES.length];
+      let x = (Math.random()-0.5) * playSpanX * 0.5;
+      let z = (Math.random()-0.5) * BOX_D * 0.4;
+      const clamped3 = clampInBox(x, z); x = clamped3.x; z = clamped3.z;
+      const y = 0.85 + Math.random() * 0.2; 
+      const p = createPlushie(type, new THREE.Vector3(x, y, z), {x:Math.random(), y:Math.random()*Math.PI, z:Math.random()});
+      plushies.push(p);
+      plushieGroup.add(p);
+    }
+    // 4층 (최고 높이 포인트)
+    const layer4Count = 6;
+    for(let i = 0; i < layer4Count; i++){
+      const type = PLUSHIE_TYPES[(i+2) % PLUSHIE_TYPES.length];
+      let x = (Math.random()-0.5) * playSpanX * 0.3;
+      let z = (Math.random()-0.5) * BOX_D * 0.25;
+      const clamped4 = clampInBox(x, z); x = clamped4.x; z = clamped4.z;
+      const y = 1.2 + Math.random() * 0.2; // 아주 높게 쌓음
+      const p = createPlushie(type, new THREE.Vector3(x, y, z), {x:Math.random(), y:Math.random()*Math.PI, z:Math.random()});
+      plushies.push(p);
+      plushieGroup.add(p);
+    }
   }
 
   // 2 plushies near the prize hole walls (outside, touchable by claw swing)
@@ -1225,9 +1403,9 @@ const CHAR_ICONS = {
   trex:'🦖', trice:'🦕', brachi:'🦒', stego:'🦎', ptera:'🦅', baby:'🥚',
   honey:'🍯', polar:'🐻‍❄️', brown:'🐻', panda:'🐼', strawberry:'🍓', sky:'☁️',
   hangyodon:'🐟', sayuri:'🐙', kingyo:'🐠', otamaro:'🦎', keroppi:'🐸', tuxedosam:'🐧',
-  doraemon:'🐱', dorami:'🎀', nobita:'👓', shizuka:'👧', suneo:'🎤', gian:'🥊'
+  doraemon:'🐱', dorami:'🎀', nobita:'👓', shizuka:'👧', suneo:'🎤', gian:'🥊', loopy:'🌸', pororo:'🐧'
 };
-const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', maenggu:'맹구', hangyodon:'한교동', doraemon:'도라에몽'};
+const THEME_NAMES = {shinchan:'짱구', cinnamoroll:'시나모롤', dino:'공룡', maenggu:'맹구', hangyodon:'한교동', doraemon:'도라에몽', loopy:'루피'};
 
 function saveCollection(){
   localStorage.setItem(COLL_KEY, JSON.stringify(collection));

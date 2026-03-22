@@ -1,13 +1,59 @@
 {
   "id": "jongro",
   "name": "종로",
-  "station": "종로3가역",
-  "exit": "5번 출구",
+  "station": "종로3가역 / 종각역",
+  "exit": "종로3가역 4번 출구",
   "route": {
-    "steps": ["정보 준비 중입니다"],
-    "totalDistance": "-",
-    "naverMapUrl": "",
+    "steps": [
+      "종로3가역 4번 출구 건너편 익선동 한옥거리 입구로 진입합니다.",
+      "익선동의 중심부에 위치한 '대빵오락실'에서 대형 인형들을 공략해 보세요.",
+      "종로 거리를 따라 종각 방향으로 이동하며 종각 '젊음의 거리'에 진입합니다.",
+      "2층 규모의 '캑티가챠샵'과 활기찬 분위기의 '짱오락실'을 방문하는 풀코스 투어입니다."
+    ],
+    "totalDistance": "약 900m (투어 코스)",
+    "naverMapUrl": "https://map.naver.com/v5/search/종로%20인형뽑기",
     "naverStreetViewUrl": ""
   },
-  "spots": []
+  "spots": [
+    {
+      "name": "대빵오락실 익선점",
+      "address": "종로구 돈화문로11길 31",
+      "machineCount": 50,
+      "priceRange": "1,000원 ~ 2,000원",
+      "hours": "10:00 ~ 24:00",
+      "rating": 4.8,
+      "comment": "한옥마을 분위기와 어우러진 초대형 매장. 대형 인형 비중이 매우 높음.",
+      "recommended": true
+    },
+    {
+      "name": "캑티가챠샵 종각점",
+      "address": "종로구 종로12길 14",
+      "machineCount": 30,
+      "priceRange": "1,000원 ~ 5,000원",
+      "hours": "11:00 ~ 23:00",
+      "rating": 4.7,
+      "comment": "세련된 2층 매장. 뽑기뿐만 아니라 가챠, 랜덤박스, 산리오 굿즈가 매우 다양함.",
+      "recommended": true
+    },
+    {
+      "name": "짱오락실 종각점",
+      "address": "종로구 종로12길 10",
+      "machineCount": 40,
+      "priceRange": "1,000원 ~ 2,000원",
+      "hours": "24시간",
+      "rating": 4.4,
+      "comment": "젊음의 거리 중심. 전국 체인답게 기계 상태가 우수하고 업데이트가 빠름.",
+      "recommended": false
+    },
+    {
+      "name": "종각 젊음의거리 무인샵",
+      "address": "종로구 관철동 일대",
+      "machineCount": 12,
+      "priceRange": "1,000원",
+      "hours": "24시간",
+      "rating": 4.1,
+      "comment": "거리 곳곳의 소형 매장들. 가볍게 즐기기 좋은 키링 위주의 기계가 많음.",
+      "recommended": false
+    }
+  ]
 }

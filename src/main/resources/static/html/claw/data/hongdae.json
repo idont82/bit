@@ -5,48 +5,111 @@
   "exit": "1번 출구",
   "route": {
     "steps": [
-      "9번 출구로 나와서 좌회전",
-      "어울마당로 방면 직진 100m",
-      "첫번째 뽑기 매장(뽑기천국) 도착",
-      "계속 직진하면 추가 매장 2곳"
+      "상수역 1번 출구로 나옵니다.",
+      "출구 바로 앞에 첫 번째 성지(캐칭덕 상수역점)가 있습니다.",
+      "200m 직진 후 우회전하면 본격적인 홍대 성지 거리가 시작됩니다."
     ],
-    "totalDistance": "도보 약 10분 (전체 순회)",
-    "naverMapUrl": "https://map.naver.com/p/search/%ED%99%8D%EB%8C%80%20%EC%98%A4%EB%9D%BD%EC%8B%A4?c=16.33,0,0,0,dh",
-    "naverStreetViewUrl": "https://map.naver.com/v5/search/%ED%99%8D%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+    "totalDistance": "상수역 1번 출구 인근",
+    "mapImage": "images/hongdae-map.png"
   },
   "spots": [
     {
-      "name": "뽑기천국 홍대점",
-      "address": "마포구 어울마당로 42",
-      "machineCount": 35,
-      "priceRange": "1,000원 ~ 2,000원",
+      "name": "캐칭덕 (상단)",
+      "size": "중형",
+      "rating": 5.0,
+      "comment": "최신 유행 인형이 가장 빨리 들어오는 곳",
+      "recommended": true
+    },
+    {
+      "name": "모모 스테이션",
+      "size": "중형",
+      "rating": 4.1,
+      "comment": "아기자기한 소품형 인형이 많음",
+      "recommended": false
+    },
+    {
+      "name": "최강오락실",
+      "size": "중형",
+      "rating": 4.2,
+      "comment": "규모가 크고 다양한 오락기기 겸비",
+      "recommended": false
+    },
+    {
+      "name": "캐칭덕 (중간)",
+      "size": "중형",
       "rating": 4.5,
-      "comment": "집게 세기 괜찮고 산리오 라인업 최고",
-      "recommended": true,
-      "hours": "24시간",
-      "naverStreetViewUrl": "https://map.naver.com/v5/search/%ED%99%8D%EB%8C%80%20%EC%9D%B8%ED%98%95%EB%BD%91%EA%B8%B0"
+      "comment": "산리오 라인업이 특히 좋음 (완전 대형 인형 있음)",
+      "recommended": false
     },
     {
-      "name": "홍대 뽑기월드",
-      "address": "마포구 와우산로 21",
-      "machineCount": 25,
-      "priceRange": "1,000원 ~ 2,000원",
+      "name": "펀시티 (Fun City)",
+      "size": "중형",
+      "rating": 4.3,
+      "comment": "홍대 최대 규모, 쾌적한 환경",
+      "recommended": false
+    },
+    {
+      "name": "짱오락실 홍대점",
+      "size": "대형",
+      "rating": 5.0,
+      "comment": "홍대의 랜드마크! 농구, 풍선터트리기 게임 있음",
+      "recommended": true
+    },
+    {
+      "name": "캐티 가챠샵 홍대점",
+      "size": "중형",
+      "rating": 4.2,
+      "comment": "가챠와 인형뽑기를 동시에 즐길 수 있음",
+      "recommended": false
+    },
+    {
+      "name": "레미오 홍대본점",
+      "size": "소형",
+      "rating": 4.3,
+      "comment": "독특한 캐릭터 인형이 많음",
+      "recommended": false
+    },
+    {
+      "name": "RS게임장",
+      "size": "중형",
+      "rating": 4.1,
+      "comment": "세팅이 정직하고 손맛이 좋음",
+      "recommended": false
+    },
+    {
+      "name": "프리미엄오락실",
+      "size": "중형",
+      "rating": 4.4,
+      "comment": "이름답게 깔끔하고 고퀄리티 인형 위주",
+      "recommended": false
+    },
+    {
+      "name": "게임토피아",
+      "size": "대형",
+      "rating": 4.9,
+      "comment": "전통적인 뽑기 강자! 강력 추천",
+      "recommended": true
+    },
+    {
+      "name": "도도 (Dodo)",
+      "size": "소형",
       "rating": 4.0,
-      "comment": "포켓몬 기계 많고 대형 인형 있음",
-      "recommended": false,
-      "hours": "11:00 ~ 23:00",
-      "naverStreetViewUrl": ""
+      "comment": "작지만 실속 있는 매장",
+      "recommended": false
     },
     {
-      "name": "뽑기의 신 홍대",
-      "address": "마포구 어울마당로 58",
-      "machineCount": 20,
-      "priceRange": "1,000원",
-      "rating": 3.5,
-      "comment": "규모는 작지만 1000원 기계만 있어서 가성비 좋음",
-      "recommended": false,
-      "hours": "10:00 ~ 22:00",
-      "naverStreetViewUrl": ""
+      "name": "블링팝 서교점",
+      "size": "소형",
+      "rating": 4.2,
+      "comment": "반짝반짝 예쁜 인형이 많음",
+      "recommended": false
+    },
+    {
+      "name": "캐칭덕 (상수역점)",
+      "size": "소형",
+      "rating": 4.4,
+      "comment": "상수역 인근 최고의 접근성",
+      "recommended": false
     }
   ]
 }
