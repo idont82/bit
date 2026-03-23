@@ -221,6 +221,21 @@ body{
   transition:background 0.2s;
 }
 #collectionToggle:hover{background:linear-gradient(180deg,#3360bb,#2a4a8a)}
+.size-btn{
+  position:fixed;top:46px;right:8px;z-index:40;
+  background:linear-gradient(180deg,#e94560,#c81d38);
+  border:2px solid #ff6b81;border-radius:12px;
+  color:#fff;padding:6px 12px;font-size:clamp(10px,2.5vw,13px);
+  font-weight:bold;cursor:pointer;font-family:inherit;
+  box-shadow:0 0 12px rgba(233,69,96,0.3);
+  transition:all 0.2s;
+}
+.size-btn:hover{background:linear-gradient(180deg,#ff6b81,#e94560);transform:translateY(-1px)}
+.size-btn.large{
+  background:linear-gradient(180deg,#ffcc44,#cc9900);
+  border-color:#ffdd44;color:#000;
+  box-shadow:0 0 12px rgba(255,200,0,0.4);
+}
 #collectionToggle .badge{
   background:#e94560;border-radius:8px;padding:1px 6px;
   font-size:10px;margin-left:4px;min-width:16px;text-align:center;

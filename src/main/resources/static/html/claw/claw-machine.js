@@ -15,6 +15,9 @@ const State = {
 let state = State.IDLE;
 let credits = 3, score = 0, timer = 0, timerInterval = null;
 let craneX = 0, craneZ = 0;       // -1 ~ 1 normalized
+let isLargeMode = false;
+let plushieScale = 0.35;
+let clawScale = 1.0;
 let craneTargetX = 0, craneTargetZ = 0;
 let wireY = 0;                     // 0 = up, 1 = fully down
 let clawOpen = 1;                  // 1 = open, 0 = closed
@@ -426,10 +429,10 @@ const PLUSHIE_THEMES = {
 let currentTheme = 'shinchan';
 let PLUSHIE_TYPES = PLUSHIE_THEMES[currentTheme];
 
-function createPlushie(type, position, rotation){
+function createPlushie(type, position, rotation, customScale){
   const g = new THREE.Group();
   const t = type;
-  const s = 0.35;
+  const s = customScale || plushieScale; // 커스텀 스케일 우선 적용
 
   // ── Helper: add cute face (eyes, highlights, blush, mouth) ──
   function addCuteFace(yHead, zFront, eyeSize, hasMouth){
@@ -1284,20 +1287,21 @@ function spawnPlushies(){
   }
 
   // Layer 1: bottom layer, tightly packed
-  const layer1Count = 18;
+  const layer1Count = isLargeMode ? 6 : 18;
+  const cols = isLargeMode ? 3 : 6;
   for(let i = 0; i < layer1Count; i++){
     const typeIdx = i % PLUSHIE_TYPES.length;
     const type = PLUSHIE_TYPES[typeIdx];
-    const col = i % 6, row = Math.floor(i / 6);
-    let x = playMinX + 0.15 + col * ((playSpanX-0.3)/5) + (Math.random()-0.5)*0.2;
-    let z = -BOX_D*0.35 + row * (BOX_D*0.35) + (Math.random()-0.5)*0.2;
+    const col = i % cols, row = Math.floor(i / cols);
+    let x = playMinX + 0.3 + col * (playSpanX / cols) + (Math.random()-0.5)*0.2;
+    let z = -BOX_D*0.3 + row * (BOX_D*0.4) + (Math.random()-0.5)*0.2;
     // If overlapping hole, shift away
     if(isInHole(x, z)){
       x = playMinX + Math.random() * playSpanX * 0.5;
-      z = -BOX_D*0.3 + Math.random() * BOX_D * 0.3;
+      z = -BOX_D*0.2 + Math.random() * BOX_D * 0.2;
     }
     const clamped1 = clampInBox(x, z); x = clamped1.x; z = clamped1.z;
-    const y = 0.28 + Math.random() * 0.05;
+    const y = (isLargeMode ? 0.45 : 0.28) + Math.random() * 0.05;
     const rx = (Math.random()-0.5) * 2.0;
     const ry = Math.random() * Math.PI * 2;
     const rz = (Math.random()-0.5) * 1.0;
@@ -1307,7 +1311,7 @@ function spawnPlushies(){
   }
 
   // Layer 2: stacked on top
-  const layer2Count = currentTheme === 'dino' ? 20 : 10; // 공룡은 2층도 빽빽하게
+  const layer2Count = isLargeMode ? 4 : (currentTheme === 'dino' ? 20 : 10);
   for(let i = 0; i < layer2Count; i++){
     const typeIdx = (i+3) % PLUSHIE_TYPES.length;
     const type = PLUSHIE_TYPES[typeIdx];
@@ -1328,7 +1332,7 @@ function spawnPlushies(){
   }
 
   // Layer 3 & 4: Massive mountain for 'dino' theme
-  if(currentTheme === 'dino'){
+  if(currentTheme === 'dino' && !isLargeMode){
     // 3층 (더 많이)
     const layer3Count = 12;
     for(let i = 0; i < layer3Count; i++){
@@ -1357,16 +1361,17 @@ function spawnPlushies(){
 
   // 2 plushies near the prize hole walls (outside, touchable by claw swing)
   // Hole is flush to right wall, so place: 1=left side, 2=front side only
+  const offset = isLargeMode ? 0.6 : 0.35;
   const nearHolePositions = [
-    { x: HOLE_POS.x - (holeW/2 + wallT + 0.35), z: HOLE_POS.z },                    // left of hole
-    { x: HOLE_POS.x + (Math.random()-0.5)*0.3,   z: HOLE_POS.z - (holeD/2 + wallT + 0.35) }  // front of hole
+    { x: HOLE_POS.x - (holeW/2 + wallT + offset), z: HOLE_POS.z },                    // left of hole
+    { x: HOLE_POS.x + (Math.random()-0.5)*0.3,   z: HOLE_POS.z - (holeD/2 + wallT + offset) }  // front of hole
   ];
   for(let i = 0; i < 2; i++){
     const type = PLUSHIE_TYPES[i];
     let x = nearHolePositions[i].x;
     let z = nearHolePositions[i].z;
     const clampedH = clampInBox(x, z); x = clampedH.x; z = clampedH.z;
-    const y = 0.28;
+    const y = isLargeMode ? 0.45 : 0.28;
     const rx = (Math.random()-0.5) * 1.5;
     const ry = Math.random() * Math.PI * 2;
     const rz = (Math.random()-0.5) * 0.6;
@@ -1453,7 +1458,7 @@ function getPlushieThumbnail(char, themeId) {
   dl.position.set(1, 2, 3);
   scene.add(dl);
 
-  const plushie = createPlushie(t, new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0.3, 0)); // 약간 사선으로 렌더링
+  const plushie = createPlushie(t, new THREE.Vector3(0, 0, 0), new THREE.Euler(0, 0.3, 0), 0.35); // 고정 스케일 적용
   plushie.scale.set(1.2, 1.2, 1.2);
   scene.add(plushie);
 
@@ -1818,7 +1823,7 @@ function animate(){
       const dz = p.position.z - craneWorldZ;
       const distXZ = Math.sqrt(dx*dx+dz*dz);
       // Check horizontal proximity AND vertical — claw tip near plushie top
-      if(distXZ < p.userData.radius * 1.5 && clawTipY < p.position.y + 0.4){
+      if(distXZ < p.userData.radius * 1.5 && clawTipY < p.position.y + p.userData.radius * 1.1){
         hitPlushie = p;
         break;
       }
@@ -1960,7 +1965,7 @@ function animate(){
     const clawWorldPos = new THREE.Vector3();
     clawPivot.getWorldPosition(clawWorldPos);
     grabbedPlushie.position.x += (clawWorldPos.x - grabbedPlushie.position.x) * 0.15;
-    grabbedPlushie.position.y += (clawWorldPos.y - 0.3 - grabbedPlushie.position.y) * 0.15;
+    grabbedPlushie.position.y += (clawWorldPos.y - (plushieScale * 0.85) - grabbedPlushie.position.y) * 0.15;
     grabbedPlushie.position.z += (clawWorldPos.z - grabbedPlushie.position.z) * 0.15;
   }
 
@@ -2086,13 +2091,13 @@ function animate(){
 
     // 미끄러진 인형은 바닥 또는 다른 인형 위에 착지
     if(p.userData.slipped){
-      let landY = 0.28;
+      let landY = plushieScale * 0.8;
       for(const other of plushies){
         if(other === p || other.userData.falling) continue;
         const ldx = other.position.x - p.position.x;
         const ldz = other.position.z - p.position.z;
-        if(Math.sqrt(ldx*ldx + ldz*ldz) < 0.5){
-          landY = Math.max(landY, other.position.y + 0.3);
+        if(Math.sqrt(ldx*ldx + ldz*ldz) < plushieScale * 1.5){
+          landY = Math.max(landY, other.position.y + plushieScale * 0.85);
         }
       }
       if(p.position.y <= landY){
@@ -2128,6 +2133,46 @@ function animate(){
   topLight.intensity = 1.3 + Math.sin(t*3)*0.2;
 
   renderer.render(scene, camera);
+
+  // Update claw and indicator scale based on mode
+  const targetClawScale = isLargeMode ? 1.6 : 1.0;
+  clawPivot.scale.lerp(new THREE.Vector3(targetClawScale, targetClawScale, targetClawScale), 0.1);
+  const targetIndicatorScale = isLargeMode ? 1.5 : 1.0;
+  indicatorGroup.scale.lerp(new THREE.Vector3(targetIndicatorScale, 1, targetIndicatorScale), 0.1);
+}
+
+// ─── Machine Size Toggle (Large Mode) ───
+const sizeBtn = document.getElementById('sizeToggle');
+sizeBtn.addEventListener('click', () => {
+  if (state !== State.IDLE) return;
+  
+  isLargeMode = !isLargeMode;
+  plushieScale = isLargeMode ? 0.65 : 0.35;
+  
+  if (isLargeMode) {
+    sizeBtn.textContent = '🪄 작은 인형 버전';
+    sizeBtn.classList.add('large');
+    showMessage('🌟 큰 인형 버전으로 전환되었습니다! 🌟');
+  } else {
+    sizeBtn.textContent = '🪄 큰 인형 버전';
+    sizeBtn.classList.remove('large');
+    showMessage('🎈 일반 버전으로 전환되었습니다! 🎈');
+  }
+  
+  // Respawn plushies with new scale
+  spawnPlushies();
+});
+
+function showMessage(txt){
+  const overlay = document.getElementById('msgOverlay');
+  overlay.textContent = txt;
+  overlay.style.display = 'block';
+  overlay.classList.remove('fadeOut');
+  void overlay.offsetWidth;
+  setTimeout(()=>{
+    overlay.classList.add('fadeOut');
+    setTimeout(()=> overlay.style.display='none', 800);
+  }, 2000);
 }
 
 updateUI();
